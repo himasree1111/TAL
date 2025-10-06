@@ -1,0 +1,16 @@
+// db.js
+const sqlite3 = require("sqlite3").verbose();
+const path = require("path");
+
+// Make sure this path matches where your volunteer.db is saved
+const dbPath = path.resolve(__dirname, "volunteer.db");
+
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error("❌ Error opening database:", err.message);
+  } else {
+    console.log("✅ Connected to SQLite database!");
+  }
+});
+
+module.exports = db;
