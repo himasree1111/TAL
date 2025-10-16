@@ -27,36 +27,33 @@
 // }
 
 // //export default App;
+
+
+
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import CoverPage from "./CoverPage";
 import LoginProfiles from "./loginProfiles";
 import RoleLogin from "./RoleLogin";
-import VolunteerLogin from "./volunteerlogin";  // import volunteer login
-import Register from "./register";              // import register
-import StudentForm from "./studentform";        // import student form
+import VolunteerLogin from "./volunteerlogin";
+import Register from "./register";
+import StudentForm from "./studentform";
+
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Cover Page */}
+        {/* Cover page shows first */}
         <Route path="/" element={<CoverPage />} />
 
-        {/* Role Selection */}
-        <Route path="/login" element={<LoginProfiles />} />
-
-        {/* Role-specific login with shared component */}
-        <Route path="/login/:role" element={<RoleLogin />} />
-
-        {/* Volunteer-specific login page */}
+        {/* Volunteer auth */}
         <Route path="/volunteerlogin" element={<VolunteerLogin />} />
-
-        {/* Volunteer registration page */}
         <Route path="/register" element={<Register />} />
 
-        {/* Student Form page */}
+        {/* Student flow */}
         <Route path="/studentform" element={<StudentForm />} />
+  {/* StudentDocs route removed as requested */}
       </Routes>
     </Router>
   );
