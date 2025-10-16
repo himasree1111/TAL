@@ -1,11 +1,10 @@
-/* ===== Wrapper ===== */
 .profiles-wrapper {
   min-height: 100vh;
   padding: 4rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, #fdfbff 0%, #f9f9f9 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
   font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -26,11 +25,11 @@
 .profiles-header h1 {
   font-size: clamp(2rem, 5vw, 2.6rem);
   font-weight: 700;
-  color: #111827;
+  color: #1E1E1E;
 }
 
 .profiles-header h1 span {
-  color: #2563eb;
+  color: #8CC63F;
 }
 
 /* ===== Grid ===== */
@@ -44,45 +43,33 @@
   justify-items: center;
 }
 
-/* ===== Card Base ===== */
+/* ===== Unified Card Style ===== */
 .profile-card {
   border-radius: 22px;
   padding: 2.5rem 1.5rem;
   text-align: center;
+  background: linear-gradient(135deg, #faf9f7, #f3f0eb);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
   transition: all 0.35s ease;
   cursor: pointer;
   position: relative;
-  color: #1e293b;
+  color: #1f2937;
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* ===== Pastel Colors (your palette) ===== */
-.color-1 {
-  background: linear-gradient(135deg, #c9e4de, #e8f6f3);
-}
-.color-2 {
-  background: linear-gradient(135deg, #c6def1, #e5f3fc);
-}
-.color-3 {
-  background: linear-gradient(135deg, #dbcdf0, #f2eafd);
-}
+/* Make all .color classes identical */
+.color-1,
+.color-2,
+.color-3,
 .color-4 {
-  background: linear-gradient(135deg, #f2c6de, #ffeaf2);
+  background: linear-gradient(135deg, #faf9f7, #f3f0eb) !important;
+  color: #1f2937 !important;
 }
 
-/* ===== Staggered Layout ===== */
-.profile-card:nth-child(odd) {
-  transform: translateY(-15px);
-}
-
-.profile-card:nth-child(even) {
-  transform: translateY(15px);
-}
-
+/* ===== Hover Effect ===== */
 .profile-card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-10px);
+  box-shadow: 0 15px 40px rgba(140, 198, 63, 0.15);
 }
 
 /* ===== Circle Icon ===== */
@@ -96,20 +83,34 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  background: linear-gradient(135deg, #8CC63F, #B6E137);
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 2.1rem;
   font-weight: 700;
   color: #fff;
-  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 0 0 rgba(140, 198, 63, 0.4);
+  animation: pulseGlow 2.5s infinite ease-in-out;
   transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 
 .profile-card:hover .circle-icon {
   transform: scale(1.1);
-  box-shadow: 0 0 25px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 25px rgba(140, 198, 63, 0.55);
+}
+
+/* ===== Pulse Glow Animation ===== */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(140, 198, 63, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(140, 198, 63, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(140, 198, 63, 0);
+  }
 }
 
 /* ===== Text ===== */
