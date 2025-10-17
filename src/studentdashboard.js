@@ -118,7 +118,8 @@ const StudentDashboard = () => {
             <h3 style={styles.cardTitle}>Fee Status</h3>
             <div style={styles.feeInfo}>
               <div style={styles.feeRow}><span>Total Fee:</span><span style={styles.feeAmount}>${feeStatus.totalFee}</span></div>
-              <div style={styles.feeRow}><span>Paid:</span><span style={styles.feePaid}>${feeStatus.paid}</span></div>
+              <div style={styles.feeRow}><span>Paid(By TAL):</span><span style={styles.feePaid}>${feeStatus.paid}</span></div>
+              <div style={styles.feeRow}><span>Paid(By student):</span><span style={styles.feePaid}>${feeStatus.paid}</span></div>
               <div style={styles.feeRow}><span>Due:</span><span style={styles.feeDue}>${feeStatus.due}</span></div>
               <div style={styles.feeRow}><span>Due Date:</span><span>{feeStatus.dueDate}</span></div>
               <div style={{ ...styles.statusBadge, backgroundColor: feeStatus.status === 'Paid' ? '#4CAF50' : '#FF9800' }}>{feeStatus.status}</div>

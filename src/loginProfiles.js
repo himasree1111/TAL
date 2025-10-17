@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import "./loginProfiles.css";
 
 const profiles = [
-  { role: "Student", description: "Access courses and resources" },
+  { role: "Student", description: "Scholarship Approval Access" },
   { role: "Donor", description: "Support causes and projects" },
   { role: "Volunteer", description: "Help organize and assist" },
   { role: "Admin", description: "Manage the entire platform" },
