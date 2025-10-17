@@ -232,7 +232,7 @@ export default function StudentForm() {
           <h2>2. Academic Details</h2>
           <div className="form-group">
             <label>
-              Name of School and college
+              Name of School/College
               <input 
                 type="text" 
                 name="school" 
