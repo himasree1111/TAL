@@ -1,15 +1,15 @@
-.cover-container {
+/*.cover-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: #333;
 
-  /* Combine gradient + image with fallback */
+  /* Combine gradient + image with fallback 
   background: linear-gradient(135deg, #e3f2fd, #ffffff), url("https://touchalifeorg.com/wp-content/uploads/2025/05/Website-Sliders-Touch-A-Life-1080x1080-3-1.jpg") center/cover no-repeat;
 }
 
-/* Header Bar */
+/* Header Bar 
 .cover-header {
   display: flex;
   justify-content: space-between;
@@ -30,12 +30,12 @@
   transform: scale(1.02);
 }
 
-/* 🔹 Simplified Login Button */
+/* 🔹 Simplified Login Button 
 .login-btn {
     display:inline-block;
   padding: 6px 16px;
   width: 100px;
-  background: #4a90e2;         /* subtle blue, like many sites */
+  background: #4a90e2;         /* subtle blue, like many sites 
   color: #ffffff;
   border: none;
   border-radius: 4px;
@@ -50,7 +50,7 @@
   transform: translateY(-1px);
 }
 
-/* Main Content */
+/* Main Content 
 .cover-main {
   flex: 1;
   display: flex;
@@ -81,7 +81,7 @@
   font-size: 0.95rem;
 }
 
-/* Responsive */
+/* Responsive 
 @media (max-width: 768px) {
   .cover-header {
     padding: 12px 20px;
@@ -95,4 +95,223 @@
   .cover-main h1 {
     font-size: 2rem;
   }
+}
+*/
+
+
+/* Desktop-only CoverPage.css (full-bleed background + full-width header,
+   centered content column) */
+
+/* Reset to ensure full-bleed edges */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Full-bleed background that covers the viewport (desktop-optimized) */
+.cover-container {
+  width: 500%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* allow header to span full width */
+  background: linear-gradient(135deg, #e3f2fd, #ffffff),
+    url("https://touchalifeorg.com/wp-content/uploads/2025/05/Website-Sliders-Touch-A-Life-1080x1080-3-1.jpg")
+      center/cover no-repeat;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  color: #333;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header: full width, translucent panel; content constrained inside .header-inner */
+.cover-header {
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index:1000;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* Constrain header content to a centered column while header itself remains full-bleed */
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  box-sizing: border-box;
+}
+
+/* Logo aligned left */
+.logo {
+  height: 60px;
+  width: auto;
+  display: block;
+  transition: transform 0.18s ease;
+}
+.logo:hover { transform: scale(1.02); }
+
+/* Login button aligned right */
+.login-btn {
+  display: inline-block;
+  padding: 8px 18px;
+  min-width: 100px;
+  background: #4a90e2;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.12s ease;
+  text-align: center;
+}
+.login-btn:hover { background: #357ab8; transform: translateY(-1px); }
+
+/* Main content: centered column, constrained width */
+.cover-main {
+  width: 100%;
+  max-width: 900px;
+  margin: 48px auto 0;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.cover-main h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+  line-height: 1.05;
+}
+
+/* Desktop spacing tweaks */
+@media (min-width: 1200px) {
+  .header-inner { max-width: 1200px; padding: 16px 32px; }
+  .cover-main { max-width: 1000px; padding: 48px 32px; margin-top: 60px; }
+}
+
+/* Minimal mobile fallback but primary layout optimized for desktop */
+@media (max-width: 800px) {
+  .logo { height: 52px; }
+  .login-btn { padding: 6px 14px; min-width: 88px; font-size: 14px; }
+  .cover-main h1 { font-size: 2rem; }
+}
+
+/* Reset to ensure full-bleed edges */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Full-bleed background that covers the viewport (desktop-optimized) */
+.cover-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* allow header to span full width */
+  background: linear-gradient(135deg, #e3f2fd, #ffffff),
+    url("https://touchalifeorg.com/wp-content/uploads/2025/05/Website-Sliders-Touch-A-Life-1080x1080-3-1.jpg")
+      center/cover no-repeat;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  color: #333;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header: full width, translucent panel; content constrained inside .header-inner */
+.cover-header {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  margin-top: 0px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* Constrain header content to a centered column while header itself remains full-bleed */
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  box-sizing: border-box;
+}
+
+/* Logo aligned left */
+.logo {
+  height: 60px;
+  width: auto;
+  display: block;
+  transition: transform 0.18s ease;
+}
+.logo:hover { transform: scale(1.02); }
+
+/* Login button aligned right */
+.login-btn {
+  display: inline-block;
+  padding: 8px 18px;
+  min-width: 100px;
+  background: #4a90e2;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.12s ease;
+  text-align: center;
+  width: 50px;
+}
+.login-btn:hover { background: #357ab8; transform: translateY(-1px); }
+
+/* Main content: centered column, constrained width */
+.cover-main {
+  width: 100%;
+  max-width: 900px;
+  margin: 48px auto 0;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.cover-main h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+  line-height: 1.05;
+}
+
+/* Desktop spacing tweaks */
+@media (min-width: 1200px) {
+  .header-inner { max-width: 1200px; padding: 16px 32px; }
+  .cover-main { max-width: 1000px; padding: 48px 32px; margin-top: 60px; }
+}
+
+/* Minimal mobile fallback but primary layout optimized for desktop */
+@media (max-width: 800px) {
+  .logo { height: 52px; }
+  .login-btn { padding: 6px 14px; min-width: 88px; font-size: 14px; }
+  .cover-main h1 { font-size: 2rem; }
 }

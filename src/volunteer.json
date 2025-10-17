@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "volunteer": {
+    "id": 1,
+    "name": "Anjali Rao",
+    "email": "anjali@example.com",
+    "password": "password123", 
+    "role": "Field Volunteer",
+    "avatar": ""
+  }
+}
