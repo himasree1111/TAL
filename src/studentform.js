@@ -153,7 +153,7 @@
 //             <label>
 //               Place of Birth
 //               <input
-//                 type="text"
+//                 type="date"
 //                 name="pob"
 //                 value={formData.pob}
 //                 onChange={handleInputChange}
@@ -166,7 +166,7 @@
 //                 name="address"
 //                 value={formData.nationality}
 //                 onChange={handleInputChange}
-//               />
+//               required/>
 //             </label>
 //           </div>
 
