@@ -1,4 +1,8 @@
 import React from "react";
+<<<<<<< HEAD
+=======
+import { useNavigate } from 'react-router-dom';
+>>>>>>> c9069c44d261769edaf1de5381fec5a7b348344c
 import "./loginProfiles.css";
 
 const profiles = [
@@ -7,11 +11,25 @@ const profiles = [
   { role: "Volunteer", description: "Help organize and assist" },
   { role: "Admin", description: "Manage the entire platform" },
 ];
+<<<<<<< HEAD
 
 export default function ProfilesPage() {
   const handleClick = (role) => {
     alert(`Selected: ${role}`);
     // navigate(`/login/${role.toLowerCase()}`);
+=======
+
+export default function ProfilesPage() {
+  const navigate = useNavigate();
+
+  const handleClick = (role) => {
+    if (role === 'Student') {
+      navigate('/student-dashboard');
+      return;
+    }
+    // fallback: go to role-specific login
+    navigate(`/login/${role.toLowerCase()}`);
+>>>>>>> c9069c44d261769edaf1de5381fec5a7b348344c
   };
 
   return (

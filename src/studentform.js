@@ -8,6 +8,7 @@ export default function StudentForm() {
     last_name: "",
     middle_name: "",
     dob: "",
+    age: "",
     pob: "",
     nationality: "",
     email: "",
@@ -56,6 +57,10 @@ export default function StudentForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim() || !formData.contact.trim()) {
+      alert("⚠️ Please fill in all mandatory fields: First Name, Last Name, Email, and Parent Number.");
+      return;
+    }
     if (!allUploaded) {
       alert("⚠️ Please upload all required documents before submitting.");
       return;
@@ -94,26 +99,16 @@ export default function StudentForm() {
           <h2>1. Personal Data</h2>
           <div className="form-group">
             <label>
-              First Name
-              <input 
-                type="text" 
-                name="first_name" 
+              <span className="field-label">First Name<span className="required">*</span></span>
+              <input
+                type="text"
+                name="first_name"
                 value={formData.first_name}
                 onChange={handleInputChange}
                 required
               />
             </label>
-            <label>
-              Last Name
-              <input 
-                type="text" 
-                name="last_name" 
-                value={formData.last_name}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
+             <label>
               Middle Name
               <input 
                 type="text" 
@@ -122,33 +117,53 @@ export default function StudentForm() {
                 onChange={handleInputChange}
               />
             </label>
+            <label>
+              <span className="field-label">Last Name<span className="required">*</span></span>
+              <input
+                type="text"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleInputChange}
+                required
+              />
+            </label>
+           
           </div>
 
           <div className="form-group">
             <label>
               Date of Birth
-              <input 
-                type="date" 
-                name="dob" 
+              <input
+                type="date"
+                name="dob"
                 value={formData.dob}
                 onChange={handleInputChange}
                 required
               />
             </label>
             <label>
+              Age
+              <input
+                type="number"
+                name="age"
+                value={formData.age}
+                onChange={handleInputChange}
+              />
+            </label>
+            <label>
               Place of Birth
-              <input 
-                type="text" 
-                name="pob" 
+              <input
+                type="text"
+                name="pob"
                 value={formData.pob}
                 onChange={handleInputChange}
               />
             </label>
             <label>
-              Nationality
-              <input 
-                type="text" 
-                name="nationality" 
+              Address
+              <input
+                type="text"
+                name="address"
                 value={formData.nationality}
                 onChange={handleInputChange}
               />
@@ -156,33 +171,43 @@ export default function StudentForm() {
           </div>
 
           <div className="form-group">
+           <label>
+                <span className="field-label">Parent Number<span className="required">*</span></span>
+                <input
+                  type="text"
+                  name="contact"
+                  value={formData.contact}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+
             <label>
-              Email
-              <input 
-                type="email" 
-                name="email" 
+              Whatsapp Number
+              <input
+                type="text"
+                name="whatsapp"
+                value={formData.whatsapp}
+                onChange={handleInputChange}
+              />
+            </label>
+            <label>
+               Student Number
+              <input
+                type="text"
+                name="student_contact"
+                value={formData.student_contact || ""}
+                onChange={handleInputChange}
+              />
+            </label>
+            <label>
+              <span className="field-label">Email<span className="required">*</span></span>
+              <input
+                type="email"
+                name="email"
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-              />
-            </label>
-            <label>
-              Contact Number
-              <input 
-                type="text" 
-                name="contact" 
-                value={formData.contact}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
-              WhatsApp Number
-              <input 
-                type="text" 
-                name="whatsapp" 
-                value={formData.whatsapp}
-                onChange={handleInputChange}
               />
             </label>
           </div>
@@ -261,8 +286,7 @@ export default function StudentForm() {
 
           <div className="form-group">
             <label>
-              What is her Aspiration to become in future with details of courses, specification? (Next 2yrs Plan)
-
+"What are her career aspirations and planned courses for the next two years?"
               <input 
                 type="text" 
                 name="aspiration" 
