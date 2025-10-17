@@ -1,6 +1,6 @@
 /* StudentForm.css */
 
-/* General form styles */
+/* General form styles 
 .form-container {
   max-width: 900px;
   margin: 0 auto;
@@ -91,7 +91,7 @@ label .required {
   cursor: not-allowed;
 }
 
-/* Upload section styles */
+
 .upload-field {
   margin-bottom: 20px;
   display: flex;
@@ -144,7 +144,7 @@ label .required {
   font-weight: bold;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments 
 @media (max-width: 768px) {
   .form-group {
     flex-direction: column;
@@ -168,4 +168,365 @@ label .required {
   .upload-btn {
     margin-bottom: 10px;
   }
+}*/
+
+/* ...existing code... */
+/* StudentForm.css */
+
+/* General form styles */
+.form-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
 }
+
+.form-title {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.section {
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.section h2 {
+  color: #444;
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Use CSS Grid for consistent alignment of inputs */
+.form-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: start;
+}
+
+/* Ensure labels and inputs stretch and don't overflow */
+.form-group label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* prevents flex children overflow in grid */
+  font-weight: bold;
+  color: #555;
+}
+
+/* Keep the field-label layout */
+.field-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+/* Required indicator */
+label .required {
+  color: red;
+  display: inline-block;
+  margin-left: 2px;
+  font-weight: bold;
+}
+
+/* Inputs take full width of their grid cell */
+.form-group input,
+.upload-field input {
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Submit section */
+.submit-container {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.submit-container button {
+  padding: 12px 30px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.submit-container button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.submit-container button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Upload section styles */
+.upload-field {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-field .label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #555;
+}
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  color: #666;
+}
+
+.upload-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  color: #28a745;
+  font-weight: 500;
+  word-break: break-all;
+  max-width: calc(100% - 60px);
+}
+
+.tick {
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.plus-icon {
+  font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .form-group {
+    grid-template-columns: 1fr;
+  }
+
+  label .required {
+    color: red;
+    display: inline-block;
+    margin-left: 2px;
+    font-weight: bold;
+  }
+
+  .upload-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .upload-btn {
+    margin-bottom: 10px;
+  }
+}
+
+
+/* General form styles */
+.form-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.form-title {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.section {
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.section h2 {
+  color: #444;
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Use CSS Grid for consistent alignment of inputs */
+.form-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: start;
+}
+
+/* Ensure labels and inputs stretch and don't overflow */
+.form-group label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* prevents flex children overflow in grid */
+  font-weight: bold;
+  color: #555;
+}
+
+/* Keep the field-label layout */
+.field-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+/* Required indicator */
+label .required {
+  color: red;
+  display: inline-block;
+  margin-left: 2px;
+  font-weight: bold;
+}
+
+/* Inputs take full width of their grid cell */
+.form-group input,
+.upload-field input {
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Submit section */
+.submit-container {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.submit-container button {
+  padding: 12px 30px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.submit-container button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.submit-container button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Upload section styles */
+.upload-field {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-field .label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #555;
+}
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  color: #666;
+}
+
+.upload-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  color: #28a745;
+  font-weight: 500;
+  word-break: break-all;
+  max-width: calc(100% - 60px);
+}
+
+.tick {
+  margin-right: 5px;
+  font-weight: bold;
+}
+
+.plus-icon {
+  font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .form-group {
+    grid-template-columns: 1fr;
+  }
+
+  label .required {
+    color: red;
+    display: inline-block;
+    margin-left: 2px;
+    font-weight: bold;
+  }
+
+  .upload-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .upload-btn {
+    margin-bottom: 10px;
+  }
+}
+/* ...existing code... */
