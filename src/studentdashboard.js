@@ -19,10 +19,9 @@ const StudentDashboard = () => {
 
   const [feeStatus, setFeeStatus] = useState({
     totalFee: 5000,
-    paid: 3500,
-    due: 1500,
-    dueDate: '2025-11-15',
-    status: 'Partially Paid'
+    paidByTAL: 3500,
+    paidByStudent: 0,
+    dueDate: '2025-11-15'
   });
 
   const [documents, setDocuments] = useState([
@@ -74,6 +73,12 @@ const StudentDashboard = () => {
     }
   };
 
+  // Derived fee values
+  const paidByTAL = feeStatus.paidByTAL || 0;
+  const paidByStudent = feeStatus.paidByStudent || 0;
+  const dueAmount = Math.max(0, feeStatus.totalFee - paidByTAL - paidByStudent);
+  const displayStatus = dueAmount === 0 ? 'Paid' : (paidByTAL + paidByStudent === 0 ? 'Not Paid' : 'Partially Paid');
+
   return (
     <div style={styles.container}>
       {/* Header */}
@@ -118,10 +123,11 @@ const StudentDashboard = () => {
             <h3 style={styles.cardTitle}>Fee Status</h3>
             <div style={styles.feeInfo}>
               <div style={styles.feeRow}><span>Total Fee:</span><span style={styles.feeAmount}>${feeStatus.totalFee}</span></div>
-              <div style={styles.feeRow}><span>Paid:</span><span style={styles.feePaid}>${feeStatus.paid}</span></div>
-              <div style={styles.feeRow}><span>Due:</span><span style={styles.feeDue}>${feeStatus.due}</span></div>
+              <div style={styles.feeRow}><span>Paid (By TAL):</span><span style={styles.feePaid}>${paidByTAL}</span></div>
+              <div style={styles.feeRow}><span>Paid (By Student):</span><span style={styles.feePaid}>${paidByStudent}</span></div>
+              <div style={styles.feeRow}><span>Due:</span><span style={styles.feeDue}>${dueAmount}</span></div>
               <div style={styles.feeRow}><span>Due Date:</span><span>{feeStatus.dueDate}</span></div>
-              <div style={{ ...styles.statusBadge, backgroundColor: feeStatus.status === 'Paid' ? '#4CAF50' : '#FF9800' }}>{feeStatus.status}</div>
+              <div style={{ ...styles.statusBadge, backgroundColor: displayStatus === 'Paid' ? '#4CAF50' : '#FF9800' }}>{displayStatus}</div>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import CoverPage from "./CoverPage";
 import LoginProfiles from "./loginProfiles";
 import VolunteerLogin from "./volunteerlogin";
+import DonorLogin from "./donorlogin";
 import Register from "./register";
 import StudentForm from "./studentform";
 import StudentDashboard from "./studentdashboard";
@@ -19,6 +20,7 @@ function App() {
 
         {/* Volunteer auth */}
         <Route path="/volunteerlogin" element={<VolunteerLogin />} />
+        <Route path="/donorlogin" element={<DonorLogin />} />
         <Route path="/register" element={<Register />} />
 
         {/* Student flow */}

@@ -1901,8 +1901,15 @@ export default function StudentForm() {
     scholarship: "",
     certificates: "",
     years_area: "",
+
     parents_full_names: "",
     earning_members: "",
+=======
+    account_no: "",
+    bank_name: "",
+    bank_branch: "",
+    ifsc_code: ""
+
   });
 
   // State for file uploads
@@ -1916,6 +1923,7 @@ export default function StudentForm() {
     volunteer_signature: null,
     student_signature: null,
   });
+
 
   const [bankAccount, setBankAccount] = useState("");
   const [volunteer, setVolunteer] = useState(null);
@@ -1943,6 +1951,7 @@ export default function StudentForm() {
     }
   }, [navigate]);
 
+
   // Handles logging out the volunteer
   const handleLogout = () => {
     localStorage.removeItem("volunteerProfile");
@@ -1966,13 +1975,23 @@ export default function StudentForm() {
 
   // Checks if all required files have been uploaded
   const allUploaded =
-    Object.values(files).every((f) => f !== null) && bankAccount.trim() !== "";
+    Object.values(files).every((f) => f !== null) &&
+    (formData.account_no || "").toString().trim() !== "" &&
+    (formData.bank_name || "").toString().trim() !== "" &&
+    (formData.bank_branch || "").toString().trim() !== "" &&
+    (formData.ifsc_code || "").toString().trim() !== "";
 
   // Handles the form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim() || !formData.contact.trim()) {
       alert("⚠️ Please fill in all mandatory fields: First Name, Last Name, Email, and Parent Number.");
+      return;
+    }
+    // Ensure age (if provided) is at least 6
+    const ageVal = formData.age !== "" && formData.age !== null ? Number(formData.age) : null;
+    if (ageVal !== null && !Number.isNaN(ageVal) && ageVal < 6) {
+      alert("⚠️ Age must be at least 6 years.");
       return;
     }
     if (!allUploaded) {

@@ -290,16 +290,30 @@ html, body, #root {
   font-weight: bold;
   color: #555;
 }
+
 label .required {
   color: red;
   margin-left: 4px;
+
+
+/* Required indicator */
+.required {
+  color: red;
+  display: inline;
+
   font-weight: bold;
 }
 
 /* Inputs take full width of grid cell */
 .form-group input,
+
 .upload-field input,
 .form-group select,
+
+.form-group select,
+.upload-field input,
+.upload-field select,
+
 .form-group textarea {
   padding: 10px;
   border: 1px solid #ccc;
@@ -482,6 +496,18 @@ label .required {
   display: block;
 }
 
+/* Bank account section */
+.bank-account-section h3 {
+  color: #444;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.bank-account-section .form-group {
+  margin-bottom: 10px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 780px) {
   .form-container { padding: 12px; width: calc(100% - 24px); }
@@ -491,11 +517,19 @@ label .required {
   .volunteer-name { display: none; }
 }
 
+
 /* Ensure long label text doesn't push alignment */
 .form-group label .field-label {
   white-space: normal;
   word-break: break-word;
 }
+=======
+  .required {
+    color: red;
+    display: inline;
+    font-weight: bold;
+  }
+
 
 /* Reset & base */
 html, body, #root {

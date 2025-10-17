@@ -39,6 +39,15 @@ db.serialize(() => {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS donor (
+      donor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      email TEXT UNIQUE,
+      password_hash TEXT
+    );
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS student_records (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       volunteer_id INTEGER,
@@ -85,7 +94,7 @@ db.serialize(() => {
   `);
 });
 
-// ---------- REGISTER ----------
+// ---------- REGISTER VOLUNTEER ----------
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) return res.json({ success: false, message: "All fields required" });
@@ -108,7 +117,30 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// ---------- LOGIN ----------
+// ---------- REGISTER DONOR ----------
+app.post("/register-donor", async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) return res.json({ success: false, message: "All fields required" });
+
+  try {
+    const password_hash = await bcrypt.hash(password, 10);
+    const sql = `INSERT INTO donor (name, email, password_hash) VALUES (?, ?, ?)`;
+    db.run(sql, [name, email, password_hash], function (err) {
+      if (err) {
+        console.error("Donor registration error:", err);
+        if (err.code === "SQLITE_CONSTRAINT") return res.json({ success: false, message: "Email already exists" });
+        return res.json({ success: false, message: "Registration failed" });
+      }
+      console.log(`✅ Donor registered with ID: ${this.lastID}`);
+      return res.json({ success: true, message: "Registered", donor_id: this.lastID });
+    });
+  } catch (e) {
+    console.error("Hashing error:", e);
+    return res.json({ success: false, message: "Server error" });
+  }
+});
+
+// ---------- LOGIN VOLUNTEER ----------
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
@@ -130,6 +162,33 @@ app.post("/login", (req, res) => {
       return res.json({ success: true, message: "Login successful", volunteer_id: row.volunteer_id, name: row.name });
     } catch (e) {
       console.error("Login compare error:", e);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
+});
+
+// ---------- LOGIN DONOR ----------
+app.post("/login-donor", (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
+
+  const sql = `SELECT * FROM donor WHERE email = ?`;
+  db.get(sql, [email], async (err, row) => {
+    if (err) {
+      console.error("Donor login DB error:", err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
+    if (!row) return res.status(401).json({ success: false, message: "Invalid email or password" });
+
+    try {
+      const valid = await bcrypt.compare(password, row.password_hash);
+      if (!valid) return res.status(401).json({ success: false, message: "Invalid email or password" });
+
+      // success
+      console.log(`✅ Donor login successful for donor_id=${row.donor_id}`);
+      return res.json({ success: true, message: "Login successful", donor_id: row.donor_id, name: row.name });
+    } catch (e) {
+      console.error("Donor login compare error:", e);
       return res.status(500).json({ success: false, message: "Server error" });
     }
   });
