@@ -40,12 +40,11 @@ import VolunteerLogin from "./volunteerlogin";
 import Register from "./register";
 import StudentForm from "./studentform";
 
-=======
 import VolunteerLogin from "./volunteerlogin";  // import volunteer login
 import Register from "./register";              // import register
 import StudentForm from "./studentform";        // import student form
 import StudentDashboard from "./studentdashboard";
->>>>>>> c9069c44d261769edaf1de5381fec5a7b348344c
+
 
 function App() {
   return (
