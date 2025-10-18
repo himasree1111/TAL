@@ -2,9 +2,9 @@
   "success": true,
   "volunteer": {
     "id": 1,
-    "name": "Anjali Rao",
-    "email": "anjali@example.com",
-    "password": "password123", 
+    "name": "Priya Sharma",
+    "email": "priya@example.com",
+    "password": "Password@123", 
     "role": "Field Volunteer",
     "avatar": ""
   }
