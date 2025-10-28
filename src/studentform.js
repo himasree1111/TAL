@@ -308,8 +308,11 @@ export default function StudentForm() {
               />
             </label>
           </div>
+          </div>
 
           {/* Academic Data: School and Class */}
+           <div className="section">
+          <h2>2. Academic Data</h2>
           <div className="form-group">
             <label>
               <span className="field-label">Name of School and college<span className="required">*</span></span>

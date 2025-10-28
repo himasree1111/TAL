@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function DonorLogin() {
+function DonorLogin({ setDonorLoggedIn }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,7 +15,8 @@ function DonorLogin() {
 
     if (email === mockDonor.email && password === mockDonor.password) {
       setError("");
-      navigate("/donor-dashboard");  // redirect to dashboard
+      setDonorLoggedIn(true);        // mark donor as logged in
+      navigate("/donor/dashboard");  // redirect to dashboard
     } else {
       setError("Invalid credentials. Please try again.");
     }
@@ -44,7 +45,7 @@ function DonorLogin() {
           style={{ width: "100%", padding: "0.75rem", marginBottom: "1rem", borderRadius: "0.5rem", border: "1px solid #ccc" }}
         />
 
-        <button type="submit" style={{ width: "100%", padding: "0.75rem", background: "#2196F3", color: "white", borderRadius: "0.5rem" }}>
+        <button type="submit" style={{ width: "100%", padding: "0.75rem", background: "#B6E137", color: "white", borderRadius: "0.5rem" }}>
           Login
         </button>
 
