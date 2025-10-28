@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function DonorLogin({ setDonorLoggedIn }) {
+function DonorLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,8 +15,8 @@ function DonorLogin({ setDonorLoggedIn }) {
 
     if (email === mockDonor.email && password === mockDonor.password) {
       setError("");
-      setDonorLoggedIn(true);        // mark donor as logged in
-      navigate("/donor/dashboard");  // redirect to dashboard
+          // mark donor as logged in
+      navigate("/donor-dashboard");  // redirect to dashboard
     } else {
       setError("Invalid credentials. Please try again.");
     }
