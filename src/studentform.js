@@ -372,64 +372,7 @@ export default function StudentForm() {
           </div>
         </div>
 
-        {/* Academic Data */}
-        <div className="section">
-          <h2>2. Academic Details</h2>
-          <div className="form-group">
-            <label>
-              Name of School/College
-              <input 
-                type="text" 
-                name="school" 
-                value={formData.school}
-                onChange={handleInputChange}
-                required
-              />
-            </label>
-            <label>
-              Class
-              <select
-                name="Class"
-                value={formData.Class || ""}
-                onChange={handleInputChange}
-              >
-                <option value="">Select class</option>
-                <option value="8th">8th</option>
-                <option value="9th">9th</option>
-                <option value="10th">10th</option>
-                <option value="11th">11th</option>
-                <option value="12th">12th</option>
-                <option value="B.Tech 1st Year">B.Tech 1st Year</option>
-                <option value="B.Tech 2nd Year">B.Tech 2nd Year</option>
-                <option value="B.Tech 3rd Year">B.Tech 3rd Year</option>
-                <option value="B.Tech 4th Year">B.Tech 4th Year</option>
-                <option value="B.Com">B.Com</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="form-group">
-            <label>
-             Percentage scored in previous academic year
-              <input 
-                type="text" 
-                name="prev_percent" 
-                value={formData.prev_percent}
-                onChange={handleInputChange}
-              />
-            </label>
-            <label>
-              Percentage scored in present acedemic year
-              <input 
-                type="text" 
-                name="present_percent" 
-                value={formData.present_percent}
-                onChange={handleInputChange}
-              />
-            </label>
-          </div>
-        </div>
+      
 
         {/* Other Data */}
         <div className="section">
