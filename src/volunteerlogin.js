@@ -5,8 +5,11 @@ import supabase from "./supabaseClient";
 export default function VolunteerLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
   const navigate = useNavigate();
 
+  // Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -17,13 +20,7 @@ export default function VolunteerLogin() {
         .eq("email", email)
         .eq("password", password);
 
-      console.log("Supabase response:", { data, error });
-
-      if (error) {
-        alert("Error: " + error.message);
-        console.error("Supabase Error:", error);
-        return;
-      }
+      if (error) throw error;
 
       if (data && data.length > 0) {
         alert("Login successful ✅");
@@ -33,8 +30,42 @@ export default function VolunteerLogin() {
         alert("Invalid email or password ❌");
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      console.error("Login error:", err);
       alert("Something went wrong. Please try again.");
+    }
+  };
+
+  // Handle Registration
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    try {
+      const { data: existingUser } = await supabase
+        .from("volunteers")
+        .select("*")
+        .eq("email", email);
+
+      if (existingUser && existingUser.length > 0) {
+        alert("Email already exists. Please login instead.");
+        setIsRegistering(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("volunteers")
+        .insert([{ name, email, password }])
+        .select();
+
+      if (error) throw error;
+
+      alert("Registration successful ✅ Please login now.");
+      setIsRegistering(false);
+      setEmail("");
+      setPassword("");
+      setName("");
+    } catch (err) {
+      console.error("Registration error:", err);
+      alert("Something went wrong while registering.");
     }
   };
 
@@ -45,7 +76,7 @@ export default function VolunteerLogin() {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        background: "linear-gradient(to bottom right, #f7f9fc, #e3ecf5)",
+        background: "linear-gradient(to bottom right, #c8e0ff, #f2f7ff)",
       }}
     >
       <div
@@ -65,10 +96,28 @@ export default function VolunteerLogin() {
             fontSize: "1.4rem",
           }}
         >
-          Volunteer Login
+          {isRegistering ? "Volunteer Register" : "Volunteer Login"}
         </h2>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={isRegistering ? handleRegister : handleLogin}>
+          {isRegistering && (
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              style={{
+                width: "100%",
+                padding: "9px",
+                marginBottom: "12px",
+                border: "1px solid #ccc",
+                borderRadius: "6px",
+                fontSize: "0.95rem",
+              }}
+            />
+          )}
+
           <input
             type="email"
             placeholder="Email"
@@ -105,7 +154,7 @@ export default function VolunteerLogin() {
             type="submit"
             style={{
               width: "100%",
-              backgroundColor: "#cdcfbdff",
+              backgroundColor: "#4a90e2",
               color: "#fff",
               padding: "10px",
               border: "none",
@@ -115,7 +164,7 @@ export default function VolunteerLogin() {
               fontSize: "1rem",
             }}
           >
-            Login
+            {isRegistering ? "Register" : "Login"}
           </button>
         </form>
 
@@ -124,16 +173,38 @@ export default function VolunteerLogin() {
             textAlign: "center",
             marginTop: "14px",
             fontSize: "0.9rem",
-            color: "#555555ff",
+            color: "#555",
           }}
         >
-          Don’t have an account?{" "}
-          <a
-            href="/register"
-            style={{ color: "#007bff", textDecoration: "none", fontWeight: 500 }}
-          >
-            Register
-          </a>
+          {isRegistering ? (
+            <>
+              Already have an account?{" "}
+              <span
+                onClick={() => setIsRegistering(false)}
+                style={{
+                  color: "#007bff",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+              >
+                Login
+              </span>
+            </>
+          ) : (
+            <>
+              Don’t have an account?{" "}
+              <span
+                onClick={() => setIsRegistering(true)}
+                style={{
+                  color: "#007bff",
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+              >
+                Register
+              </span>
+            </>
+          )}
         </p>
       </div>
     </div>
