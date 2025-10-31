@@ -11,8 +11,9 @@
 /* --- Container & Base --- */
 .cover-container-minimal {
     min-height: 100vh;
-    
-    background-color: var(--light-background);
+
+    background: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)),
+                url('https://images.pexels.com/photos/1720186/pexels-photo-1720186.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1') center/cover no-repeat;
     color: var(--dark-text);
     font-family: var(--font-family);
     display: flex;
@@ -23,7 +24,9 @@
 .header-minimal {
     width: 100%;
     padding: 20px 0;
+    background-color: #b3dcb3; /* Light professional green background */
     border-bottom: 1px solid #eee;
+    position: static; /* Ensure it scrolls naturally with the page */
 }
 
 .header-inner-minimal {
@@ -42,21 +45,98 @@
     width: auto;
 }
 
-.login-btn-minimal {
-  width: 100px;
-    background-color: var(--dark-text);
-    color: white;
-    border: none;
-    padding: 10px 20px;
+/* Navigation Menu */
+.navigation-menu {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+    flex: 1;
+}
+
+.nav-btn {
+    background: none;
+    border: 1px solid #7FC74A;
+    color: var(--dark-text);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
+    padding: 4px 8px;
     border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.nav-btn:hover {
+    background-color: rgba(127, 199, 74, 0.1);
+    color: var(--dark-text);
+}
+
+.nav-icon {
+    font-size: 16px;
+}
+
+.dropdown-btn {
+    font-size: 16px;
+    padding: 6px 10px;
+    gap: 6px;
+}
+
+.dropdown-btn .nav-icon {
+    font-size: 18px;
+}
+
+/* Dropdown Styles */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.dropdown-arrow {
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
+    z-index: 1000;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--dark-text);
+    font-size: 16px;
+    padding: 10px 15px;
+    text-align: left;
+    cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.login-btn-minimal:hover {
-    background-color: var(--accent-green);
+.dropdown-item:hover {
+    background-color: rgba(127, 199, 74, 0.1);
+    color: var(--accent-green);
 }
 
 /* --- Hero Content --- */
@@ -131,12 +211,60 @@
     font-weight: 600;
 }
 
+/* --- Contact Info Section --- */
+.contact-info-section {
+    padding: 40px 20px;
+    background-color: #f9f9f9;
+    text-align: center;
+    color: var(--dark-text);
+}
+
+/* --- Footer Section --- */
+.footer-section {
+    padding: 20px 20px;
+    background-color: #a5a9a5;
+    text-align: center;
+    color: var(--dark-text);
+    border-top: 1px solid #eee;
+}
+
+.footer-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.footer-container p {
+    margin: 5px 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.contact-info-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.contact-info-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--accent-green);
+}
+
+.contact-details p {
+    font-size: 16px;
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+
+
 /* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
     .header-inner-minimal {
         padding: 0 20px;
     }
-    
+
     .main-headline {
         font-size: 44px;
         line-height: 1.2;
@@ -150,6 +278,18 @@
     .donate-btn-minimal {
         padding: 12px 30px;
         font-size: 16px;
+    }
+
+    .contact-info-section {
+        padding: 30px 20px;
+    }
+
+    .contact-info-title {
+        font-size: 20px;
+    }
+
+    .contact-details p {
+        font-size: 14px;
     }
 }
 */
@@ -168,7 +308,7 @@ html, body, #root {
 
 /* Full-bleed background that covers the viewport (desktop-optimized) */
 .cover-container {
-  width: 500%;
+  width: 100%;
   min-height: 100%;
   display: flex;
   flex-direction: column;
