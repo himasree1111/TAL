@@ -1,7 +1,16 @@
 import React, { useState } from "react";
 import "./studentdashboard.css";
+import { useNavigate } from "react-router-dom";
+import supabase from "./supabaseClient";
 
 const StudentDashboard = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/student-login");
+  };
+
   const [student] = useState({
     name: "Katie Johnson",
     studentId: "STU2024001",
@@ -52,20 +61,29 @@ const StudentDashboard = () => {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case "high": return "#e74c3c";
-      case "medium": return "#f39c12";
-      case "low": return "#27ae60";
-      default: return "#ccc";
+      case "high":
+        return "#e74c3c";
+      case "medium":
+        return "#f39c12";
+      case "low":
+        return "#27ae60";
+      default:
+        return "#ccc";
     }
   };
 
   const getAlertIcon = (type) => {
     switch (type) {
-      case "workshop": return "📚";
-      case "deadline": return "⏰";
-      case "fee": return "💰";
-      case "event": return "🎯";
-      default: return "🔔";
+      case "workshop":
+        return "📚";
+      case "deadline":
+        return "⏰";
+      case "fee":
+        return "💰";
+      case "event":
+        return "🎯";
+      default:
+        return "🔔";
     }
   };
 
@@ -84,6 +102,10 @@ const StudentDashboard = () => {
           <div className="user-info">
             <span>Welcome, {student.name}!</span>
             <div className="student-id">{student.studentId}</div>
+            {/* ✅ Logout Button */}
+            <button onClick={handleLogout} className="logout-btn">
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -93,18 +115,37 @@ const StudentDashboard = () => {
         <aside className="sidebar">
           <div className="sidebar-card">
             <h3>Student Profile</h3>
-            <p><strong>Program:</strong> {student.program}</p>
-            <p><strong>Semester:</strong> {student.semester}</p>
-            <p><strong>Enrollment:</strong> {student.enrollmentDate}</p>
-            <p><strong>Email:</strong> {student.email}</p>
+            <p>
+              <strong>Program:</strong> {student.program}
+            </p>
+            <p>
+              <strong>Semester:</strong> {student.semester}
+            </p>
+            <p>
+              <strong>Enrollment:</strong> {student.enrollmentDate}
+            </p>
+            <p>
+              <strong>Email:</strong> {student.email}
+            </p>
           </div>
 
           <div className="sidebar-card">
             <h3>Academic Performance</h3>
             <div className="stats">
-              <div><h2>{academicData.cgpa}</h2><span>CGPA</span></div>
-              <div><h2>{academicData.attendance}%</h2><span>Attendance</span></div>
-              <div><h2>{academicData.completedCredits}/{academicData.totalCredits}</h2><span>Credits</span></div>
+              <div>
+                <h2>{academicData.cgpa}</h2>
+                <span>CGPA</span>
+              </div>
+              <div>
+                <h2>{academicData.attendance}%</h2>
+                <span>Attendance</span>
+              </div>
+              <div>
+                <h2>
+                  {academicData.completedCredits}/{academicData.totalCredits}
+                </h2>
+                <span>Credits</span>
+              </div>
             </div>
           </div>
 
@@ -115,7 +156,9 @@ const StudentDashboard = () => {
             <p>Paid (Student): ₹{paidByStudent}</p>
             <p>Due: ₹{dueAmount}</p>
             <p>Due Date: {feeStatus.dueDate}</p>
-            <span className={`status ${displayStatus.toLowerCase().replace(" ", "_")}`}>
+            <span
+              className={`status ${displayStatus.toLowerCase().replace(" ", "_")}`}
+            >
               {displayStatus}
             </span>
           </div>
