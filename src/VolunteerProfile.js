@@ -1,55 +1,46 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./StudentForm.css"; // reuse existing styles and add enhancements
+import supabase from "./supabaseClient";
 
 export default function VolunteerProfile() {
-  const [profile, setProfile] = useState(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const raw = localStorage.getItem("volunteerProfile");
-    if (raw) {
-      try {
-        setProfile(JSON.parse(raw));
-      } catch (e) {
-        console.error("Failed to parse volunteerProfile", e);
-      }
-    }
-  }, []);
+    const fetchUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      console.log("Supabase user session:", user); // Debug: see user session
+      console.log("Error (if any):", error);
 
-  const handleLogout = () => {
-    localStorage.removeItem("volunteerProfile");
-    navigate("/volunteerlogin");
+      if (user) {
+        setName(user.user_metadata?.full_name || "Volunteer");
+        setEmail(user.email || "");
+      } else {
+        console.log("No logged-in user detected. Redirecting to /cover");
+        navigate("/cover"); // redirect if no user
+      }
+    };
+    fetchUser();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.log("Logout error:", error);
+    else console.log("Logged out successfully");
+
+    navigate("/CoverPage"); // redirect to cover page after logout
   };
 
-  if (!profile) return null;
-
-  // derive initials if no avatar provided
-  const initials = ((profile.name || "").split(" ") || [])
-    .filter(Boolean)
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   return (
-    <div className="volunteer-profile" role="region" aria-label="Volunteer profile">
-      <div className="vp-left">
-        {profile.photo ? (
-          <img src={profile.photo} alt={`${profile.name} avatar`} className="vp-avatar" />
-        ) : (
-          <div className="vp-avatar vp-initials">{initials}</div>
-        )}
+    <div className="volunteer-profile" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "15px", padding: "10px" }}>
+      <div className="profile-info" style={{ textAlign: "right" }}>
+        <span className="profile-name" style={{ display: "block", fontWeight: "bold" }}>{name}</span>
+        <span className="profile-email" style={{ display: "block", fontSize: "0.9em" }}>{email}</span>
       </div>
-      <div className="vp-right">
-        <div className="vp-name">{profile.name}</div>
-        <div className="vp-role">{profile.role}</div>
-        <div className="vp-email">{profile.email}</div>
-        <div className="vp-actions">
-          <button className="vp-btn vp-view" onClick={() => navigate('/volunteerprofile')}>View</button>
-          <button className="vp-btn vp-logout" onClick={handleLogout}>Logout</button>
-        </div>
-      </div>
+      <button className="logout-btn" onClick={handleLogout} style={{ padding: "5px 12px", cursor: "pointer" }}>
+        Logout
+      </button>
     </div>
   );
 }

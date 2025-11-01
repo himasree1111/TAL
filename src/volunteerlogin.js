@@ -1,137 +1,92 @@
-import React, { useState } from "react";
+// src/StudentLogin.js
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import supabase from "./supabaseClient";
+import "./studentlogin.css";
 
-export default function VolunteerLogin() {
+export default function StudentLogin() {
+  const [isSignIn, setIsSignIn] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Handle Login
-  const handleLogin = async (e) => {
+  // ✅ Check session on load
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/studentform");
+      } else {
+        setLoading(false);
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
+  if (loading) return <p>Loading...</p>;
+
+  // ✅ Handle sign in & sign up
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const { data, error } = await supabase
-        .from("volunteers")
-        .select("*")
-        .eq("email", email)
-        .eq("password", password);
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        alert("Login successful ✅");
-        localStorage.setItem("volunteerProfile", JSON.stringify(data[0]));
+      if (isSignIn) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        toast.success("Signed in successfully!");
         navigate("/studentform");
       } else {
-        alert("Invalid email or password ❌");
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name } },
+        });
+        if (error) throw error;
+        toast.success("Account created successfully!");
       }
     } catch (err) {
-      console.error("Login error:", err);
-      alert("Something went wrong. Please try again.");
+      toast.error(err.message);
     }
   };
 
-  // Handle Registration
-  const handleRegister = async (e) => {
-    e.preventDefault();
-
-    try {
-      const { data: existingUser } = await supabase
-        .from("volunteers")
-        .select("*")
-        .eq("email", email);
-
-      if (existingUser && existingUser.length > 0) {
-        alert("Email already exists. Please login instead.");
-        setIsRegistering(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("volunteers")
-        .insert([{ name, email, password }])
-        .select();
-
-      if (error) throw error;
-
-      alert("Registration successful ✅ Please login now.");
-      setIsRegistering(false);
-      setEmail("");
-      setPassword("");
-      setName("");
-    } catch (err) {
-      console.error("Registration error:", err);
-      alert("Something went wrong while registering.");
-    }
+  // ✅ Google Sign-In
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + "/student-dashboard" },
+    });
+    if (error) toast.error(error.message);
   };
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "linear-gradient(to bottom right, #c8e0ff, #f2f7ff)",
-      }}
-    >
-      <div
-        style={{
-          width: "360px",
-          padding: "25px 20px",
-          borderRadius: "12px",
-          backgroundColor: "#fff",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h2
-          style={{
-            textAlign: "center",
-            marginBottom: "18px",
-            color: "#333",
-            fontSize: "1.4rem",
-          }}
-        >
-          {isRegistering ? "Volunteer Register" : "Volunteer Login"}
-        </h2>
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1>{isSignIn ? "Sign In" : "Sign Up"}</h1>
 
-        <form onSubmit={isRegistering ? handleRegister : handleLogin}>
-          {isRegistering && (
+        <form onSubmit={handleSubmit}>
+          {!isSignIn && (
             <input
               type="text"
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "9px",
-                marginBottom: "12px",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "0.95rem",
-              }}
             />
           )}
 
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{
-              width: "100%",
-              padding: "9px",
-              marginBottom: "12px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              fontSize: "0.95rem",
-            }}
           />
 
           <input
@@ -140,73 +95,26 @@ export default function VolunteerLogin() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{
-              width: "100%",
-              padding: "9px",
-              marginBottom: "18px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              fontSize: "0.95rem",
-            }}
           />
 
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              backgroundColor: "#4a90e2",
-              color: "#fff",
-              padding: "10px",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "1rem",
-            }}
-          >
-            {isRegistering ? "Register" : "Login"}
-          </button>
+          <button type="submit">{isSignIn ? "Sign In" : "Sign Up"}</button>
         </form>
 
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "14px",
-            fontSize: "0.9rem",
-            color: "#555",
-          }}
-        >
-          {isRegistering ? (
-            <>
-              Already have an account?{" "}
-              <span
-                onClick={() => setIsRegistering(false)}
-                style={{
-                  color: "#007bff",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Login
-              </span>
-            </>
-          ) : (
-            <>
-              Don’t have an account?{" "}
-              <span
-                onClick={() => setIsRegistering(true)}
-                style={{
-                  color: "#007bff",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Register
-              </span>
-            </>
-          )}
+        <div className="divider">or</div>
+
+        <button className="google-btn" onClick={handleGoogleSignIn}>
+          Continue with Google
+        </button>
+
+        <p className="switch-text">
+          {isSignIn ? "New here?" : "Already have an account?"}{" "}
+          <span onClick={() => setIsSignIn(!isSignIn)}>
+            {isSignIn ? "Create an account" : "Sign in"}
+          </span>
         </p>
       </div>
+
+      <ToastContainer position="top-center" autoClose={3000} />
     </div>
   );
 }
