@@ -15,7 +15,9 @@ function DonorLogin() {
 
     if (email === mockDonor.email && password === mockDonor.password) {
       setError("");
-          // mark donor as logged in
+      // Store user's name in localStorage (mock name based on email)
+      const userName = email.split('@')[0].replace('.', ' '); // e.g., "donor" from "donor@example.com"
+      localStorage.setItem('donorName', userName);
       navigate("/donor-dashboard");  // redirect to dashboard
     } else {
       setError("Invalid credentials. Please try again.");

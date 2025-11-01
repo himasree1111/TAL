@@ -1,7 +1,4 @@
-# TODO: Implement Quit Navigation in DonorDashboard
-
-- [x] Import useNavigate from 'react-router-dom' in DonorDashboard.js
-- [x] Declare const navigate = useNavigate(); in DonorDashboard component
-- [x] Pass navigate as prop to Sidebar component: <Sidebar navigate={navigate} />
-- [x] Update Quit link in Sidebar to use onClick={() => navigate('/login')} and remove href="#", add cursor pointer style
-- [x] Test the navigation by running the app and clicking Quit
+- [x] Update CoverPage.js to replace LOGIN button with navigation menu (Home, About, Learn More, Roles dropdown)
+- [x] Add dropdown functionality for Roles with options: Volunteer, Student, Donor, Admin
+- [x] Update CoverPage.css for navigation menu styles
+- [x] Test the navigation menu UI (completed via code review)

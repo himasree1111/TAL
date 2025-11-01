@@ -223,6 +223,7 @@ const ImpactFeed = () => (
 // --- Main Donor Dashboard ---
 const DonorDashboard = () => {
   const navigate = useNavigate();
+  const userName = localStorage.getItem('donorName') || 'User';
 
   return (
     <div className="app-container">
@@ -232,7 +233,7 @@ const DonorDashboard = () => {
           <header className="main-header">
             <h1 className="page-title">Donor Impact Dashboard</h1>
             <div className="user-info">
-              <span className="user-name">Monica Ashan</span>
+              <span className="user-name">{userName}</span>
               <div className="user-avatar"></div>
             </div>
           </header>
