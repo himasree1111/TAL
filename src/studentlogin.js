@@ -100,7 +100,7 @@ export default function StudentLogin() {
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <h1>{isSignIn ? "Student Sign In" : "Student Sign Up"}</h1>
+        <h1>{isSignIn ? "Sign In" : "Student Sign Up"}</h1>
 
         <form onSubmit={handleSubmit}>
           {!isSignIn && (
@@ -134,9 +134,6 @@ export default function StudentLogin() {
 
         <div className="divider">or</div>
 
-        <button className="google-btn" onClick={handleGoogleSignIn}>
-          Continue with Google
-        </button>
 
         <p className="switch-text">
           {isSignIn ? "New here?" : "Already have an account?"}{" "}

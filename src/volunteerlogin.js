@@ -79,7 +79,7 @@ export default function VolunteerLogin() {
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <h1>{isSignIn ? "Volunteer Sign In" : "Volunteer Sign Up"}</h1>
+        <h1>{isSignIn ? "Sign In" : "Volunteer Sign Up"}</h1>
 
         <form onSubmit={handleSubmit}>
           {!isSignIn && (

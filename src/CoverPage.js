@@ -135,7 +135,7 @@ export default function CoverPage() {
     } else if (role === 'Donor') {
       navigate('/donorlogin');
     } else if (role === 'Admin') {
-      navigate('/admin-dashboard');
+      navigate('/adminlogin');
     }
   };
 

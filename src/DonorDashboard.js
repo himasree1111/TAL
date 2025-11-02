@@ -75,7 +75,7 @@ const Sidebar = ({ navigate }) => (
             {item.name}
           </a>
         ))}
-        <a onClick={() => navigate("/login")} className="nav-item" style={{ cursor: "pointer" }}>
+        <a onClick={() => navigate("/")} className="nav-item" style={{ cursor: "pointer" }}>
           <LogOut size={18} className="nav-icon" />
           Quit
         </a>

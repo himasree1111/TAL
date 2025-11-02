@@ -12,7 +12,7 @@ import StudentForm from "./studentform";
 import StudentDashboard from "./studentdashboard";
 import DonorDashboard from "./DonorDashboard"; // <-- 1. IMPORT DonorDashboard
 import AdminDashboard from "./AdminDashboard"; // admin dashboard
-
+import Adminlogin from "./adminlogin";
 function App() {
   return (
     <Router>
@@ -36,6 +36,7 @@ function App() {
         {/* Donor flow */}
         <Route path="/donor-dashboard" element={<DonorDashboard />} /> {/* <-- 2. ADD NEW ROUTE */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/adminlogin" element={<Adminlogin />} />
       </Routes>
     </Router>
   );
