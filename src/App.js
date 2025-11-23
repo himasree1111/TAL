@@ -13,6 +13,8 @@ import StudentDashboard from "./studentdashboard";
 import DonorDashboard from "./DonorDashboard"; // <-- 1. IMPORT DonorDashboard
 import AdminDashboard from "./AdminDashboard"; // admin dashboard
 import Adminlogin from "./adminlogin";
+import VolunteerDashboard from "./VolunteerDashboard";
+
 function App() {
   return (
     <Router>
@@ -25,6 +27,7 @@ function App() {
 
         {/* Volunteer auth */}
         <Route path="/volunteerlogin" element={<VolunteerLogin />} />
+        <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
         <Route path="/donorlogin" element={<DonorLogin />} />
         <Route path="/register" element={<Register />} />
 

@@ -43,7 +43,7 @@ export default function VolunteerLogin() {
         if (error) throw error;
 
         toast.success("Signed in successfully!");
-        navigate("/studentform");
+        navigate("/volunteer-dashboard");
       } else {
         // VOLUNTEER SIGN-UP 👇 (important)
         const { data, error } = await supabase.auth.signUp({
