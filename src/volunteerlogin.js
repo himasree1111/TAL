@@ -27,7 +27,7 @@ export default function VolunteerLogin() {
     checkSession();
   }, [navigate]);
 
-  if (loading) return <p>Loading...</p>;
+
 
   // ✅ Handle sign in & sign up
   const handleSubmit = async (e) => {
