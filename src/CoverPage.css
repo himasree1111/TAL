@@ -55,24 +55,27 @@
 }
 
 .nav-btn {
-    background: none;
-    border: 1px solid #7FC74A;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
     color: var(--dark-text);
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s, color 0.2s;
+    padding: 12px 16px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 4px;
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .nav-btn:hover {
-    background-color: rgba(127, 199, 74, 0.1);
-    color: var(--dark-text);
+    background: rgba(127, 199, 74, 0.8);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .nav-icon {

@@ -441,9 +441,9 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td>
-                          <button className="btn small" onClick={() => setViewStudent(s)}>View Profile</button>
-                          <button className="btn small" onClick={() => openEditModal(s)}>Edit</button>
-                          <button className="btn small danger" onClick={() => handleDelete(s.id)}>Delete</button>
+                          <button className="btn small icon-btn" onClick={() => setViewStudent(s)} title="View Profile">👁️</button>
+                          <button className="btn small icon-btn" onClick={() => openEditModal(s)} title="Edit">✏️</button>
+                          <button className="btn small danger icon-btn" onClick={() => handleDelete(s.id)} title="Delete">🗑️</button>
                         </td>
                       </tr>
                     ))}
