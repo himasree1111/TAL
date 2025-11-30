@@ -361,7 +361,7 @@ export default function StudentForm() {
               <input type="text" name="contact" value={formData.contact} onChange={handleInputChange} required />
             </label>
             <label>
-              <span className="field-label">Whatsapp Number Communication<span className="required">*</span></span>
+              <span className="field-label">Whatsapp Number For Communication<span className="required">*</span></span>
               <input type="text" name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} required />
             </label>
             <label>
