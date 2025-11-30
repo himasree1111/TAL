@@ -278,6 +278,8 @@ export default function StudentForm() {
       student_signature: null,
     });
 
+    
+
 
     } catch (err) {
       console.error("Unexpected error on submit:", err);
@@ -428,105 +430,129 @@ export default function StudentForm() {
         </div>
 
         {/* Other Details */}
-        <div className="section">
-  <h2>3. Other Details</h2>
+<h2>3. Other Details</h2>
 
-  {/* --- Does she work to support her family? --- */}
-  <div className="form-group">
+{/* --- Does she work to support her family? --- */}
+<div className="form-group">
+  <label>Does she work to support her family?</label>
+
+  <div className="radio-inline">
     <label>
-      Does she work to support her family?
-      <select
+      <input
+        type="radio"
         name="does_work"
-        value={formData.does_work || ""}
-        onChange={handleInputChange}
-      >
-        <option value="">Select</option>
-        <option value="YES">Yes</option>
-        <option value="NO">No</option>
-      </select>
-    </label>
-
-    {/* Show ONLY if yes */}
-    {formData.does_work === "YES" && (
-      <label>
-        What kind of job does she do?
-        <input
-          type="text"
-          name="job"
-          value={formData.job}
-          onChange={handleInputChange}
-          placeholder="Describe her occupation"
-        />
-      </label>
-    )}
-  </div>
-
-  {/* --- Career Aspiration --- */}
-  <div className="form-group">
-    <label>
-      What are her career aspirations and planned courses for the next two years?
-      <input
-        type="text"
-        name="aspiration"
-        value={formData.aspiration}
+        value="YES"
+        checked={formData.does_work === "YES"}
         onChange={handleInputChange}
       />
-    </label>
-  </div>
-
-  {/* --- Scholarship Question --- */}
-  <div className="form-group">
-    <label>
-      Is she getting any scholarship / Govt help / financial assistance?
-      <select
-        name="has_scholarship"
-        value={formData.has_scholarship || ""}
-        onChange={handleInputChange}
-      >
-        <option value="">Select</option>
-        <option value="YES">Yes</option>
-        <option value="NO">No</option>
-      </select>
+      Yes
     </label>
 
-    {/* Show ONLY if yes */}
-    {formData.has_scholarship === "YES" && (
-      <label>
-        Scholarship / Assistance Details
-        <input
-          type="text"
-          name="Scholarship"
-          value={formData.scholarship}
-          onChange={handleInputChange}
-          placeholder="Enter Scholarship Details"
-        />
-      </label>
-    )}
-  </div>
-
-  {/* --- Other Questions --- */}
-  <div className="form-group">
     <label>
-      Achievement Certificates
       <input
-        type="text"
-        name="certificates"
-        value={formData.certificates}
+        type="radio"
+        name="does_work"
+        value="NO"
+        checked={formData.does_work === "NO"}
         onChange={handleInputChange}
       />
-    </label>
-
-    <label>
-      From how long are they living in this area? (Is she a migrant worker?)
-      <input
-        type="text"
-        name="years_area"
-        value={formData.years_area}
-        onChange={handleInputChange}
-      />
+      No
     </label>
   </div>
+
+  {formData.does_work === "YES" && (
+    <label className="full-width">
+      What kind of job does she do?
+      <input
+        type="text"
+        name="job"
+        value={formData.job}
+        onChange={handleInputChange}
+        placeholder="Describe her occupation"
+      />
+    </label>
+  )}
 </div>
+
+{/* --- Career Aspiration --- */}
+<div className="form-group">
+  <label className="full-width">
+    What are her career aspirations and planned courses for the next two years?
+    <input
+      type="text"
+      name="aspiration"
+      value={formData.aspiration}
+      onChange={handleInputChange}
+    />
+  </label>
+</div>
+
+{/* --- Scholarship Question --- */}
+<div className="form-group">
+  <label>Is she getting any scholarship / Govt help / financial assistance?</label>
+
+  <div className="radio-inline">
+    <label>
+      <input
+        type="radio"
+        name="has_scholarship"
+        value="YES"
+        checked={formData.has_scholarship === "YES"}
+        onChange={handleInputChange}
+      />
+      Yes
+    </label>
+
+    <label>
+      <input
+        type="radio"
+        name="has_scholarship"
+        value="NO"
+        checked={formData.has_scholarship === "NO"}
+        onChange={handleInputChange}
+      />
+      No
+    </label>
+  </div>
+
+  {formData.has_scholarship === "YES" && (
+    <label className="full-width">
+      Scholarship / Assistance Details
+      <input
+        type="text"
+        name="scholarship"
+        value={formData.scholarship}
+        onChange={handleInputChange}
+        placeholder="Enter Scholarship Details"
+      />
+    </label>
+  )}
+</div>
+
+{/* --- Other Questions --- */}
+<div className="form-group">
+  <label className="full-width">
+    Achievement Certificates
+    <input
+      type="text"
+      name="certificates"
+      value={formData.certificates}
+      onChange={handleInputChange}
+    />
+  </label>
+
+  <label className="full-width">
+    From how long are they living in this area? (Is she a migrant worker?)
+    <input
+      type="text"
+      name="years_area"
+      value={formData.years_area}
+      onChange={handleInputChange}
+    />
+  </label>
+</div>
+
+
 
 
         {/* Document Upload */}
