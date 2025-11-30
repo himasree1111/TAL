@@ -1,160 +1,89 @@
+/* --- GLOBAL RESET --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* --- MAIN CONTAINER --- */
 .form-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
+  width: 100%;
+  max-width: 1100px;  /* Increased width */
+  margin: 20px auto;
+  padding: 25px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.15);
 }
 
 .form-title {
   text-align: center;
-  color: #333;
-  margin-bottom: 30px;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+/* --- SECTION HEADER --- */
+.section h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: #111;
+  border-left: 5px solid #007bff;
+  padding-left: 10px;
 }
 
 .section {
-  margin-bottom: 30px;
+  margin-bottom: 35px;
   padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #f9f9f9;
+  background: #fafafa;
+  border-radius: 10px;
 }
 
-.section h2 {
-  color: #444;
-  margin-top: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #ddd;
-}
-
-/* Use CSS Grid for consistent alignment of inputs */
+/* --- FORM GROUPS --- */
 .form-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  margin-bottom: 20px;
-  align-items: start;
 }
 
-/* Ensure labels and inputs stretch and don't overflow */
 .form-group label {
+  flex: 1 1 calc(50% - 20px); /* Two fields per row */
+  font-size: 16px;
+  font-weight: 600;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* prevents flex children overflow in grid */
-  font-weight: bold;
+}
+
+.form-group .full-width {
+  flex: 1 1 100%;
+}
+
+input,
+select,
+textarea {
+  margin-top: 6px;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 100%;
+}
+
+/* Read-only AGE box */
+.readonly-age {
+  background: #f0f0f0;
   color: #555;
 }
 
-/* Make certain labels span the full width of the form grid */
-.form-group label.full-width {
-  grid-column: 1 / -1;
-}
-
-/* Hide number input spinner for readonly age input */
-.readonly-age::-webkit-outer-spin-button,
-.readonly-age::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.readonly-age {
-  appearance: none;
-  -moz-appearance: textfield; /* Firefox */
-}
-
-/* Volunteer profile small box */
-.volunteer-profile {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  background: linear-gradient(180deg, #ffffff, #fbfbfb);
-  border: 1px solid rgba(0,0,0,0.06);
-  padding: 12px;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(20,24,40,0.08);
-  width: 280px;
-  z-index: 1000;
-  font-size: 14px;
-  display: flex;
-  gap: 10px;
-}
-.vp-left { flex: 0 0 56px; display:flex; align-items:center; }
-.vp-right { flex: 1 1 auto; display:flex; flex-direction:column; }
-.vp-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(0,0,0,0.06); }
-.vp-initials { display:flex; align-items:center; justify-content:center; background:#4a90e2; color:#fff; font-weight:700; font-size:18px; }
-.vp-name { font-weight:700; color:#111; margin-bottom:2px; }
-.vp-role { font-size:12px; color:#6b7280; margin-bottom:6px; }
-.vp-email { font-size:12px; color:#374151; margin-bottom:8px; word-break:break-word; }
-.vp-actions { display:flex; gap:8px; }
-.vp-btn { padding:6px 8px; border-radius:6px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer; font-size:13px; }
-.vp-btn.vp-view { background: linear-gradient(90deg,#eef2ff,#f9fbff); color:#1f2937; }
-.vp-btn.vp-logout { background:#ef4444; color:#fff; border:none; }
-.vp-btn.vp-logout:hover { background:#dc2626; }
-
-/* Keep the field-label layout */
-.field-label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-/* Required indicator */
+/* --- REQUIRED STAR --- */
 .required {
   color: red;
-  display: inline;
-  font-weight: bold;
+  margin-left: 3px;
 }
 
-/* Inputs take full width of their grid cell */
-.form-group input,
-.form-group select,
-.upload-field input,
-.upload-field select,
-.form-group textarea {
-  padding: 10px;
-  margin-top: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 16px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Submit section */
-.submit-container {
-  text-align: center;
-  margin-top: 30px;
-}
-
-.submit-container button {
-  padding: 12px 30px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 18px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.submit-container button:hover:not(:disabled) {
-  background-color: #45a049;
-}
-
-.submit-container button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-/* Upload section styles */
+/* --- UPLOAD FIELDS --- */
 .upload-field {
   margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.upload-field .label {
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: #555;
 }
 
 .upload-controls {
@@ -164,251 +93,118 @@
 }
 
 .upload-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background-color: #f0f0f0;
-  border: 1px dashed #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 20px;
-  color: #666;
-}
-
-.upload-btn:hover {
-  background-color: #e0e0e0;
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  color: #28a745;
-  font-weight: 500;
-  word-break: break-all;
-  max-width: calc(100% - 60px);
-}
-
-.tick {
-  margin-right: 5px;
-  font-weight: bold;
-}
-
-.plus-icon {
-  font-weight: bold;
-}
-
-/* Bank account section */
-.bank-account-section h3 {
-  color: #444;
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 18px;
-}
-
-.bank-account-section .form-group {
-  margin-bottom: 10px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .form-group {
-    grid-template-columns: 1fr;
-  }
-
-  .required {
-    color: red;
-    display: inline;
-    font-weight: bold;
-  }
-
-  .upload-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .upload-btn {
-    margin-bottom: 10px;
-  }
-}
-
-
-/* General form styles */
-.form-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.form-title {
-  text-align: center;
-  color: #333;
-  margin-bottom: 30px;
-}
-
-.section {
-  margin-bottom: 30px;
-  padding: 20px;
-  border: 1px solid #ddd;
+  background: #007bff;
+  color: white;
+  padding: 8px 15px;
   border-radius: 8px;
-  background-color: #f9f9f9;
-}
-
-.section h2 {
-  color: #444;
-  margin-top: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #ddd;
-}
-
-/* Use CSS Grid for consistent alignment of inputs */
-.form-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-  align-items: start;
-}
-
-/* Ensure labels and inputs stretch and don't overflow */
-.form-group label {
-  display: flex;
-  flex-direction: column;
-  min-width: 0; /* prevents flex children overflow in grid */
-  font-weight: bold;
-  color: #555;
-}
-
-/* Keep the field-label layout */
-.field-label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-/* Required indicator */
-label .required {
-  color: red;
-  display: inline-block;
-  margin-left: 2px;
-  font-weight: bold;
-}
-
-/* Inputs take full width of their grid cell */
-.form-group input,
-.upload-field input {
-  padding: 10px;
-  margin-top: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 16px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Submit section */
-.submit-container {
-  text-align: center;
-  margin-top: 30px;
-}
-
-.submit-container button {
-  padding: 12px 30px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 18px;
   cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.submit-container button:hover:not(:disabled) {
-  background-color: #45a049;
-}
-
-.submit-container button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-/* Upload section styles */
-.upload-field {
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.upload-field .label {
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: #555;
-}
-
-.upload-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.upload-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background-color: #f0f0f0;
-  border: 1px dashed #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 20px;
-  color: #666;
-}
-
-.upload-btn:hover {
-  background-color: #e0e0e0;
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  color: #28a745;
-  font-weight: 500;
-  word-break: break-all;
-  max-width: calc(100% - 60px);
-}
-
-.tick {
-  margin-right: 5px;
-  font-weight: bold;
 }
 
 .plus-icon {
+  font-size: 20px;
   font-weight: bold;
 }
 
-/* Responsive adjustments */
+.file-info {
+  font-size: 15px;
+  color: green;
+  font-weight: 600;
+}
+
+.tick {
+  color: green;
+  margin-right: 5px;
+}
+
+/* --- SUBMIT BUTTON --- */
+.submit-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+button[type="submit"] {
+  background: #28a745;
+  padding: 14px 35px;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background: #218838;
+}
+
+/* --- RESPONSIVE FIXES --- */
 @media (max-width: 768px) {
-  .form-group {
-    grid-template-columns: 1fr;
+  .form-group label {
+    flex: 1 1 100%;
   }
-
-  label .required {
-    color: red;
-    display: inline-block;
-    margin-left: 2px;
-    font-weight: bold;
-  }
-
-  .upload-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .upload-btn {
-    margin-bottom: 10px;
+  
+  .form-title {
+    font-size: 26px;
   }
 }
-/* ...existing code... */
+/* ---------- TOP RIGHT BOX ---------- */
+.top-box {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 12px 18px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border-left: 5px solid #2d6a4f;
+  z-index: 2000;
+}
+
+.top-box-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+  color: #333;
+  line-height: 1.3;
+}
+
+.top-box-text strong {
+  font-size: 16px;
+  color: #2d6a4f;
+}
+
+.top-logout-btn {
+  background: #2d6a4f;
+  color: #fff;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+}
+
+.top-logout-btn:hover {
+  background: #20563d;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .top-box {
+    right: 10px;
+    top: 10px;
+    padding: 10px 14px;
+  }
+  .top-logout-btn {
+    font-size: 13px;
+    padding: 7px 12px;
+  }
+}
+

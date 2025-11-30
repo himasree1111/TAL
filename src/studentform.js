@@ -429,40 +429,105 @@ export default function StudentForm() {
 
         {/* Other Details */}
         <div className="section">
-          <h2>3. Other Details</h2>
-          <div className="form-group">
-            <label>
-              Fee Structure
-              <input type="text" name="fee" value={formData.fee} onChange={handleInputChange} />
-            </label>
-            <label>
-              Does she work to support her family, If Yes what kind of job?
-              <input type="text" name="job" value={formData.job} onChange={handleInputChange} />
-            </label>
-          </div>
+  <h2>3. Other Details</h2>
 
-          <div className="form-group">
-            <label>
-              What are her career aspirations and planned courses for the next two years?
-              <input type="text" name="aspiration" value={formData.aspiration} onChange={handleInputChange} />
-            </label>
-            <label>
-              Is she currently getting any scholarship or Govt help or any financial assistance for her education or health
-              <input type="text" name="scholarship" value={formData.scholarship} onChange={handleInputChange} />
-            </label>
-          </div>
+  {/* --- Does she work to support her family? --- */}
+  <div className="form-group">
+    <label>
+      Does she work to support her family?
+      <select
+        name="does_work"
+        value={formData.does_work || ""}
+        onChange={handleInputChange}
+      >
+        <option value="">Select</option>
+        <option value="YES">Yes</option>
+        <option value="NO">No</option>
+      </select>
+    </label>
 
-          <div className="form-group">
-            <label>
-              Achievement Certificates
-              <input type="text" name="certificates" value={formData.certificates} onChange={handleInputChange} />
-            </label>
-            <label>
-              From how long they living in this Area. Is she temporary living (migrant worker)?
-              <input type="text" name="years_area" value={formData.years_area} onChange={handleInputChange} />
-            </label>
-          </div>
-        </div>
+    {/* Show ONLY if yes */}
+    {formData.does_work === "YES" && (
+      <label>
+        What kind of job does she do?
+        <input
+          type="text"
+          name="job"
+          value={formData.job}
+          onChange={handleInputChange}
+          placeholder="Describe her occupation"
+        />
+      </label>
+    )}
+  </div>
+
+  {/* --- Career Aspiration --- */}
+  <div className="form-group">
+    <label>
+      What are her career aspirations and planned courses for the next two years?
+      <input
+        type="text"
+        name="aspiration"
+        value={formData.aspiration}
+        onChange={handleInputChange}
+      />
+    </label>
+  </div>
+
+  {/* --- Scholarship Question --- */}
+  <div className="form-group">
+    <label>
+      Is she getting any scholarship / Govt help / financial assistance?
+      <select
+        name="has_scholarship"
+        value={formData.has_scholarship || ""}
+        onChange={handleInputChange}
+      >
+        <option value="">Select</option>
+        <option value="YES">Yes</option>
+        <option value="NO">No</option>
+      </select>
+    </label>
+
+    {/* Show ONLY if yes */}
+    {formData.has_scholarship === "YES" && (
+      <label>
+        Scholarship / Assistance Details
+        <input
+          type="text"
+          name="Scholarship"
+          value={formData.scholarship}
+          onChange={handleInputChange}
+          placeholder="Enter Scholarship Details"
+        />
+      </label>
+    )}
+  </div>
+
+  {/* --- Other Questions --- */}
+  <div className="form-group">
+    <label>
+      Achievement Certificates
+      <input
+        type="text"
+        name="certificates"
+        value={formData.certificates}
+        onChange={handleInputChange}
+      />
+    </label>
+
+    <label>
+      From how long are they living in this area? (Is she a migrant worker?)
+      <input
+        type="text"
+        name="years_area"
+        value={formData.years_area}
+        onChange={handleInputChange}
+      />
+    </label>
+  </div>
+</div>
+
 
         {/* Document Upload */}
         <div className="section">
