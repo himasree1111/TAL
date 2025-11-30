@@ -361,7 +361,7 @@ export default function StudentForm() {
               <input type="text" name="contact" value={formData.contact} onChange={handleInputChange} required />
             </label>
             <label>
-              <span className="field-label">Whatsapp Number<span className="required">*</span></span>
+              <span className="field-label">Whatsapp Number Communication<span className="required">*</span></span>
               <input type="text" name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} required />
             </label>
             <label>
@@ -369,7 +369,7 @@ export default function StudentForm() {
               <input type="text" name="student_contact" value={formData.student_contact || ""} onChange={handleInputChange} />
             </label>
             <label>
-              <span className="field-label">Email ( For Further Communication)<span className="required">*</span></span>
+              <span className="field-label"> Enter Email For Further Communication<span className="required">*</span></span>
               <input type="email" name="email" value={formData.email} onChange={handleInputChange} required />
             </label>
 
@@ -382,7 +382,7 @@ export default function StudentForm() {
               <input type="text" name="parents_full_names" value={formData.parents_full_names || ""} placeholder="e.g. Asha Devi (Mother), Rajesh Kumar (Father)" onChange={handleInputChange} required />
             </label>
             <label className="full-width">
-              <span className="field-label">Who are the earning members and what do they do?<span className="required">*</span></span>
+              <span className="field-label">Who are the earning members and their Occupation?<span className="required">*</span></span>
               <input type="text" name="earning_members" value={formData.earning_members || ""} placeholder="e.g. Father - Farmer; Mother - Sewing work" onChange={handleInputChange} required />
             </label>
           </div>
@@ -393,7 +393,7 @@ export default function StudentForm() {
           <h2>2. Academic Data</h2>
           <div className="form-group">
             <label>
-              <span className="field-label">Name of School/College<span className="required">*</span></span>
+              <span className="field-label">Name of School/College/University<span className="required">*</span></span>
               <input type="text" name="school" value={formData.school} onChange={handleInputChange} required />
             </label>
             <label>
