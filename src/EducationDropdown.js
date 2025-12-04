@@ -1,6 +1,6 @@
 import React from "react";
 
-const EducationDropdown = ({ educationCategory, educationSubcategory, educationYear, onChange }) => {
+const EducationDropdown = ({ educationcategory, educationsubcategory, educationyear, onChange }) => {
   // Education dropdown data with hierarchical structure
   const educationData = {
     "SCHOOL": {
@@ -78,18 +78,18 @@ const EducationDropdown = ({ educationCategory, educationSubcategory, educationY
 
   const educationCategories = Object.keys(educationData);
 
-  const currentData = educationData[educationCategory];
-  const hasSubcategories = currentData && currentData.subcategories;
-  const subcategories = hasSubcategories && currentData.subcategories ? (Array.isArray(currentData.subcategories) ? currentData.subcategories : Object.keys(currentData.subcategories)) : [];
-  const years = hasSubcategories && educationSubcategory && typeof currentData.subcategories === 'object' && currentData.subcategories[educationSubcategory] ? currentData.subcategories[educationSubcategory] : (currentData && currentData.years ? currentData.years : []);
+  const currentData = educationData[educationcategory];
+  const hassubcategories = currentData && currentData.subcategories;
+  const subcategories = hassubcategories && currentData.subcategories ? (Array.isArray(currentData.subcategories) ? currentData.subcategories : Object.keys(currentData.subcategories)) : [];
+  const years = hassubcategories && educationsubcategory && typeof currentData.subcategories === 'object' && currentData.subcategories[educationsubcategory] ? currentData.subcategories[educationsubcategory] : (currentData && currentData.years ? currentData.years : []);
 
   return (
     <div className="form-group">
       <label>
         <span className="field-label">Education Level<span className="required">*</span></span>
         <select
-          name="educationCategory"
-          value={educationCategory || ""}
+          name="educationcategory"
+          value={educationcategory || ""}
           onChange={onChange}
           required
         >
@@ -102,12 +102,12 @@ const EducationDropdown = ({ educationCategory, educationSubcategory, educationY
         </select>
       </label>
 
-      {educationCategory && hasSubcategories && (
+      {educationcategory && hassubcategories && (
         <label style={{ marginTop: "12px" }}>
           <span className="field-label">Stream/Branch/Course<span className="required">*</span></span>
           <select
-            name="educationSubcategory"
-            value={educationSubcategory || ""}
+            name="educationsubcategory"
+            value={educationsubcategory || ""}
             onChange={onChange}
             required
           >
@@ -121,12 +121,12 @@ const EducationDropdown = ({ educationCategory, educationSubcategory, educationY
         </label>
       )}
 
-      {educationCategory && (!hasSubcategories || educationSubcategory) && (
+      {educationcategory && (!hassubcategories || educationsubcategory) && (
         <label style={{ marginTop: "12px" }}>
           <span className="field-label">Year<span className="required">*</span></span>
           <select
-            name="educationYear"
-            value={educationYear || ""}
+            name="educationyear"
+            value={educationyear || ""}
             onChange={onChange}
             required
           >

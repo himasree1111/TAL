@@ -50,9 +50,9 @@ export default function StudentForm() {
     nationality: "",
     address: "",
     class: "",
-    educationCategory: "",
-    educationSubcategory: "",
-    educationYear: "",
+    educationcategory: "",
+    educationsubcategory: "",
+    educationyear: "",
     email: "",
     contact: "",
     whatsapp: "",
@@ -187,20 +187,20 @@ export default function StudentForm() {
     }
 
     // Education category/subcategory/year handling
-    if (name === "educationCategory") {
-      setFormData(prev => ({ ...prev, educationCategory: value, educationSubcategory: "", educationYear: "" }));
+    if (name === "educationcategory") {
+      setFormData(prev => ({ ...prev, educationcategory: value, educationsubcategory: "", educationyear: "" }));
       return;
     }
 
-    if (name === "educationSubcategory") {
-      setFormData(prev => ({ ...prev, educationSubcategory: value, educationYear: "" }));
+    if (name === "educationsubcategory") {
+      setFormData(prev => ({ ...prev, educationsubcategory: value, educationyear: "" }));
       return;
     }
 
-    if (name === "educationYear") {
-      const subcategoryPart = formData.educationSubcategory ? ` - ${formData.educationSubcategory}` : "";
-      const combinedClass = value ? `${formData.educationCategory}${subcategoryPart} - ${value}` : "";
-      setFormData(prev => ({ ...prev, educationYear: value, class: combinedClass }));
+    if (name === "educationyear") {
+      const subcategoryPart = formData.educationsubcategory ? ` - ${formData.educationsubcategory}` : "";
+      const combinedClass = value ? `${formData.educationcategory}${subcategoryPart} - ${value}` : "";
+      setFormData(prev => ({ ...prev, educationyear: value, class: combinedClass }));
       return;
     }
 
@@ -355,13 +355,15 @@ export default function StudentForm() {
           uploadedFileUrls[fKey] = null;
         }
       }
-
+ 
       // Prepare payload for DB. Use same field names as your form.
       const payload = {
         ...formData,
         volunteer_email: volunteerEmail,
         created_at: new Date().toISOString(),
         // attach uploaded file URLs by their keys
+         
+
         school_id_url: uploadedFileUrls.school_id ?? null,
         aadhaar_url: uploadedFileUrls.aadhaar ?? null,
         income_proof_url: uploadedFileUrls.income_proof ?? null,
@@ -373,7 +375,7 @@ export default function StudentForm() {
       };
 
       // Insert record
-      const { error: insertError } = await supabase.from("student_details").insert([payload]);
+      const { error: insertError } = await supabase.from("student_form_submissions").insert([payload]);
 
       if (insertError) {
         console.error("Insert error details:", insertError);
@@ -398,9 +400,9 @@ export default function StudentForm() {
         nationality: "",
         address: "",
         class: "",
-        educationCategory: "",
-        educationSubcategory: "",
-        educationYear: "",
+        educationcategory: "",
+        educationsubcategory: "",
+        educationyear: "",
         email: "",
         contact: "",
         whatsapp: "",
@@ -600,9 +602,9 @@ export default function StudentForm() {
           </div>
 
           <EducationDropdown
-            educationCategory={formData.educationCategory}
-            educationSubcategory={formData.educationSubcategory}
-            educationYear={formData.educationYear}
+            educationcategory={formData.educationcategory}
+            educationsubcategory={formData.educationsubcategory}
+            educationyear={formData.educationyear}
             onChange={handleInputChange}
           />
 
