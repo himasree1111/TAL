@@ -1,11 +1,76 @@
 import React, { useEffect, useState } from "react";
 import supabase from "./supabaseClient";
 
+// Simple Bar Chart Component
+const BarChart = ({ data, title }) => {
+  const maxValue = Math.max(...data.map(d => d.value));
+  const chartHeight = 200;
+  const barWidth = 40;
+  const gap = 15;
+
+  return (
+    <div style={{backgroundColor: "#ffffff", borderRadius: "8px", padding: "20px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", marginTop: "20px"}}>
+      <h3 style={{margin: "0 0 15px 0", color: "#0052cc", fontSize: "1.1rem", fontWeight: "700"}}>{title}</h3>
+      <svg width="100%" height={chartHeight + 60} style={{minHeight: "280px"}}>
+        {/* Y-axis */}
+        <line x1="40" y1="20" x2="40" y2={chartHeight + 20} stroke="#e1e4e8" strokeWidth="1" />
+        {/* X-axis */}
+        <line x1="40" y1={chartHeight + 20} x2={data.length * (barWidth + gap) + 60} y2={chartHeight + 20} stroke="#e1e4e8" strokeWidth="1" />
+        
+        {/* Y-axis labels */}
+        {[0, 1, 2, 3, 4, 5].map(i => (
+          <text key={`y-label-${i}`} x="35" y={chartHeight + 20 - (i * chartHeight / 5)} textAnchor="end" fontSize="11" fill="#666">
+            {(maxValue * i / 5).toFixed(0)}
+          </text>
+        ))}
+
+        {/* Bars and Labels */}
+        {data.map((item, idx) => {
+          const barHeight = (item.value / maxValue) * chartHeight;
+          const xPos = 60 + idx * (barWidth + gap);
+          return (
+            <g key={`bar-${idx}`}>
+              <rect 
+                x={xPos} 
+                y={chartHeight + 20 - barHeight} 
+                width={barWidth} 
+                height={barHeight} 
+                fill="#3b82f6" 
+                rx="4"
+              />
+              <text 
+                x={xPos + barWidth / 2} 
+                y={chartHeight + 40} 
+                textAnchor="middle" 
+                fontSize="12" 
+                fill="#666"
+              >
+                {item.label}
+              </text>
+              <text 
+                x={xPos + barWidth / 2} 
+                y={chartHeight + 20 - barHeight - 5} 
+                textAnchor="middle" 
+                fontSize="12" 
+                fontWeight="700"
+                fill="#0052cc"
+              >
+                {item.value}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
 export default function VolunteerDashboard() {
   const [forms, setForms] = useState([]);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [volunteerName, setVolunteerName] = useState("Volunteer");
   const [volunteerEmail, setVolunteerEmail] = useState("");
+  const [monthlyData, setMonthlyData] = useState([]);
 
   useEffect(() => {
     // Fetch logged-in volunteer data from Supabase
@@ -29,11 +94,25 @@ export default function VolunteerDashboard() {
 
     // Initialize dummy forms data
     const dummyForms = [
-      { id: 1, title: "Form 1", dateSubmitted: "2024-01-01", details: "Details for Form 1 here, including other relevant information about the form.", dataForEdit: { first_name: "John", last_name: "Doe", age: 20 } },
-      { id: 2, title: "Form 2", dateSubmitted: "2024-02-15", details: "Details for Form 2 here, including other relevant information about the form.", dataForEdit: { first_name: "Jane", last_name: "Smith", age: 22 } },
-      { id: 3, title: "Form 3", dateSubmitted: "2024-03-05", details: "Details for Form 3 here, including other relevant information about the form.", dataForEdit: { first_name: "Alice", last_name: "Johnson", age: 21 } }
+      { id: 1, title: "Form 1", dateSubmitted: "2024-01-15", details: "Details for Form 1 here, including other relevant information about the form.", dataForEdit: { first_name: "John", last_name: "Doe", age: 20 } },
+      { id: 2, title: "Form 2", dateSubmitted: "2024-02-20", details: "Details for Form 2 here, including other relevant information about the form.", dataForEdit: { first_name: "Jane", last_name: "Smith", age: 22 } },
+      { id: 3, title: "Form 3", dateSubmitted: "2024-03-05", details: "Details for Form 3 here, including other relevant information about the form.", dataForEdit: { first_name: "Alice", last_name: "Johnson", age: 21 } },
+      { id: 4, title: "Form 4", dateSubmitted: "2024-04-10", details: "Details for Form 4", dataForEdit: { first_name: "Bob", last_name: "Williams", age: 23 } },
+      { id: 5, title: "Form 5", dateSubmitted: "2024-05-18", details: "Details for Form 5", dataForEdit: { first_name: "Carol", last_name: "Davis", age: 24 } },
+      { id: 6, title: "Form 6", dateSubmitted: "2024-06-12", details: "Details for Form 6", dataForEdit: { first_name: "David", last_name: "Miller", age: 25 } },
     ];
     setForms(dummyForms);
+
+    // Generate monthly data for chart
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const chartData = months.map((month, idx) => {
+      const formsInMonth = dummyForms.filter(f => new Date(f.dateSubmitted).getMonth() === idx).length;
+      return {
+        label: month,
+        value: formsInMonth > 0 ? formsInMonth : Math.floor(Math.random() * 5) // Random data for months without forms
+      };
+    });
+    setMonthlyData(chartData);
   }, []);
 
   const handleFormClick = (id) => {
@@ -71,10 +150,25 @@ export default function VolunteerDashboard() {
           <h2 style={{margin: 0}}>{volunteerName}</h2>
           <p style={{marginTop: "6px", fontSize: "0.9rem", opacity: 0.85}}>{volunteerEmail}</p>
         </div>
-        <div className="stats" style={{marginTop: "40px"}}>
-          <div className="card" style={{backgroundColor: "#edf2ff", borderRadius: "8px", padding: "18px 20px", marginBottom: "18px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)"}}>
+        <div className="stats" style={{marginTop: "40px", display: "flex", flexDirection: "column", gap: "12px"}}>
+          <div style={{display: "flex", gap: "12px", justifyContent: "space-between"}}>
+            <div className="card" style={{backgroundColor: "#fff4e6", borderRadius: "8px", padding: "15px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", flex: 1}}>
+              <h3 style={{margin:0, fontSize: "1.6rem", color: "#f59e0b"}}>{forms.filter(f => new Date(f.dateSubmitted).getMonth() === new Date().getMonth()).length}</h3>
+              <p style={{marginTop: "2px", fontWeight: "600", fontSize: "0.85rem", letterSpacing: "0.02em", color: "#1D2B4A"}}>This Month</p>
+            </div>
+            <div className="card" style={{backgroundColor: "#e0f2fe", borderRadius: "8px", padding: "15px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", flex: 1}}>
+              <h3 style={{margin:0, fontSize: "1.6rem", color: "#0284c7"}}>{forms.filter(f => {
+                const formDate = new Date(f.dateSubmitted);
+                const lastMonth = new Date();
+                lastMonth.setMonth(lastMonth.getMonth() - 1);
+                return formDate.getMonth() === lastMonth.getMonth() && formDate.getFullYear() === lastMonth.getFullYear();
+              }).length}</h3>
+              <p style={{marginTop: "2px", fontWeight: "600", fontSize: "0.85rem", letterSpacing: "0.02em", color: "#1D2B4A"}}>Last Month</p>
+            </div>
+          </div>
+          <div className="card" style={{backgroundColor: "#edf2ff", borderRadius: "8px", padding: "18px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)"}}>
             <h3 style={{margin:0, fontSize: "1.9rem", color: "#0052cc"}}>{forms.length}</h3>
-            <p style={{marginTop: "4px", fontWeight: "600", letterSpacing: "0.03em", color: "#1D2B4A"}}>Forms Submitted</p>
+            <p style={{marginTop: "4px", fontWeight: "600", letterSpacing: "0.03em", color: "#1D2B4A"}}>Total Forms Submitted</p>
           </div>
         </div>
       </aside>
@@ -112,6 +206,10 @@ export default function VolunteerDashboard() {
             New Form
           </button>
         </div>
+        
+        {/* Performance Chart */}
+        {monthlyData.length > 0 && <BarChart data={monthlyData} title="Volunteer Performance - Forms Submitted by Month (2024)" />}
+        
         <table className="forms-table" style={{marginTop: "30px", borderCollapse: "collapse", width: "100%"}}>
           <thead style={{backgroundColor: "#edf2ff"}}>
             <tr>
