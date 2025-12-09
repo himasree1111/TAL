@@ -37,6 +37,58 @@ export default function StudentForm() {
       }
     };
     getUser();
+
+    // Check if there's edit data in localStorage
+    const editData = localStorage.getItem("editFormData");
+    if (editData) {
+      try {
+        const parsedData = JSON.parse(editData);
+        // Populate form with edit data
+        setFormData({
+          first_name: parsedData.first_name || "",
+          last_name: parsedData.last_name || "",
+          middle_name: parsedData.middle_name || "",
+          dob: parsedData.dob || "",
+          age: parsedData.age || "",
+          pob: parsedData.pob || "",
+          camp_name: parsedData.camp_name || "",
+          nationality: parsedData.nationality || "",
+          address: parsedData.address || "",
+          class: parsedData.class || "",
+          educationcategory: parsedData.educationcategory || "",
+          educationsubcategory: parsedData.educationsubcategory || "",
+          educationyear: parsedData.educationyear || "",
+          email: parsedData.email || "",
+          contact: parsedData.contact || "",
+          whatsapp: parsedData.whatsapp || "",
+          student_contact: parsedData.student_contact || "",
+          school: parsedData.school || "",
+          branch: parsedData.branch || "",
+          prev_percent: parsedData.prev_percent || "",
+          present_percent: parsedData.present_percent || "",
+          fee: parsedData.fee || "",
+          job: parsedData.job || "",
+          aspiration: parsedData.aspiration || "",
+          scholarship: parsedData.scholarship || "",
+          certificates: parsedData.certificates || "",
+          years_area: parsedData.years_area || "",
+          parents_full_names: parsedData.parents_full_names || "",
+          family_members: parsedData.family_members || "",
+          earning_members: parsedData.earning_members || "",
+          account_no: parsedData.account_no || "",
+          bank_name: parsedData.bank_name || "",
+          bank_branch: parsedData.bank_branch || "",
+          ifsc_code: parsedData.ifsc_code || "",
+          special_remarks: parsedData.special_remarks || "",
+          does_work: parsedData.does_work || "",
+          has_scholarship: parsedData.has_scholarship || ""
+        });
+        // Clear the edit data after loading
+        localStorage.removeItem("editFormData");
+      } catch (error) {
+        console.error("Error loading edit data:", error);
+      }
+    }
   }, []);
 
   const [formData, setFormData] = useState({
@@ -386,7 +438,8 @@ export default function StudentForm() {
       // Success
       alert("🎉 Form submitted successfully!");
       setSuccessMessage("Form submitted successfully!");
-      navigate('/volunteer-dashboard');
+      // Navigate back to dashboard and force refresh to show new form
+      window.location.href = '/volunteer-dashboard';
 
       // optionally reset form
       setFormData({
@@ -464,7 +517,7 @@ export default function StudentForm() {
     <div>
       <button className="back-btn" onClick={() => navigate('/volunteer-dashboard')}>Back to Volunteer Dashboard</button>
        
-      <div className="form-container" style={{ marginTop: '60px' }}>
+      <div className="form-container">
         <h1 className="form-title">STUDENT APPLICATION FORM</h1>
 
       {successMessage && (

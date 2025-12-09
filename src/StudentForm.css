@@ -5,11 +5,31 @@
   box-sizing: border-box;
 }
 
+/* --- BACK BUTTON --- */
+.back-btn {
+  display: block;
+  margin: 10px 0 10px 0;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #2A686B;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  width: auto;
+}
+
+.back-btn:hover {
+  background: #235557;
+}
+
 /* --- MAIN CONTAINER --- */
 .form-container {
   width: 100%;
   max-width: 1000px;
-  margin: 20px auto;
+  margin: 0 0 20px 0;
   padding: 25px;
   background: #ffffff;
   border-radius: 14px;

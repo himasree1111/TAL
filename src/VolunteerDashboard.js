@@ -11,17 +11,21 @@ export default function VolunteerDashboard() {
   const [volunteerEmail, setVolunteerEmail] = useState("");
 
   useEffect(() => {
-    // Fetch logged-in volunteer data from Supabase
+    // Fetch logged-in volunteer data and forms from Supabase
     const fetchVolunteerData = async () => {
       try {
         const { data } = await supabase.auth.getSession();
         if (data.session) {
           const user = data.session.user;
-          setVolunteerEmail(user.email || "");
-          
+          const email = user.email || "";
+          setVolunteerEmail(email);
+
           // Get the volunteer's name from user metadata or email
           const name = user.user_metadata?.name || user.email?.split("@")[0] || "Volunteer";
           setVolunteerName(name);
+
+          // Fetch forms submitted by this volunteer
+          await fetchForms(email);
         }
       } catch (error) {
         console.error("Error fetching volunteer data:", error);
@@ -29,18 +33,36 @@ export default function VolunteerDashboard() {
     };
 
     fetchVolunteerData();
-
-    // Initialize dummy forms data
-    const dummyForms = [
-      { id: 1, title: "Form 1", dateSubmitted: "2024-01-15", details: "Details for Form 1 here, including other relevant information about the form.", dataForEdit: { first_name: "John", last_name: "Doe", age: 20 } },
-      { id: 2, title: "Form 2", dateSubmitted: "2024-02-20", details: "Details for Form 2 here, including other relevant information about the form.", dataForEdit: { first_name: "Jane", last_name: "Smith", age: 22 } },
-      { id: 3, title: "Form 3", dateSubmitted: "2024-03-05", details: "Details for Form 3 here, including other relevant information about the form.", dataForEdit: { first_name: "Alice", last_name: "Johnson", age: 21 } },
-      { id: 4, title: "Form 4", dateSubmitted: "2024-04-10", details: "Details for Form 4", dataForEdit: { first_name: "Bob", last_name: "Williams", age: 23 } },
-      { id: 5, title: "Form 5", dateSubmitted: "2024-05-18", details: "Details for Form 5", dataForEdit: { first_name: "Carol", last_name: "Davis", age: 24 } },
-      { id: 6, title: "Form 6", dateSubmitted: "2024-06-12", details: "Details for Form 6", dataForEdit: { first_name: "David", last_name: "Miller", age: 25 } },
-    ];
-    setForms(dummyForms);
   }, []);
+
+  const fetchForms = async (volunteerEmail) => {
+    try {
+      const { data, error } = await supabase
+        .from("student_form_submissions")
+        .select("*")
+        .eq("volunteer_email", volunteerEmail)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching forms:", error);
+        return;
+      }
+
+      // Transform the data to match the expected format
+      const transformedForms = data.map((submission, index) => ({
+        id: submission.id, // Use the actual database ID for operations
+        displayId: index + 1, // Sequential display ID starting from 1
+        title: `${submission.first_name} ${submission.last_name}`,
+        dateSubmitted: new Date(submission.created_at).toISOString().split('T')[0],
+        details: `Student: ${submission.first_name} ${submission.last_name}, Age: ${submission.age}, School: ${submission.school}, Class: ${submission.class}`,
+        dataForEdit: submission // Store the full submission data for editing
+      }));
+
+      setForms(transformedForms);
+    } catch (error) {
+      console.error("Error fetching forms:", error);
+    }
+  };
 
   const handleFormClick = (id) => {
     setSelectedFormId(id);
@@ -52,11 +74,28 @@ export default function VolunteerDashboard() {
     window.location.href = "/studentform"; // or use navigate in real app
   };
 
-  const handleDeleteClick = (id) => {
+  const handleDeleteClick = async (id) => {
     if(window.confirm("Are you sure you want to delete this form?")) {
-      setForms((prev) => prev.filter(form => form.id !== id));
-      // If deleted form was selected, clear selection
-      if (selectedFormId === id) setSelectedFormId(null);
+      try {
+        const { error } = await supabase
+          .from("student_form_submissions")
+          .delete()
+          .eq("id", id);
+
+        if (error) {
+          console.error("Error deleting form:", error);
+          alert("Error deleting form. Please try again.");
+          return;
+        }
+
+        // Remove from local state
+        setForms((prev) => prev.filter(form => form.id !== id));
+        // If deleted form was selected, clear selection
+        if (selectedFormId === id) setSelectedFormId(null);
+      } catch (error) {
+        console.error("Error deleting form:", error);
+        alert("Error deleting form. Please try again.");
+      }
     }
   };
 
@@ -142,7 +181,7 @@ export default function VolunteerDashboard() {
             <tbody>
               {forms.map(form => (
                 <tr key={form.id} className={form.id === selectedFormId ? "selected" : ""}>
-                  <td onClick={() => handleFormClick(form.id)}>{form.id}</td>
+                  <td onClick={() => handleFormClick(form.id)}>{form.displayId}</td>
                   <td onClick={() => handleFormClick(form.id)}>{form.title}</td>
                   <td onClick={() => handleFormClick(form.id)}>{form.dateSubmitted}</td>
                   <td>
