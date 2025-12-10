@@ -1,7 +1,7 @@
-# TODO: Implement Quit Navigation in DonorDashboard
+# TODO: Update Volunteer Dashboard Edit/Delete Buttons to Icons
 
-- [x] Import useNavigate from 'react-router-dom' in DonorDashboard.js
-- [x] Declare const navigate = useNavigate(); in DonorDashboard component
-- [x] Pass navigate as prop to Sidebar component: <Sidebar navigate={navigate} />
-- [x] Update Quit link in Sidebar to use onClick={() => navigate('/login')} and remove href="#", add cursor pointer style
-- [x] Test the navigation by running the app and clicking Quit
+## Tasks to Complete:
+- [x] Update `VolunteerDashboard.js` to remove text from edit and delete buttons, keeping only icons (✎ for edit, 🗑 for delete) and existing title attributes for tooltips.
+- [x] Update `VolunteerDashboard.css` to style buttons as icon-only (reduce padding, make square-shaped, center icons).
+- [ ] Test the dashboard to ensure icons display correctly and tooltips appear on hover.
+- [ ] Verify responsiveness on different screen sizes.

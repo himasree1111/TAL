@@ -185,19 +185,19 @@ export default function VolunteerDashboard() {
                   <td onClick={() => handleFormClick(form.id)}>{form.title}</td>
                   <td onClick={() => handleFormClick(form.id)}>{form.dateSubmitted}</td>
                   <td>
-                    <button 
-                      className="btn primary small"
+                    <button
+                      className="btn primary small icon"
                       onClick={() => handleEditClick(form)}
                       title="Edit"
                     >
-                      ✎ Edit
+                      ✎
                     </button>
-                    <button 
-                      className="btn danger small"
+                    <button
+                      className="btn danger small icon"
                       onClick={() => handleDeleteClick(form.id)}
                       title="Delete"
                     >
-                      🗑 Delete
+                      🗑
                     </button>
                   </td>
                 </tr>
@@ -212,17 +212,19 @@ export default function VolunteerDashboard() {
             <h2>{selectedForm.title}</h2>
             <p>{selectedForm.details}</p>
             <div className="form-actions">
-              <button 
-                className="btn primary"
+              <button
+                className="btn primary icon"
                 onClick={() => handleEditClick(selectedForm)}
+                title="Edit"
               >
-                ✎ Edit Form
+                ✎
               </button>
-              <button 
-                className="btn danger"
+              <button
+                className="btn danger icon"
                 onClick={() => handleDeleteClick(selectedForm.id)}
+                title="Delete"
               >
-                🗑 Delete Form
+                🗑
               </button>
             </div>
           </div>

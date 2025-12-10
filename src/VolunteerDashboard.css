@@ -230,6 +230,26 @@
   min-width: 60px;
 }
 
+.volunteer-dashboard .btn.icon {
+  padding: 8px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 6px;
+}
+
+.volunteer-dashboard .btn.small.icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 6px;
+  font-size: 1rem;
+}
+
 .volunteer-dashboard .fill-form-btn {
   padding: 10px 24px;
   background-color: #2A686B;
