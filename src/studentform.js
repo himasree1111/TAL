@@ -707,11 +707,11 @@ export default function StudentForm() {
 
           <div className="form-group">
             <label>
-              <span className="field-label">Percentage scored in previous academic year<span className="required">*</span></span>
+              <span className="field-label">Percentage scored in previous academic year (Not CGPA)<span className="required">*</span></span>
               <input type="text" name="prev_percent" value={formData.prev_percent} onChange={handleInputChange} required />
             </label>
             <label>
-              <span className="field-label">Percentage scored in present academic year<span className="required">*</span></span>
+              <span className="field-label">Percentage scored in present academic year (Not CGPA)<span className="required">*</span></span>
               <input type="text" name="present_percent" value={formData.present_percent} onChange={handleInputChange} required />
             </label>
           </div>
@@ -883,7 +883,7 @@ export default function StudentForm() {
                 <input type="text" name="bank_branch" value={formData.bank_branch || ""} onChange={handleInputChange} required />
               </label>
               <label>
-                <span className="field-label">IFSC Code<span className="required">*</span></span>
+                <span className="field-label">Enter valid IFSC Code<span className="required">*</span></span>
                 <input
                   type="text"
                   name="ifsc_code"
