@@ -15,7 +15,7 @@ export default function AdminDashboard() {
       try {
         // Fetch student form submissions
         const { data: studentData, error: studentError } = await supabase
-          .from('student_form_submissions')
+          .from('admin_student_info')
           .select('*')
           .order('created_at', { ascending: false });
         // Save raw fetch result for debugging
