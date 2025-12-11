@@ -182,7 +182,7 @@ export default function StudentForm() {
     // We'll enforce uppercase letters automatically in handleInputChange
     if (name === "ifsc_code") {
       if (!value || !/^[A-Z]{4}0[0-9]{6}$/.test(value)) {
-        return "IFSC must be 4 letters, '0', then 6 numbers (e.g. HDFC0001234)";
+        return "Enter a valid IFSC code (e.g. ABCD0123456)";
       }
       return "";
     }
