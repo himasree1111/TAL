@@ -401,57 +401,75 @@ export default function StudentForm() {
     }
 
     try {
-      // Get volunteer_id from email
-      const volunteerResponse = await fetch(`http://localhost:4000/volunteer-id/${encodeURIComponent(volunteerEmail)}`);
-      const volunteerResult = await volunteerResponse.json();
-
-      if (!volunteerResult.success) {
-        alert("❌ Error getting volunteer ID: " + volunteerResult.message);
-        return;
+      // Upload files to Supabase storage and get URLs
+      const uploadedFiles = {};
+      for (const [key, file] of Object.entries(files)) {
+        if (file) {
+          const url = await uploadFileToStorage(file, key);
+          uploadedFiles[key] = url;
+        }
       }
 
-      const volunteer_id = volunteerResult.volunteer_id;
-
-      // Prepare payload for backend. Map form fields to backend fields.
+      // Prepare payload for Supabase. Map form fields to table columns.
       const payload = {
-        volunteer_id: volunteer_id,
-        full_name: `${formData.first_name} ${formData.middle_name} ${formData.last_name}`.trim(),
+        volunteer_email: volunteerEmail,
+        first_name: formData.first_name,
+        middle_name: formData.middle_name || null,
+        last_name: formData.last_name,
+        dob: formData.dob || null,
         age: parseInt(formData.age),
+        pob: formData.pob || null,
+        camp_name: formData.camp_name || null,
+        nationality: formData.nationality || null,
+        address: formData.address,
+        class: formData.class,
+        educationcategory: formData.educationcategory || null,
+        educationsubcategory: formData.educationsubcategory || null,
+        educationyear: formData.educationyear || null,
         email: formData.email,
-        contact_no: formData.contact,
-        whatsapp_no: formData.whatsapp,
-        parent_no: formData.student_contact || null,
-        family_members: formData.family_members,
-        parents_names: formData.parents_full_names,
-        earning_members: formData.earning_members,
-        school_college: formData.school,
+        contact: formData.contact,
+        whatsapp: formData.whatsapp,
+        student_contact: formData.student_contact || null,
+        school: formData.school,
         branch: formData.branch || null,
-        previous_percentage: parseFloat(formData.prev_percent) || null,
-        present_percentage: parseFloat(formData.present_percent) || null,
-        course_class_fee: formData.fee_structure,
-        job_details: formData.job || null,
+        prev_percent: parseFloat(formData.prev_percent) || null,
+        present_percent: parseFloat(formData.present_percent) || null,
+        fee: formData.fee || null,
+        fee_structure: formData.fee_structure,
+        job: formData.job || null,
         aspiration: formData.aspiration || null,
-        scholarship_details: formData.scholarship || null,
-        achievement_certificates: formData.certificates || null,
-        present_scholarship_details: null, // Not in form
-        years_in_area: formData.years_area || null,
-        scholarship_reason: formData.special_remarks || null
+        scholarship: formData.scholarship || null,
+        certificates: formData.certificates || null,
+        years_area: formData.years_area || null,
+        parents_full_names: formData.parents_full_names,
+        family_members: formData.family_members,
+        earning_members: formData.earning_members,
+        account_no: formData.account_no || null,
+        bank_name: formData.bank_name || null,
+        bank_branch: formData.bank_branch || null,
+        ifsc_code: formData.ifsc_code || null,
+        special_remarks: formData.special_remarks || null,
+        does_work: formData.does_work || null,
+        has_scholarship: formData.has_scholarship || null,
+        // File URLs
+        school_id_url: uploadedFiles.school_id || null,
+        aadhaar_url: uploadedFiles.aadhaar || null,
+        income_proof_url: uploadedFiles.income_proof || null,
+        marksheet_url: uploadedFiles.marksheet || null,
+        passport_photo_url: uploadedFiles.passport_photo || null,
+        fees_receipt_url: uploadedFiles.fees_receipt || null,
+        volunteer_signature_url: uploadedFiles.volunteer_signature || null,
+        student_signature_url: uploadedFiles.student_signature || null,
       };
 
-      // Submit to backend
-      const response = await fetch('http://localhost:4000/student', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from("student_form_submissions")
+        .insert([payload]);
 
-      const result = await response.json();
-
-      if (!result.success) {
-        console.error("Insert error details:", result.message);
-        alert("❌ Error saving student: " + result.message);
+      if (error) {
+        console.error("Supabase insert error:", error);
+        alert("❌ Error saving student: " + error.message);
         return;
       }
 
