@@ -9,48 +9,50 @@ export default function AdminDashboard() {
   const [lastFetch, setLastFetch] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch real data from backend
+  // Fetch real data from Supabase
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch student records from backend
-        const response = await fetch('http://localhost:4000/students');
-        const result = await response.json();
-
+        // Fetch student form submissions
+        const { data: studentData, error: studentError } = await supabase
+          .from('student_form_submissions')
+          .select('*')
+          .order('created_at', { ascending: false });
         // Save raw fetch result for debugging
-        setLastFetch({ data: result.students || null, error: result.success ? null : result.message, fetchedAt: new Date().toISOString() });
+        setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
 
-        if (!result.success) {
-          console.error('AdminDashboard: Error fetching student data:', result.message);
+        if (studentError) {
+          console.error('AdminDashboard: Error fetching student data:', studentError);
         } else {
-          console.log('AdminDashboard: fetched studentData (count):', Array.isArray(result.students) ? result.students.length : 0);
+          console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
-          // Backend fields: full_name, school_college, course_class_fee, etc.
-          const transformedStudents = (result.students || []).map((student) => ({
-            id: student.id,
-            name: student.full_name || '',
-            college: student.school_college || '',
-            year: student.course_class_fee || '', // Using course_class_fee as year/class
-            donor: 'None', // No volunteer email in backend, set to None
-            feeStatus: 'Pending', // Default to Pending, no fee field in backend
-            campName: '', // No camp data in backend
-            campDate: '', // No camp date in backend
-            course: '', // No course field in backend
-            paidDate: '' // No paid date in backend
+          const transformedStudents = (studentData || []).map((student, index) => ({
+            id: student.id || index + 1,
+            name: `${student.first_name || ''} ${student.middle_name || ''} ${student.last_name || ''}`.trim(),
+            college: student.school || '',
+            year: student.class || '',
+            donor: student.volunteer_email || 'None', // Use volunteer email as donor for now
+            feeStatus: student.fee ? 'Paid' : 'Pending', // Simple logic based on fee field
+            campName: student.camp_name || '',
+            campDate: student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : '',
+            course: student.educationcategory || '',
+            paidDate: student.fee ? new Date(student.created_at).toISOString().split('T')[0] : ''
           }));
           setStudents(transformedStudents);
         }
 
-        // For now, create dummy donors (no volunteer data in backend yet)
-        const transformedDonors = [
-          { id: 1, name: 'Dummy Donor 1', amount: 15000, years: "2024-2025" },
-          { id: 2, name: 'Dummy Donor 2', amount: 20000, years: "2024-2025" }
-        ];
+        // For now, create dummy donors from volunteer emails (you can replace this with real donor data later)
+        const uniqueVolunteers = [...new Set((studentData || []).map(s => s.volunteer_email).filter(Boolean))];
+        const transformedDonors = uniqueVolunteers.map((email, index) => ({
+          id: index + 1,
+          name: email,
+          amount: Math.floor(Math.random() * 10000) + 5000, // Random amount for demo
+          years: "2024-2025"
+        }));
         setDonors(transformedDonors);
 
       } catch (error) {
         console.error('Error fetching data:', error);
-        setLastFetch({ data: null, error: error.message, fetchedAt: new Date().toISOString() });
       } finally {
         setLoading(false);
       }

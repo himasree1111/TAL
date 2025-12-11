@@ -128,14 +128,3 @@ body {
     transform: translateY(0);
   }
 }
-
-/* Validation error styles */
-.input-error {
-  border: 2px solid red !important;
-}
-
-.error-text {
-  color: red;
-  font-size: 0.8rem;
-  margin-top: 4px;
-}

@@ -7,6 +7,12 @@ const app = express();
 const PORT = 4000;
 const DB_FILE = "./volunteer.db"; // <- change to "./volunteer.ds" if your DB file is named that
 
+// Email validation function
+const validateEmail = (email) => {
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email);
+};
+
 app.use(cors());
 app.use(express.json());
 
@@ -101,6 +107,7 @@ db.serialize(() => {
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) return res.json({ success: false, message: "All fields required" });
+  if (!validateEmail(email)) return res.json({ success: false, message: "Invalid email format" });
 
   try {
     const password_hash = await bcrypt.hash(password, 10);
@@ -124,6 +131,7 @@ app.post("/register", async (req, res) => {
 app.post("/register-donor", async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) return res.json({ success: false, message: "All fields required" });
+  if (!validateEmail(email)) return res.json({ success: false, message: "Invalid email format" });
 
   try {
     const password_hash = await bcrypt.hash(password, 10);
@@ -147,6 +155,7 @@ app.post("/register-donor", async (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
+  if (!validateEmail(email)) return res.status(400).json({ success: false, message: "Invalid email format" });
 
   const sql = `SELECT * FROM volunteer WHERE email = ?`;
   db.get(sql, [email], async (err, row) => {
@@ -174,6 +183,7 @@ app.post("/login", (req, res) => {
 app.post("/login-donor", (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
+  if (!validateEmail(email)) return res.status(400).json({ success: false, message: "Invalid email format" });
 
   const sql = `SELECT * FROM donor WHERE email = ?`;
   db.get(sql, [email], async (err, row) => {
@@ -201,6 +211,7 @@ app.post("/login-donor", (req, res) => {
 app.post("/student", (req, res) => {
   const s = req.body;
   if (!s.volunteer_id || !s.full_name) return res.json({ success: false, message: "Missing required fields" });
+  if (s.email && !validateEmail(s.email)) return res.json({ success: false, message: "Invalid email format" });
 
   const query = `
     INSERT INTO student_records

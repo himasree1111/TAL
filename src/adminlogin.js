@@ -12,28 +12,7 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-
-  // Validation functions
-  const validateEmail = (email) => {
-    if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
-    return "";
-  };
-
-  const validatePassword = (password) => {
-    if (!password) return "Password is required";
-    if (password.length < 6) return "Password must be at least 6 characters long";
-    return "";
-  };
-
-  const validateName = (name) => {
-    if (!name) return "Name is required";
-    if (name.length < 2) return "Name must be at least 2 characters long";
-    return "";
-  };
 
   // ✅ Check session on load
   useEffect(() => {
@@ -67,22 +46,6 @@ export default function AdminLogin() {
   // ✅ Handle Sign In & Sign Up
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate all fields before submission
-    const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
-    const nameError = !isSignIn ? validateName(name) : "";
-
-    setErrors({
-      email: emailError,
-      password: passwordError,
-      name: nameError
-    });
-
-    // If any validation errors, prevent submission
-    if (emailError || passwordError || nameError) {
-      return;
-    }
 
     try {
       if (isSignIn) {

@@ -46,29 +46,31 @@ export default function VolunteerDashboard() {
   const fetchForms = async (volunteerEmail) => {
     try {
       setLoading(true);
-      // Fetch from backend with volunteer email filter
-      const response = await fetch(`http://localhost:4000/students?volunteer_email=${encodeURIComponent(volunteerEmail)}`);
-      const result = await response.json();
+      // Select only the columns we need for the volunteer UI (avoid dumping sensitive fields)
+      const { data, error } = await supabase
+        .from("student_form_submissions")
+        .select("id, first_name, middle_name, last_name, created_at, age, school, class, volunteer_email, fee_structure, contact, whatsapp")
+        .eq("volunteer_email", volunteerEmail)
+        .order("created_at", { ascending: true });
 
-      // Save debug payload
-      const sample = (result.students && result.students.length > 0) ? (({ id, full_name }) => ({ id, full_name }))(result.students[0]) : null;
-      setLastFetch({ raw: result.students || null, error: result.success ? null : result.message, fetchedAt: new Date().toISOString(), summary: { count: (result.students || []).length, sample } });
+      // Save a compact debug payload: count + a small sample (avoid full raw dump)
+      const sample = (data && data.length > 0) ? (({ id, first_name, last_name, created_at }) => ({ id, first_name, last_name, created_at }))(data[0]) : null;
+      setLastFetch({ raw: data || null, error: error || null, fetchedAt: new Date().toISOString(), summary: { count: (data || []).length, sample } });
 
-      if (!result.success) {
-        console.error("Error fetching forms:", result.message);
+      if (error) {
+        console.error("Error fetching forms:", error);
         setLoading(false);
         return;
       }
 
       // Transform the data to match the expected format
-      // Backend fields: full_name, school_college, course_class_fee, age, etc.
-      const transformedForms = (result.students || []).map((student, index) => ({
-        id: student.id, // Use the actual database ID for operations
+      const transformedForms = (data || []).map((submission, index) => ({
+        id: submission.id, // Use the actual database ID for operations
         displayId: index + 1, // Sequential display ID starting from 1
-        title: student.full_name || 'Unknown Student',
-        dateSubmitted: 'N/A', // Backend doesn't have created_at, set to N/A
-        details: `Student: ${student.full_name || 'Unknown'}, Age: ${student.age || 'N/A'}, School: ${student.school_college || 'N/A'}, Class: ${student.course_class_fee || 'N/A'}`,
-        dataForEdit: student // Store the full student data for editing
+        title: `${submission.first_name} ${submission.last_name}`,
+        dateSubmitted: new Date(submission.created_at).toISOString().split('T')[0],
+        details: `Student: ${submission.first_name} ${submission.last_name}, Age: ${submission.age}, School: ${submission.school}, Class: ${submission.class}`,
+        dataForEdit: submission // Store the full submission data for editing
       }));
 
       setForms(transformedForms);

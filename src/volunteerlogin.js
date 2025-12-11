@@ -12,56 +12,7 @@ export default function VolunteerLogin() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-
-  // Validation functions
-  const validateEmail = (email) => {
-    if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
-    return "";
-  };
-
-  const validatePassword = (password) => {
-    if (!password) return "Password is required";
-    if (password.length < 8) return "Password must be at least 8 characters long";
-    if (password.length > 64) return "Password must be no more than 64 characters long";
-    if (/\s/.test(password)) return "Password cannot contain spaces";
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])([A-Za-z\d!@#$%^&*]{8,64})$/;
-    if (!passwordRegex.test(password)) {
-      return "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (!@#$%^&*)";
-    }
-    return "";
-  };
-
-  const validateName = (name) => {
-    if (!name) return "Full name is required";
-    if (name.trim().length < 2) return "Full name must be at least 2 characters long";
-    if (!/^[a-zA-Z\s]+$/.test(name.trim())) return "Full name can only contain alphabets and spaces";
-    return "";
-  };
-
-  // Change handlers with live validation
-  const handleNameChange = (e) => {
-    const value = e.target.value;
-    setName(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, name: validateName(value) }));
-    }
-  };
-
-  const handleEmailChange = (e) => {
-    const value = e.target.value;
-    setEmail(value);
-    setErrors(prev => ({ ...prev, email: validateEmail(value) }));
-  };
-
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setPassword(value);
-    setErrors(prev => ({ ...prev, password: validatePassword(value) }));
-  };
 
   // ✅ Check session on load
   useEffect(() => {
@@ -81,23 +32,6 @@ export default function VolunteerLogin() {
   // ✅ Handle sign in & sign up
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate all fields before submission
-    const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
-    const nameError = !isSignIn ? validateName(name) : "";
-
-    setErrors({
-      email: emailError,
-      password: passwordError,
-      name: nameError
-    });
-
-    // If any validation errors, prevent submission
-    if (emailError || passwordError || nameError) {
-      return;
-    }
-
     console.log("handleSubmit called", { email, password, isSignIn });
 
     try {
@@ -159,42 +93,30 @@ export default function VolunteerLogin() {
 
         <form onSubmit={(e) => { console.log("Form submitted"); handleSubmit(e); }}>
           {!isSignIn && (
-            <div>
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={handleNameChange}
-                className={errors.name ? "input-error" : ""}
-                required
-              />
-              {errors.name && <p className="error-text">{errors.name}</p>}
-            </div>
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           )}
 
-          <div>
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={email}
-              onChange={handleEmailChange}
-              className={errors.email ? "input-error" : ""}
-              required
-            />
-            {errors.email && <p className="error-text">{errors.email}</p>}
-          </div>
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={handlePasswordChange}
-              className={errors.password ? "input-error" : ""}
-              required
-            />
-            {errors.password && <p className="error-text">{errors.password}</p>}
-          </div>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           <button type="submit">{isSignIn ? "Sign In" : "Sign Up"}</button>
         </form>
