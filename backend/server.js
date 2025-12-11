@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcryptjs");
@@ -68,6 +67,10 @@ db.serialize(() => {
       job_details TEXT,
       aspiration TEXT,
       scholarship_details TEXT,
+      achievement_certificates TEXT,
+      present_scholarship_details TEXT,
+      years_in_area INTEGER,
+      scholarship_reason TEXT,
       FOREIGN KEY (volunteer_id) REFERENCES volunteer(volunteer_id)
     );
   `);
@@ -275,6 +278,47 @@ app.post("/studentdocs", (req, res) => {
     }
     console.log(`✅ Student docs saved doc_id=${this.lastID} for student_id=${d.student_id}`);
     return res.json({ success: true, message: "Documents saved", doc_id: this.lastID });
+  });
+});
+
+// ---------- GET VOLUNTEER ID BY EMAIL ----------
+app.get("/volunteer-id/:email", (req, res) => {
+  const email = req.params.email;
+  const sql = `SELECT volunteer_id FROM volunteer WHERE email = ?`;
+  db.get(sql, [email], (err, row) => {
+    if (err) {
+      console.error("Get volunteer id error:", err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
+    if (!row) return res.status(404).json({ success: false, message: "Volunteer not found" });
+    return res.json({ success: true, volunteer_id: row.volunteer_id });
+  });
+});
+
+// ---------- GET ALL STUDENTS ----------
+app.get("/students", (req, res) => {
+  const volunteerEmail = req.query.volunteer_email;
+  let sql = `SELECT * FROM student_records`;
+  let params = [];
+
+  if (volunteerEmail) {
+    // Join with volunteer table to filter by email
+    sql = `
+      SELECT sr.* FROM student_records sr
+      JOIN volunteer v ON sr.volunteer_id = v.volunteer_id
+      WHERE v.email = ?
+    `;
+    params = [volunteerEmail];
+  }
+
+  sql += ` ORDER BY sr.id DESC`;
+
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      console.error("Get students error:", err);
+      return res.status(500).json({ success: false, message: "Database error" });
+    }
+    return res.json({ success: true, students: rows });
   });
 });
 

@@ -146,6 +146,15 @@ export default function StudentForm() {
 
   // Helper: validate a single field and return error message (or empty string)
   const validateField = (name, value) => {
+    // Name fields: only alphabets and spaces allowed
+    if (name === "first_name" || name === "last_name" || name === "middle_name") {
+      if (!value) return `${name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} is required`;
+      if (!/^[a-zA-Z\s]+$/.test(value)) {
+        return "Only alphabets and spaces are allowed";
+      }
+      return "";
+    }
+
     // Phone fields (exactly 10 digits)
     if (name === "contact" || name === "whatsapp") {
       if (!value || !/^\d{10}$/.test(value)) {
@@ -169,19 +178,20 @@ export default function StudentForm() {
       return "";
     }
 
-    // IFSC: 4 letters + 0 + 6 alnum (common pattern)
+    // IFSC: 4 letters + 0 + 6 numbers (common pattern)
     // We'll enforce uppercase letters automatically in handleInputChange
     if (name === "ifsc_code") {
-      if (!value || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(value)) {
-        return "IFSC must be 4 letters, '0', then 6 characters (e.g. HDFC0001234)";
+      if (!value || !/^[A-Z]{4}0[0-9]{6}$/.test(value)) {
+        return "IFSC must be 4 letters, '0', then 6 numbers (e.g. HDFC0001234)";
       }
       return "";
     }
 
-    // Email simple check
+    // Email proper validation
     if (name === "email") {
       if (!value) return "Email is required";
-      if (!/^\S+@\S+\.\S+$/.test(value)) return "Enter a valid email";
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(value)) return "Enter a valid email address";
       return "";
     }
 
@@ -390,51 +400,58 @@ export default function StudentForm() {
       return;
     }
 
-    // Build a folder name for storage
-    const studentFolder = `${formData.first_name}_${formData.last_name}_${Date.now()}`.replace(/\s+/g, "_");
-
     try {
-      // Upload files (if present)
-      const uploadedFileUrls = {};
-      for (const fKey of Object.keys(files)) {
-        if (files[fKey]) {
-          try {
-            const publicUrl = await uploadFileToStorage(files[fKey], studentFolder);
-            uploadedFileUrls[fKey] = publicUrl;
-          } catch (upErr) {
-            console.error(`Failed to upload ${fKey}`, upErr);
-            // continue without breaking — file not required
-            uploadedFileUrls[fKey] = null;
-          }
-        } else {
-          uploadedFileUrls[fKey] = null;
-        }
-      }
- 
-      // Prepare payload for DB. Use same field names as your form.
-      const payload = {
-        ...formData,
-        volunteer_email: volunteerEmail,
-        created_at: new Date().toISOString(),
-        // attach uploaded file URLs by their keys
-         
+      // Get volunteer_id from email
+      const volunteerResponse = await fetch(`http://localhost:4000/volunteer-id/${encodeURIComponent(volunteerEmail)}`);
+      const volunteerResult = await volunteerResponse.json();
 
-        school_id_url: uploadedFileUrls.school_id ?? null,
-        aadhaar_url: uploadedFileUrls.aadhaar ?? null,
-        income_proof_url: uploadedFileUrls.income_proof ?? null,
-        marksheet_url: uploadedFileUrls.marksheet ?? null,
-        passport_photo_url: uploadedFileUrls.passport_photo ?? null,
-        fees_receipt_url: uploadedFileUrls.fees_receipt ?? null,
-        volunteer_signature_url: uploadedFileUrls.volunteer_signature ?? null,
-        student_signature_url: uploadedFileUrls.student_signature ?? null
+      if (!volunteerResult.success) {
+        alert("❌ Error getting volunteer ID: " + volunteerResult.message);
+        return;
+      }
+
+      const volunteer_id = volunteerResult.volunteer_id;
+
+      // Prepare payload for backend. Map form fields to backend fields.
+      const payload = {
+        volunteer_id: volunteer_id,
+        full_name: `${formData.first_name} ${formData.middle_name} ${formData.last_name}`.trim(),
+        age: parseInt(formData.age),
+        email: formData.email,
+        contact_no: formData.contact,
+        whatsapp_no: formData.whatsapp,
+        parent_no: formData.student_contact || null,
+        family_members: formData.family_members,
+        parents_names: formData.parents_full_names,
+        earning_members: formData.earning_members,
+        school_college: formData.school,
+        branch: formData.branch || null,
+        previous_percentage: parseFloat(formData.prev_percent) || null,
+        present_percentage: parseFloat(formData.present_percent) || null,
+        course_class_fee: formData.fee_structure,
+        job_details: formData.job || null,
+        aspiration: formData.aspiration || null,
+        scholarship_details: formData.scholarship || null,
+        achievement_certificates: formData.certificates || null,
+        present_scholarship_details: null, // Not in form
+        years_in_area: formData.years_area || null,
+        scholarship_reason: formData.special_remarks || null
       };
 
-      // Insert record
-      const { error: insertError } = await supabase.from("student_form_submissions").insert([payload]);
+      // Submit to backend
+      const response = await fetch('http://localhost:4000/student', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-      if (insertError) {
-        console.error("Insert error details:", insertError);
-        alert("❌ Error saving student: " + insertError.message);
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error("Insert error details:", result.message);
+        alert("❌ Error saving student: " + result.message);
         return;
       }
 
@@ -537,15 +554,38 @@ export default function StudentForm() {
           <div className="form-group">
             <label>
               <span className="field-label">First Name<span className="required">*</span></span>
-              <input type="text" name="first_name" value={formData.first_name} onChange={handleInputChange} required />
+              <input
+                type="text"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleInputChange}
+                className={errors.first_name ? "input-error" : ""}
+                required
+              />
+              {errors.first_name && <p className="error-text">{errors.first_name}</p>}
             </label>
             <label>
               Middle Name
-              <input type="text" name="middle_name" value={formData.middle_name} onChange={handleInputChange} />
+              <input
+                type="text"
+                name="middle_name"
+                value={formData.middle_name}
+                onChange={handleInputChange}
+                className={errors.middle_name ? "input-error" : ""}
+              />
+              {errors.middle_name && <p className="error-text">{errors.middle_name}</p>}
             </label>
             <label>
               <span className="field-label">Last Name<span className="required">*</span></span>
-              <input type="text" name="last_name" value={formData.last_name} onChange={handleInputChange} required />
+              <input
+                type="text"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleInputChange}
+                className={errors.last_name ? "input-error" : ""}
+                required
+              />
+              {errors.last_name && <p className="error-text">{errors.last_name}</p>}
             </label>
           </div>
 
@@ -568,11 +608,11 @@ export default function StudentForm() {
               {errors.age && <p className="error-text">{errors.age}</p>}
             </label>
             <label>
-              Date of Camp
+              Name of Camp
               <input type="text" name="pob" value={formData.pob} onChange={handleInputChange} />
             </label>
             <label>
-              Name of Camp
+              Date of Camp
               <input type="text" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
             </label>
             <label>
@@ -788,7 +828,7 @@ export default function StudentForm() {
         {/* --- Other Questions --- */}
         <div className="form-group">
           <label className="full-width">
-            Achievement Certificates
+            Achievements
             <input
               type="text"
               name="certificates"
@@ -810,7 +850,7 @@ export default function StudentForm() {
 
         {/* Document Upload */}
         <div className="section">
-          <h2>4. Document Upload</h2>
+          <h2>4. Document Upload (Size Limit: 50 MB)</h2>
 
           {renderUploadField("School / College ID", "school_id")}
           {renderUploadField("Aadhaar Card", "aadhaar")}
