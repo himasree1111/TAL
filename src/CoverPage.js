@@ -113,7 +113,7 @@ export default function CoverPage() {
   };
 
   const handleLearnMore = () => {
-    window.open('https://touchalifeorg.com/about-pages/about-us/', '_blank');
+    window.open('https://touchalifeorg.com/', '_blank');
   };
 
   const handleContactUs = () => {

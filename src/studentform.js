@@ -631,7 +631,7 @@ export default function StudentForm() {
             </label>
             <label>
               Date of Camp
-              <input type="text" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
+              <input type="date" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
             </label>
             <label>
               <span className="field-label">Address<span className="required">*</span></span>

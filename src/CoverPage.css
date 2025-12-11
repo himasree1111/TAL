@@ -41,8 +41,9 @@
 /* In CoverPage.css */
 
 .logo-image-minimal {
-    height: 65px; /* Adjust height for the image */
+    height: 100px; /* Further increased height for a more prominent logo */
     width: auto;
+    max-width: 250px; /* Adjusted max width to maintain proportions */
 }
 
 /* Navigation Menu */
