@@ -46,10 +46,10 @@ export default function VolunteerDashboard() {
   const fetchForms = async (volunteerEmail) => {
     try {
       setLoading(true);
-      // Select only the columns we need for the volunteer UI (avoid dumping sensitive fields)
+      // Select all form fields needed for editing (volunteer UI only shows limited fields)
       const { data, error } = await supabase
         .from("student_form_submissions")
-        .select("id, first_name, middle_name, last_name, created_at, age, school, class, volunteer_email, fee_structure, contact, whatsapp")
+        .select("id, first_name, middle_name, last_name, created_at, age, school, class, volunteer_email, fee_structure, contact, whatsapp, dob, pob, camp_name, nationality, address, educationcategory, educationsubcategory, educationyear, email, student_contact, branch, prev_percent, present_percent, fee, job, aspiration, scholarship, certificates, years_area, parents_full_names, family_members, earning_members, account_no, bank_name, bank_branch, ifsc_code, special_remarks, does_work, has_scholarship")
         .eq("volunteer_email", volunteerEmail)
         .order("created_at", { ascending: true });
 
