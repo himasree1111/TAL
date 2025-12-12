@@ -53,8 +53,8 @@
 }
 
 .section {
-  margin-bottom: 20px;
-  padding: 20px;
+  margin-bottom: -1px;
+  padding: 15px;
   background: #fafafa;
   border-radius: 10px;
 }
@@ -63,7 +63,8 @@
 .form-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 1px;
+  margin-bottom: 0px;
 }
 
 /* Make the QUESTION LABEL take full width */
@@ -72,13 +73,19 @@
   font-size: 16px;
   font-weight: 600;
   display: block;
+  margin-bottom: 0px;
 }
 
 /* Input fields inside label */
 .form-group label input,
 .form-group label textarea {
-  margin-top: 6px;
+  margin-top: 3px;
   width: 100%;
+}
+
+/* Remove default margins on labels */
+.form-group label {
+  margin-bottom: 0px;
 }
 
 /* Full-width field */
@@ -211,7 +218,7 @@ button[type="submit"]:hover {
 .form-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 0px;
 }
 
 /* All fields inside form-group will have equal width */
