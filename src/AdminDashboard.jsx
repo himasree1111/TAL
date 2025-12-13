@@ -28,12 +28,13 @@ export default function AdminDashboard() {
           // Transform student data to match admin dashboard format
   const transformedStudents = (studentData || []).map((student, index) => ({
     id: student.id || index + 1,
+    student_id: student.student_id || student.id,  // VERY IMPORTANT
 
     /* TABLE COLUMNS */
     name: student.full_name,           // Name column
     // college: student.school,           // College column
     year: student.class,               // Year column
-    donor: student.volunteer_email || "None",
+   // donor: student.volunteer_email || "None",
     fee_status: student.fee_structure || "Not Provided",
     course: student.educationcategory || "",
     camp: student.camp_name,
@@ -149,14 +150,37 @@ export default function AdminDashboard() {
     setStudents((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleApprove = (id) => {
-    alert(`Student ${id} approved (demo)`);
-  };
+  const handleApprove = async (studentId) => {
+  try {
+    const { error } = await supabase
+      .from("admin_student_info")
+      .update({ status: "eligible" })
+      .eq("student_id", studentId);
 
-  const handleNotApprove = (id) => {
-    alert(`Student ${id} not approved (demo)`);
-  };
+    if (error) throw error;
 
+    alert("Student approved successfully");
+  } catch (err) {
+    console.error(err);
+    alert("Approval failed");
+  }
+};
+
+ const handleNotApprove = async (studentId) => {
+  try {
+    const { error } = await supabase
+      .from("admin_student_info")
+      .update({ status: "not_eligible" })
+      .eq("student_id", studentId);
+
+    if (error) throw error;
+
+    alert("Student marked as not eligible");
+  } catch (err) {
+    console.error(err);
+    alert("Rejection failed");
+  }
+};
   const handleEditSave = (data) => {
     // Data contains id + updated fields
     setStudents((prev) => prev.map((p) => (p.id === data.id ? { ...p, ...data } : p)));
@@ -470,7 +494,7 @@ export default function AdminDashboard() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Education</th>
-                      <th>Donor</th>
+                
                       {/* <th>Fee Status</th> */}
                       <th>Contact</th>         {/* NEW column (stream) */}
                       <th>Camp</th>           {/* NEW column (campName / campDate) */}
@@ -483,7 +507,7 @@ export default function AdminDashboard() {
                         <td>{s.name}</td>
                         <td>{s.email}</td>
                         <td>{s.year}</td>
-                        <td>{s.donor}</td>
+                    
                         {/* <td>{s.feeStatus}</td> */}
                         <td>{s.contact}</td>
                         <td>
@@ -499,11 +523,11 @@ export default function AdminDashboard() {
                               <span className="tooltiptext">View</span>
                             </div>
                             <div className="tooltip">
-                              <button className="btn small icon-btn" onClick={() => handleApprove(s.id)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
+                              <button className="btn small icon-btn" onClick={() => handleApprove(s.student_id)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
                               <span className="tooltiptext">Approved</span>
                             </div>
                             <div className="tooltip">
-                              <button className="btn small icon-btn" onClick={() => handleNotApprove(s.id)} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
+                              <button className="btn small icon-btn" onClick={() => handleNotApprove(s.student_id)} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
                               <span className="tooltiptext">Not Approved</span>
                             </div>
                           </div>
