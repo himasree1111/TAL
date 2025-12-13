@@ -150,37 +150,81 @@ export default function AdminDashboard() {
     setStudents((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleApprove = async (studentId) => {
+const handleApprove = async (studentId) => {
   try {
-    const { error } = await supabase
+    // 1️⃣ Fetch student
+    const { data: student, error: fetchError } = await supabase
       .from("admin_student_info")
-      .update({ status: "eligible" })
+      .select("*")
+      .eq("student_id", studentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // ❗ Remove auto-generated columns
+    const { id, created_at, ...studentData } = student;
+
+    // 2️⃣ Insert into eligible_students
+    const { error: insertError } = await supabase
+      .from("eligible_students")
+      .insert([studentData]);
+
+    if (insertError) throw insertError;
+
+    // 3️⃣ Delete from admin_student_info
+    const { error: deleteError } = await supabase
+      .from("admin_student_info")
+      .delete()
       .eq("student_id", studentId);
 
-    if (error) throw error;
+    if (deleteError) throw deleteError;
 
-    alert("Student approved successfully");
+    // 4️⃣ Update UI
+    setStudents(prev => prev.filter(s => s.student_id !== studentId));
+
+    alert("Student moved to Eligible Students ✅");
+
   } catch (err) {
-    console.error(err);
+    console.error("Approve failed:", err);
     alert("Approval failed");
   }
 };
 
- const handleNotApprove = async (studentId) => {
+const handleNotApprove = async (studentId) => {
   try {
-    const { error } = await supabase
+    const { data: student, error: fetchError } = await supabase
       .from("admin_student_info")
-      .update({ status: "not_eligible" })
+      .select("*")
+      .eq("student_id", studentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const { id, created_at, ...studentData } = student;
+
+    const { error: insertError } = await supabase
+      .from("non_eligible_students")
+      .insert([studentData]);
+
+    if (insertError) throw insertError;
+
+    const { error: deleteError } = await supabase
+      .from("admin_student_info")
+      .delete()
       .eq("student_id", studentId);
 
-    if (error) throw error;
+    if (deleteError) throw deleteError;
 
-    alert("Student marked as not eligible");
+    setStudents(prev => prev.filter(s => s.student_id !== studentId));
+
+    alert("Student marked Not Eligible ❌");
+
   } catch (err) {
-    console.error(err);
+    console.error("Not approve failed:", err);
     alert("Rejection failed");
   }
 };
+
   const handleEditSave = (data) => {
     // Data contains id + updated fields
     setStudents((prev) => prev.map((p) => (p.id === data.id ? { ...p, ...data } : p)));
@@ -321,7 +365,7 @@ export default function AdminDashboard() {
         <main className="admin-content">
           {loading && (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <div>Loading data...</div>
+             
             </div>
           )}
 
@@ -540,14 +584,9 @@ export default function AdminDashboard() {
               {/* Debug panel: show raw fetch when no students present to help diagnose Supabase issues */}
               {students.length === 0 && lastFetch && (
                 <div className="debug-panel">
-                  <h4>Debug: Supabase Fetch Result</h4>
-                  <div style={{whiteSpace: 'pre-wrap', fontSize: '0.85rem', background: '#111', color: '#e6fffd', padding: 12, borderRadius: 6, marginTop: 12}}>
-                    {JSON.stringify(lastFetch, null, 2)}
-                  </div>
-                  <div style={{marginTop:8, fontSize:'0.9rem'}}>
-                    If this shows an empty array, check the table name and whether rows exist in Supabase.
-                    If an error is present, check RLS permissions and your anon key in `src/supabaseClient.js`.
-                  </div>
+                  <h4>No more forms to Review</h4>
+                  
+                  
                 </div>
               )}
             </section>
