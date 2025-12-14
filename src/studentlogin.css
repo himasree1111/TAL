@@ -128,3 +128,14 @@ body {
     transform: translateY(0);
   }
 }
+.forgot-password {
+  margin-top: 10px;
+  text-align: center;
+  color: #6a5acd;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import supabase from "./supabaseClient";
-import "./studentlogin.css"; // same styles (optional rename)
+import "./studentlogin.css"; // SAME color/style as Volunteer
 
 export default function DonorLogin() {
   const [isSignIn, setIsSignIn] = useState(true);
@@ -15,59 +15,31 @@ export default function DonorLogin() {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  // Validation functions
+  /* ---------------- VALIDATION ---------------- */
+
   const validateEmail = (email) => {
     if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!regex.test(email)) return "Invalid email address";
     return "";
   };
 
   const validatePassword = (password) => {
     if (!password) return "Password is required";
-    if (password.length < 8) return "Password must be at least 8 characters long";
-    if (password.length > 64) return "Password must be less than 64 characters long";
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])([A-Za-z\d!@#$%^&*]{8,64})$/;
-    if (!passwordRegex.test(password)) {
-      return "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character";
-    }
+    if (password.length < 8)
+      return "Password must be at least 8 characters";
     return "";
   };
 
   const validateName = (name) => {
     if (!name) return "Full name is required";
-    if (name.trim().length < 2) return "Full name must be at least 2 characters long";
-    const nameRegex = /^[a-zA-Z\s]+$/;
-    if (!nameRegex.test(name.trim())) return "Full name can only contain letters and spaces";
+    if (name.trim().length < 2)
+      return "Name must be at least 2 characters";
     return "";
   };
 
-  // Handle input changes with validation
-  const handleEmailChange = (e) => {
-    const value = e.target.value;
-    setEmail(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, email: validateEmail(value) }));
-    }
-  };
+  /* ---------------- RESET SESSION ---------------- */
 
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setPassword(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, password: validatePassword(value) }));
-    }
-  };
-
-  const handleNameChange = (e) => {
-    const value = e.target.value;
-    setName(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, name: validateName(value) }));
-    }
-  };
-
-  // ✅ Always clear previous session when page opens
   useEffect(() => {
     const resetSession = async () => {
       await supabase.auth.signOut();
@@ -76,86 +48,103 @@ export default function DonorLogin() {
     resetSession();
   }, []);
 
- 
+  /* ---------------- SIGN IN / SIGN UP ---------------- */
 
-  // ✅ Handle sign in / sign up
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form
     const newErrors = {};
     if (isSignIn) {
-      // Sign in validation
       const emailError = validateEmail(email);
       if (emailError) newErrors.email = emailError;
-      if (!password) newErrors.password = "Password is required";
+      if (!password) newErrors.password = "Password required";
     } else {
-      // Sign up validation
       const nameError = validateName(name);
       if (nameError) newErrors.name = nameError;
       const emailError = validateEmail(email);
       if (emailError) newErrors.email = emailError;
-      const passwordError = validatePassword(password);
-      if (passwordError) newErrors.password = passwordError;
+      const passError = validatePassword(password);
+      if (passError) newErrors.password = passError;
     }
 
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      return;
-    }
+    if (Object.keys(newErrors).length > 0) return;
 
     try {
       if (isSignIn) {
-        // Donor sign-in
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
         if (error) throw error;
 
-        const { user } = data;
-        const userType = user?.user_metadata?.user_type;
-
-        if (userType !== "donor") {
+        if (data.user.user_metadata?.user_type !== "donor") {
           await supabase.auth.signOut();
-          toast.error("Access denied! Please log in via the donor portal only.");
+          toast.error("Access denied. Use Donor login only.");
           return;
         }
 
-        toast.success("Donor signed in successfully!");
+        toast.success("Donor login successful!");
         navigate("/donor-dashboard");
       } else {
-        // Donor sign-up
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               name,
-              user_type: "donor", // 👈 Important metadata
+              user_type: "donor",
             },
           },
         });
         if (error) throw error;
-
-        toast.success("Donor account created successfully!");
+        toast.success("Donor account created!");
       }
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // ✅ Optional: Google Sign-In
+  /* ---------------- FORGOT PASSWORD ---------------- */
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Please enter your email first");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo:
+          window.location.origin + "/reset-password",
+      }
+    );
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset email sent!");
+    }
+  };
+
+  /* ---------------- GOOGLE SIGN IN ---------------- */
+
   const handleGoogleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin + "/donor-dashboard",
-        queryParams: { access_type: "offline", prompt: "consent" },
+        redirectTo:
+          window.location.origin + "/donor-dashboard",
       },
     });
     if (error) toast.error(error.message);
   };
+
+  if (loading) return <div>Loading...</div>;
+
+  /* ---------------- UI ---------------- */
 
   return (
     <div className="auth-container">
@@ -169,11 +158,12 @@ export default function DonorLogin() {
                 type="text"
                 placeholder="Full Name"
                 value={name}
-                onChange={handleNameChange}
+                onChange={(e) => setName(e.target.value)}
                 className={errors.name ? "input-error" : ""}
-                required
               />
-              {errors.name && <p className="error-text">{errors.name}</p>}
+              {errors.name && (
+                <p className="error-text">{errors.name}</p>
+              )}
             </>
           )}
 
@@ -181,30 +171,31 @@ export default function DonorLogin() {
             type="email"
             placeholder="Email Address"
             value={email}
-            onChange={handleEmailChange}
+            onChange={(e) => setEmail(e.target.value)}
             className={errors.email ? "input-error" : ""}
-            required
           />
-          {errors.email && <p className="error-text">{errors.email}</p>}
+          {errors.email && (
+            <p className="error-text">{errors.email}</p>
+          )}
 
           <input
             type="password"
             placeholder="Password"
             value={password}
-            onChange={handlePasswordChange}
+            onChange={(e) => setPassword(e.target.value)}
             className={errors.password ? "input-error" : ""}
-            required
           />
-          {errors.password && <p className="error-text">{errors.password}</p>}
+          {errors.password && (
+            <p className="error-text">{errors.password}</p>
+          )}
 
-          <button type="submit">{isSignIn ? "Sign In" : "Sign Up"}</button>
+          <button type="submit">
+            {isSignIn ? "Sign In" : "Sign Up"}
+          </button>
         </form>
 
         <div className="divider">or</div>
 
-        <button className="google-btn" onClick={handleGoogleSignIn}>
-          Continue with Google
-        </button>
 
         <p className="switch-text">
           {isSignIn ? "New here?" : "Already have an account?"}{" "}
@@ -212,6 +203,16 @@ export default function DonorLogin() {
             {isSignIn ? "Create an account" : "Sign in"}
           </span>
         </p>
+
+        {/* ✅ FORGOT PASSWORD BELOW CREATE ACCOUNT */}
+        {isSignIn && (
+          <p
+            className="forgot-password"
+            onClick={handleForgotPassword}
+          >
+            Forgot password?
+          </p>
+        )}
       </div>
 
       <ToastContainer position="top-center" autoClose={3000} />

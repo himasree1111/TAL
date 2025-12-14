@@ -12,73 +12,28 @@ export default function StudentLogin() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  // Validation functions
-  const validateEmail = (email) => {
-    if (!email) return "Email is required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
-    return "";
+  // 🔹 Inline style for Forgot Password
+  const forgotStyle = {
+    marginTop: "10px",
+    textAlign: "center",
+    color: "#2563eb",
+    cursor: "pointer",
+    fontSize: "0.95rem",
   };
 
-  const validatePassword = (password) => {
-    if (!password) return "Password is required";
-    if (password.length < 8) return "Password must be at least 8 characters long";
-    if (password.length > 64) return "Password must be less than 64 characters long";
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])([A-Za-z\d!@#$%^&*]{8,64})$/;
-    if (!passwordRegex.test(password)) {
-      return "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character";
-    }
-    return "";
-  };
-
-  const validateName = (name) => {
-    if (!name) return "Full name is required";
-    if (name.trim().length < 2) return "Full name must be at least 2 characters long";
-    const nameRegex = /^[a-zA-Z\s]+$/;
-    if (!nameRegex.test(name.trim())) return "Full name can only contain letters and spaces";
-    return "";
-  };
-
-  // Handle input changes with validation
-  const handleEmailChange = (e) => {
-    const value = e.target.value;
-    setEmail(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, email: validateEmail(value) }));
-    }
-  };
-
-  const handlePasswordChange = (e) => {
-    const value = e.target.value;
-    setPassword(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, password: validatePassword(value) }));
-    }
-  };
-
-  const handleNameChange = (e) => {
-    const value = e.target.value;
-    setName(value);
-    if (!isSignIn) {
-      setErrors(prev => ({ ...prev, name: validateName(value) }));
-    }
-  };
-
-  // ✅ Check session on load
+  // 🔍 Check session
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        const userType = data.session.user.user_metadata.user_type;
+        const userType = data.session.user.user_metadata?.user_type;
         if (userType === "student") {
           navigate("/student-dashboard");
         } else {
-          // Sign out invalid users automatically
           await supabase.auth.signOut();
-          toast.error("Unauthorized! Please log in through the correct portal.");
+          toast.error("Unauthorized access");
         }
       } else {
         setLoading(false);
@@ -87,68 +42,62 @@ export default function StudentLogin() {
     checkSession();
   }, [navigate]);
 
- 
-
-  // ✅ Handle sign in & sign up
+  // 🔐 Login / Signup
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       if (isSignIn) {
-        // Step 1: Attempt sign-in
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
 
-        // Step 2: Check user type immediately
-        const { user } = data;
-        const userType = user?.user_metadata?.user_type;
-
-        if (userType !== "student") {
-          // 🚫 If not a student, reject login
+        if (data.user.user_metadata.user_type !== "student") {
           await supabase.auth.signOut();
-          toast.error("Access denied. Please login with proper login.");
+          toast.error("Access denied");
           return;
         }
 
-        toast.success("Student signed in successfully!");
+        toast.success("Login successful");
         navigate("/student-dashboard");
       } else {
-        // Student Sign-Up
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               name,
-              user_type: "student", // 👈 Set role explicitly
+              user_type: "student",
             },
           },
         });
         if (error) throw error;
-        toast.success("Student account created successfully!");
+
+        toast.success("Account created successfully");
       }
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // ✅ Google Sign-In (optional)
-  const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin + "/student-dashboard",
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-      },
+  // 🔑 Forgot Password
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Please enter your email first");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
     });
+
     if (error) toast.error(error.message);
+    else toast.success("Password reset email sent 📧");
   };
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="auth-container">
@@ -157,44 +106,35 @@ export default function StudentLogin() {
 
         <form onSubmit={handleSubmit}>
           {!isSignIn && (
-            <>
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={handleNameChange}
-                className={errors.name ? "input-error" : ""}
-                required
-              />
-              {errors.name && <p className="error-text">{errors.name}</p>}
-            </>
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           )}
 
           <input
             type="email"
             placeholder="Email Address"
             value={email}
-            onChange={handleEmailChange}
-            className={errors.email ? "input-error" : ""}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
-          {errors.email && <p className="error-text">{errors.email}</p>}
 
           <input
             type="password"
             placeholder="Password"
             value={password}
-            onChange={handlePasswordChange}
-            className={errors.password ? "input-error" : ""}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
-          {errors.password && <p className="error-text">{errors.password}</p>}
 
-          <button type="submit">{isSignIn ? "Sign In" : "Sign Up"}</button>
+          <button type="submit">
+            {isSignIn ? "Sign In" : "Sign Up"}
+          </button>
         </form>
-
-        <div className="divider">or</div>
-
 
         <p className="switch-text">
           {isSignIn ? "New here?" : "Already have an account?"}{" "}
@@ -202,6 +142,16 @@ export default function StudentLogin() {
             {isSignIn ? "Create an account" : "Sign in"}
           </span>
         </p>
+
+        {/* 🔐 FORGOT PASSWORD */}
+        {isSignIn && (
+          <p style={forgotStyle} onClick={handleForgotPassword}
+            onMouseOver={(e) => (e.target.style.textDecoration = "underline")}
+            onMouseOut={(e) => (e.target.style.textDecoration = "none")}
+            >
+            Forgot password?
+          </p>
+        )}
       </div>
 
       <ToastContainer position="top-center" autoClose={3000} />

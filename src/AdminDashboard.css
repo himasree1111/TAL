@@ -654,3 +654,14 @@
   .admin-main{margin-left:0}
   .header-actions input{min-width:120px}
 }
+.forgot-password {
+  margin-top: 10px;
+  text-align: center;
+  color: #6a5acd;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
