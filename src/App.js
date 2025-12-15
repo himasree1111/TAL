@@ -14,6 +14,8 @@ import DonorDashboard from "./DonorDashboard"; // <-- 1. IMPORT DonorDashboard
 import AdminDashboard from "./AdminDashboard"; // admin dashboard
 import Adminlogin from "./adminlogin";
 import VolunteerDashboard from "./VolunteerDashboard";
+import ResetPassword from "./ResetPassword";
+
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
         {/* Volunteer auth */}
         <Route path="/volunteerlogin" element={<VolunteerLogin />} />
         <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
+<Route path="/reset-password" element={<ResetPassword />} />
+
         <Route path="/donorlogin" element={<DonorLogin />} />
         <Route path="/register" element={<Register />} />
 
@@ -42,6 +46,7 @@ function App() {
         <Route path="/donor-dashboard" element={<DonorDashboard />} /> {/* <-- 2. ADD NEW ROUTE */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/adminlogin" element={<Adminlogin />} />
+
       </Routes>
     </Router>
   );

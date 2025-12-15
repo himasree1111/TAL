@@ -76,22 +76,22 @@ export default function VolunteerLogin() {
   // 🔑 Forgot Password
   const handleForgotPassword = async () => {
     if (!email) {
-      toast.error("Please enter your email first");
-      return;
-    }
+    toast.error("Please enter your email first");
+    return;
+  }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/reset-password",
-    });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: "http://localhost:3000/reset-password?role=volunteer",
+  });
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Password reset email sent 📧");
-    }
+  if (error) {
+    toast.error(error.message);
+  } else {
+    toast.success("Password reset email sent 📧");
+  }
   };
 
-  if (loading) return <div>Loading...</div>;
+  
 
   return (
     <div className="auth-container">
