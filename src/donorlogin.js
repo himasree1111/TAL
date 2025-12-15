@@ -13,29 +13,40 @@ export default function DonorLogin() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({ name: false, email: false, password: false });
   const navigate = useNavigate();
 
-  /* ---------------- VALIDATION ---------------- */
-
-  const validateEmail = (email) => {
-    if (!email) return "Email is required";
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!regex.test(email)) return "Invalid email address";
+  // ✅ Validation functions
+  const validateName = (value) => {
+    if (!value.trim()) {
+      return "❌ Full name is required";
+    }
+    const regex = /^[a-zA-Z\s]+$/;
+    if (!regex.test(value)) {
+      return "❌ Full name must contain only letters and spaces";
+    }
+    if (value.trim().length < 2) {
+      return "❌ Full name must be at least 2 characters long";
+    }
     return "";
   };
 
-  const validatePassword = (password) => {
-    if (!password) return "Password is required";
-    if (password.length < 8)
-      return "Password must be at least 8 characters";
+  const validateEmail = (value) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+    if (!regex.test(value)) {
+      return "❌ Wrong email format (example: name@example.com)";
+    }
     return "";
   };
 
-  const validateName = (name) => {
-    if (!name) return "Full name is required";
-    if (name.trim().length < 2)
-      return "Name must be at least 2 characters";
-    return "";
+  const validatePassword = (value) => {
+    const errors = [];
+    if (!/[a-z]/.test(value)) errors.push("❌ Must include a lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("❌ Must include an uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("❌ Must include a number");
+    if (!/[@$!%*?&]/.test(value)) errors.push("❌ Must include a special character (@$!%*?&)");
+    if (value.length < 8) errors.push("❌ Must be at least 8 characters long");
+    return errors;
   };
 
   /* ---------------- RESET SESSION ---------------- */
@@ -47,6 +58,11 @@ export default function DonorLogin() {
     };
     resetSession();
   }, []);
+
+  useEffect(() => {
+    setErrors({});
+    setTouched({ name: false, email: false, password: false });
+  }, [isSignIn]);
 
   /* ---------------- SIGN IN / SIGN UP ---------------- */
 

@@ -6,9 +6,25 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordErrors, setPasswordErrors] = useState([]);
-  const [touched, setTouched] = useState({ email: false, password: false });
+  const [touched, setTouched] = useState({ name: false, email: false, password: false });
+
+  // ✅ Name validation
+  const validateName = (value) => {
+    if (!value.trim()) {
+      return "❌ Full name is required";
+    }
+    const regex = /^[a-zA-Z\s]+$/;
+    if (!regex.test(value)) {
+      return "❌ Full name must contain only letters and spaces";
+    }
+    if (value.trim().length < 2) {
+      return "❌ Full name must be at least 2 characters long";
+    }
+    return "";
+  };
 
   // ✅ Email validation
   const validateEmail = (value) => {
@@ -74,9 +90,21 @@ function Register() {
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (touched.name) {
+                setNameError(validateName(e.target.value));
+              }
+            }}
+            onBlur={() => {
+              setTouched({ ...touched, name: true });
+              setNameError(validateName(name));
+            }}
             required
           />
+          {touched.name && nameError && (
+            <p style={{ color: "red" }}>{nameError}</p>
+          )}
         </div>
 
         {/* Email */}
@@ -135,6 +163,7 @@ function Register() {
             !name ||
             !email ||
             !password ||
+            nameError ||
             emailError ||
             passwordErrors.length > 0
           }
