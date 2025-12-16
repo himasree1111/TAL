@@ -41,11 +41,11 @@ export default function VolunteerLogin() {
 
   const validatePassword = (value) => {
     const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("❌ Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("❌ Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("❌ Must include a number");
-    if (!/[@$!%*?&]/.test(value)) errors.push("❌ Must include a special character (@$!%*?&)");
-    if (value.length < 8) errors.push("❌ Must be at least 8 characters long");
+    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include a number");
+    if (!/[@$!%*?&]/.test(value)) errors.push("Must include a special character (@$!%*?&)");
+    if (value.length < 8) errors.push("Must be at least 8 characters long");
     return errors;
   };
 
