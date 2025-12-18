@@ -4,48 +4,37 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import supabase from "./supabaseClient";
-import "./studentlogin.css"; // SAME color/style as Volunteer
+import "./studentlogin.css";
 
 export default function DonorLogin() {
   const [isSignIn, setIsSignIn] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordErrors, setPasswordErrors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({ name: false, email: false, password: false });
   const navigate = useNavigate();
 
-  // ✅ Validation functions
-  const validateName = (value) => {
-    if (!value.trim()) {
-      return "❌ Full name is required";
-    }
-    const regex = /^[a-zA-Z\s]+$/;
-    if (!regex.test(value)) {
-      return "❌ Full name must contain only letters and spaces";
-    }
-    if (value.trim().length < 2) {
-      return "❌ Full name must be at least 2 characters long";
-    }
-    return "";
-  };
+  /* ---------------- VALIDATION FUNCTIONS ---------------- */
 
   const validateEmail = (value) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
-    if (!regex.test(value)) {
-      return "❌ Wrong email format (example: name@example.com)";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      return "Invalid email format (example: name@example.com)";
     }
     return "";
   };
 
   const validatePassword = (value) => {
     const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("❌ Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("❌ Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("❌ Must include a number");
-    if (!/[@$!%*?&]/.test(value)) errors.push("❌ Must include a special character (@$!%*?&)");
-    if (value.length < 8) errors.push("❌ Must be at least 8 characters long");
+    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include a number");
+    if (!/[@$!%*?&]/.test(value))
+      errors.push("Must include a special character (@$!%*?&)");
+    if (value.length < 8)
+      errors.push("Must be at least 8 characters long");
     return errors;
   };
 
@@ -59,32 +48,28 @@ export default function DonorLogin() {
     resetSession();
   }, []);
 
-  useEffect(() => {
-    setErrors({});
-    setTouched({ name: false, email: false, password: false });
-  }, [isSignIn]);
-
-  /* ---------------- SIGN IN / SIGN UP ---------------- */
+  /* ---------------- SUBMIT ---------------- */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const newErrors = {};
-    if (isSignIn) {
-      const emailError = validateEmail(email);
-      if (emailError) newErrors.email = emailError;
-      if (!password) newErrors.password = "Password required";
-    } else {
-      const nameError = validateName(name);
-      if (nameError) newErrors.name = nameError;
-      const emailError = validateEmail(email);
-      if (emailError) newErrors.email = emailError;
-      const passError = validatePassword(password);
-      if (passError) newErrors.password = passError;
+    const emailErr = validateEmail(email);
+    setEmailError(emailErr);
+
+    if (emailErr) return;
+
+    if (!isSignIn && !name.trim()) {
+      toast.error("Full name is required");
+      return;
     }
 
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    const pwdErrors = validatePassword(password);
+    setPasswordErrors(pwdErrors);
+
+    if (pwdErrors.length > 0) {
+      toast.error("Please fix password requirements");
+      return;
+    }
 
     try {
       if (isSignIn) {
@@ -93,6 +78,7 @@ export default function DonorLogin() {
             email,
             password,
           });
+
         if (error) throw error;
 
         if (data.user.user_metadata?.user_type !== "donor") {
@@ -101,7 +87,7 @@ export default function DonorLogin() {
           return;
         }
 
-        toast.success("Donor login successful!");
+        toast.success("Donor login successful 🎉");
         navigate("/donor-dashboard");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -114,8 +100,11 @@ export default function DonorLogin() {
             },
           },
         });
+
         if (error) throw error;
-        toast.success("Donor account created!");
+
+        toast.success("Donor account created 🎉");
+        setIsSignIn(true);
       }
     } catch (err) {
       toast.error(err.message);
@@ -130,32 +119,12 @@ export default function DonorLogin() {
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo:
-          window.location.origin + "/reset-password",
-      }
-    );
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Password reset email sent!");
-    }
-  };
-
-  /* ---------------- GOOGLE SIGN IN ---------------- */
-
-  const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo:
-          window.location.origin + "/donor-dashboard",
-      },
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password",
     });
+
     if (error) toast.error(error.message);
+    else toast.success("Password reset email sent 📧");
   };
 
   if (loading) return <div>Loading...</div>;
@@ -165,53 +134,78 @@ export default function DonorLogin() {
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <h1>{isSignIn ? "Sign In" : "Sign Up"}</h1>
+        <h1>{isSignIn ? "Donor Sign In" : "Donor Sign Up"}</h1>
 
         <form onSubmit={handleSubmit}>
           {!isSignIn && (
-            <>
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={errors.name ? "input-error" : ""}
-              />
-              {errors.name && (
-                <p className="error-text">{errors.name}</p>
-              )}
-            </>
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           )}
 
+          {/* EMAIL */}
           <input
             type="email"
             placeholder="Email Address"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={errors.email ? "input-error" : ""}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setEmailError(validateEmail(e.target.value));
+            }}
+            className={emailError ? "input-error" : ""}
+            required
           />
-          {errors.email && (
-            <p className="error-text">{errors.email}</p>
-          )}
+          {emailError && <p className="error-text">{emailError}</p>}
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={errors.password ? "input-error" : ""}
-          />
-          {errors.password && (
-            <p className="error-text">{errors.password}</p>
+          {/* PASSWORD WITH EYE ICON */}
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordErrors(validatePassword(e.target.value));
+              }}
+              style={{ paddingRight: "42px" }}
+              required
+            />
+
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: "absolute",
+                right: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: "pointer",
+                color: "#555",
+                fontSize: "18px",
+                userSelect: "none",
+              }}
+              title={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "👁‍🗨" : "👁"}
+            </span>
+          </div>
+
+          {/* PASSWORD REQUIREMENTS */}
+          {!isSignIn && passwordErrors.length > 0 && (
+            <ul className="error-text">
+              {passwordErrors.map((err, index) => (
+                <li key={index}>{err}</li>
+              ))}
+            </ul>
           )}
 
           <button type="submit">
             {isSignIn ? "Sign In" : "Sign Up"}
           </button>
         </form>
-
-        <div className="divider">or</div>
-
 
         <p className="switch-text">
           {isSignIn ? "New here?" : "Already have an account?"}{" "}
@@ -220,7 +214,6 @@ export default function DonorLogin() {
           </span>
         </p>
 
-        {/* ✅ FORGOT PASSWORD BELOW CREATE ACCOUNT */}
         {isSignIn && (
           <p
             className="forgot-password"
