@@ -975,7 +975,7 @@ if (result.error) {
         </div>
 
         <div className="submit-container">
-          <button type="submit">Submit Application</button>
+          <button type="submit">{isEditMode ? "Save" : "Submit Application"}</button>
         </div>
       </form>
       </div>
