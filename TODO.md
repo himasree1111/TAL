@@ -1,12 +1,21 @@
-# TODO List for Login UI Fixes
+# Validation Implementation Plan
 
-## Completed Tasks
-- [x] Add eye symbol (password visibility toggle) to volunteerlogin.js
-- [x] Reduce gap between field box and alert message in studentlogin.css (added margin-top: 2px to .error-text and reduced form gap to 2px)
-- [x] Make eye symbol more professional and neat (replaced text with professional SVG eye icons in all login forms)
-- [x] Reduce gap between field box and alert messages in ResetPassword.js (changed inline margins from 5px to 2px)
+## Files to Update
+- [x] src/register.js: Enhance password validation, add full name validation (only letters)
+- [x] src/volunteerlogin.js: Add validations for sign-in (email/password) and sign-up (name/email/password)
+- [x] src/adminlogin.js: Add validations for sign-in and sign-up
+- [ ] src/donorlogin.js: Replace basic validations with full specs
+- [ ] src/studentlogin.js: Add validations for sign-in and sign-up
+- [ ] src/ResetPassword.js: Add password strength validation for new password
 
-## Summary
-- Eye symbol is now present in all login forms (donorlogin.js, studentlogin.js, adminlogin.js, volunteerlogin.js)
-- Gap between input fields and error messages has been reduced to 2px for better UI consistency in both login forms and reset password page
-- Password visibility toggle now uses professional SVG eye icons (open eye for show, closed eye for hide) instead of text or emojis, providing a clean and neat appearance
+## Validation Rules
+- Email: Required, regex ^[^\s@]+@[^\s@]+\.[^\s@]+$
+- Password: Required, 8-64 chars, at least one lowercase, uppercase, number, special (!@#$%^&*), no spaces
+- Full Name: Required during sign-up, only letters and spaces, min 2 chars
+
+## Implementation Details
+- Add validateEmail, validatePassword, validateName functions
+- Use state for errors and touched fields
+- Real-time validation on onChange/onBlur
+- Prevent form submission if errors exist
+- Display error messages below inputs
