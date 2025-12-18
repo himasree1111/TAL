@@ -11,6 +11,7 @@ export default function VolunteerLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,18 +22,26 @@ export default function VolunteerLogin() {
   const validateEmail = (value) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
- const validatePassword = (value) => {
-  const errors = [];
-  if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
-  if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
-  if (!/[0-9]/.test(value)) errors.push("Must include a number");
-  if (!/[@$!%*?&]/.test(value))
-    errors.push("Must include a special character (@$!%*?&)");
-  if (value.length < 8)
-    errors.push("Must be at least 8 characters long");
-  return errors;
-};
+  const validateName = (value) => {
+    if (!value.trim()) return "Full name is required";
+    if (!/^[A-Za-z\s]+$/.test(value))
+      return "Name can contain only letters and spaces";
+    if (value.trim().length < 2)
+      return "Name must be at least 2 characters";
+    return "";
+  };
 
+  const validatePassword = (value) => {
+    const errors = [];
+    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include a number");
+    if (!/[@$!%*?&]/.test(value))
+      errors.push("Must include a special character (@$!%*?&)");
+    if (value.length < 8)
+      errors.push("Must be at least 8 characters long");
+    return errors;
+  };
 
   /* ---------------- SESSION CHECK ---------------- */
 
@@ -58,8 +67,10 @@ export default function VolunteerLogin() {
     }
 
     if (!isSignIn) {
-      if (!name.trim()) {
-        toast.error("Full name is required");
+      const err = validateName(name);
+      setNameError(err);
+      if (err) {
+        toast.error("Fix name field");
         return;
       }
     }
@@ -133,13 +144,21 @@ export default function VolunteerLogin() {
 
         <form onSubmit={handleSubmit}>
           {!isSignIn && (
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError(validateName(e.target.value));
+                }}
+                required
+              />
+              {nameError && (
+                <p className="error-text">{nameError}</p>
+              )}
+            </>
           )}
 
           <input
@@ -150,21 +169,20 @@ export default function VolunteerLogin() {
             required
           />
 
-          {/* PASSWORD FIELD WITH PROFESSIONAL EYE ICON */}
+          {/* PASSWORD FIELD WITH EYE ICON */}
           <div style={{ position: "relative" }}>
             <input
-  type={showPassword ? "text" : "password"}
-  placeholder="Password"
-  value={password}
-  onChange={(e) => {
-    const value = e.target.value;
-    setPassword(value);
-    setPasswordErrors(validatePassword(value));
-  }}
-  required
-  style={{ paddingRight: "40px" }}
-/>
-
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => {
+                const value = e.target.value;
+                setPassword(value);
+                setPasswordErrors(validatePassword(value));
+              }}
+              required
+              style={{ paddingRight: "40px" }}
+            />
 
             <span
               onClick={() => setShowPassword(!showPassword)}
@@ -176,7 +194,6 @@ export default function VolunteerLogin() {
                 cursor: "pointer",
                 color: "#555",
                 fontSize: "18px",
-                userSelect: "none",
               }}
               title={showPassword ? "Hide password" : "Show password"}
             >
@@ -184,28 +201,13 @@ export default function VolunteerLogin() {
             </span>
           </div>
 
-          {/* PASSWORD RULE FEEDBACK */}
-          {!isSignIn && passwordErrors.length > 0 && (
+          {passwordErrors.length > 0 && (
             <ul className="error-text">
               {passwordErrors.map((err, index) => (
                 <li key={index}>{err}</li>
               ))}
             </ul>
           )}
-{passwordErrors.length > 0 && (
-  <ul
-    style={{
-      color: "red",
-      fontSize: "0.9rem",
-      marginTop: "6px",
-      paddingLeft: "18px",
-    }}
-  >
-    {passwordErrors.map((err, index) => (
-      <li key={index}>{err}</li>
-    ))}
-  </ul>
-)}
 
           <button type="submit">
             {isSignIn ? "Sign In" : "Sign Up"}
