@@ -13,6 +13,7 @@ export default function StudentLogin() {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordErrors, setPasswordErrors] = useState([]);
 
@@ -20,6 +21,15 @@ export default function StudentLogin() {
   const navigate = useNavigate();
 
   /* ---------------- VALIDATIONS ---------------- */
+
+  const validateName = (value) => {
+    if (!value.trim()) return "Full name is required";
+    if (!/^[A-Za-z\s]+$/.test(value))
+      return "Name can contain only letters and spaces";
+    if (value.trim().length < 2)
+      return "Name must be at least 2 characters";
+    return "";
+  };
 
   const validateEmail = (value) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
@@ -58,13 +68,15 @@ export default function StudentLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const emailErr = validateEmail(email);
-    setEmailError(emailErr);
+    const nError = !isSignIn ? validateName(name) : "";
+    const eError = validateEmail(email);
+    const pErrors = validatePassword(password);
 
-    const pwdErrors = validatePassword(password);
-    setPasswordErrors(pwdErrors);
+    setNameError(nError);
+    setEmailError(eError);
+    setPasswordErrors(pErrors);
 
-    if (emailErr || pwdErrors.length > 0) {
+    if (nError || eError || pErrors.length > 0) {
       toast.error("Please fix the highlighted errors");
       return;
     }
@@ -86,11 +98,6 @@ export default function StudentLogin() {
         toast.success("Login successful 🎉");
         navigate("/student-dashboard");
       } else {
-        if (!name.trim()) {
-          toast.error("Full name is required");
-          return;
-        }
-
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -137,14 +144,21 @@ export default function StudentLogin() {
         <h1>{isSignIn ? "Student Sign In" : "Student Sign Up"}</h1>
 
         <form onSubmit={handleSubmit}>
+          {/* NAME */}
           {!isSignIn && (
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError(validateName(e.target.value));
+                }}
+                required
+              />
+              {nameError && <p className="error-text">{nameError}</p>}
+            </>
           )}
 
           {/* EMAIL */}
@@ -184,7 +198,6 @@ export default function StudentLogin() {
                 cursor: "pointer",
                 color: "#555",
                 fontSize: "18px",
-                userSelect: "none",
               }}
               title={showPassword ? "Hide password" : "Show password"}
             >
@@ -193,27 +206,20 @@ export default function StudentLogin() {
           </div>
 
           {/* PASSWORD ERRORS */}
-          {!isSignIn && passwordErrors.length > 0 && (
-            <ul className="error-text">
+          {passwordErrors.length > 0 && (
+            <ul
+              style={{
+                color: "red",
+                fontSize: "0.9rem",
+                marginTop: "6px",
+                paddingLeft: "18px",
+              }}
+            >
               {passwordErrors.map((err, index) => (
                 <li key={index}>{err}</li>
               ))}
             </ul>
           )}
-{passwordErrors.length > 0 && (
-  <ul
-    style={{
-      color: "red",
-      fontSize: "0.9rem",
-      marginTop: "6px",
-      paddingLeft: "18px",
-    }}
-  >
-    {passwordErrors.map((err, index) => (
-      <li key={index}>{err}</li>
-    ))}
-  </ul>
-)}
 
           <button type="submit">
             {isSignIn ? "Sign In" : "Sign Up"}
