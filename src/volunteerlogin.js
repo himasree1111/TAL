@@ -259,13 +259,8 @@ export default function VolunteerLogin() {
             type="submit"
             disabled={
               isSignIn
-                ? !email || !password || !!errors.email || !!errors.password
-                : !name ||
-                  !email ||
-                  !password ||
-                  !!errors.name ||
-                  !!errors.email ||
-                  (Array.isArray(errors.password) && errors.password.length > 0)
+                ? !email || !password || errors.email || errors.password
+                : !name || !email || !password || errors.name || errors.email || errors.password
             }
           >
             {isSignIn ? "Sign In" : "Sign Up"}
