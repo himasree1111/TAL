@@ -204,7 +204,7 @@ export default function DonorLogin() {
           </div>
 
           {/* PASSWORD RULES */}
-          {!isSignIn && passwordErrors.length > 0 && (
+          { passwordErrors.length > 0 && (
             <ul className="error-text">
               {passwordErrors.map((err, i) => (
                 <li key={i}>{err}</li>

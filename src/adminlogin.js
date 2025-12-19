@@ -195,7 +195,7 @@ export default function AdminLogin() {
           </div>
 
           {/* PASSWORD RULE FEEDBACK */}
-          {!isSignIn && passwordErrors.length > 0 && (
+          { passwordErrors.length > 0 && (
             <ul className="error-text">
               {passwordErrors.map((err, index) => (
                 <li key={index}>{err}</li>
