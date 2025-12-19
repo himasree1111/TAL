@@ -204,7 +204,7 @@ const handleEditClick = (form) => {
             <thead>
               <tr>
                 <th>Form ID</th>
-                <th>Title</th>
+                <th>Name</th>
                 <th>Date Submitted</th>
                 <th>Actions</th>
               </tr>
