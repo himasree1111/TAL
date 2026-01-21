@@ -674,12 +674,12 @@ if (result.error) {
               {errors.age && <p className="error-text">{errors.age}</p>}
             </label>
             <label>
-              Name of Camp
-              <input type="text" name="pob" value={formData.pob} onChange={handleInputChange} />
+              <span className="field-label">Name of Camp<span className="required">*</span></span>
+              <input type="text" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
             </label>
             <label>
               Date of Camp
-              <input type="date" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
+              <input type="date" name="camp_date" value={formData.camp_date} onChange={handleInputChange} />
             </label>
             <label>
               <span className="field-label">Address<span className="required">*</span></span>
@@ -784,7 +784,7 @@ if (result.error) {
 
           <div className="form-group">
             <label className="full-width">
-              <span className="field-label">Fee Structure<span className="required">*</span></span>
+              <span className="field-label">Tuition Fee<span className="required">*</span></span>
               <input type="text" name="fee_structure" value={formData.fee_structure || ""} onChange={handleInputChange} className={errors.fee_structure ? 'input-error' : ''} required />
               {errors.fee_structure && <p className="error-text">{errors.fee_structure}</p>}
             </label>
@@ -929,7 +929,7 @@ if (result.error) {
             <div className="form-group">
               <label>
 
-                <span className="field-label">Account No.<span className="required">*</span></span>
+                <span className="field-label">Account No.<span className="form-group"></span></span>
                 <input
                   type="text"
                   name="account_no"
@@ -941,15 +941,15 @@ if (result.error) {
                 {errors.account_no && <p className="error-text">{errors.account_no}</p>}
               </label>
               <label>
-                <span className="field-label">Bank Name<span className="required">*</span></span>
+                <span className="field-label">Bank Name<span className="form-group"></span></span>
                 <input type="text" name="bank_name" value={formData.bank_name || ""} onChange={handleInputChange} required />
               </label>
               <label>
-                <span className="field-label">Branch<span className="required">*</span></span>
+                <span className="field-label">Branch<span className="form-group"></span></span>
                 <input type="text" name="bank_branch" value={formData.bank_branch || ""} onChange={handleInputChange} required />
               </label>
               <label>
-                <span className="field-label">Enter valid IFSC Code<span className="required">*</span></span>
+                <span className="field-label">Enter valid IFSC Code<span className="form-group"></span></span>
                 <input
                   type="text"
                   name="ifsc_code"
@@ -964,8 +964,6 @@ if (result.error) {
           </div>
 
           {renderUploadField("Fees Receipt (Upload / Text)", "fees_receipt")}
-          {renderUploadField("Volunteer Signature", "volunteer_signature")}
-          {renderUploadField("Student Signature", "student_signature")}
         </div>
 
         {/* Special Remarks */}
