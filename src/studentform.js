@@ -851,7 +851,7 @@ if (result.error) {
 
         {/* --- Scholarship Question --- */}
         <div className="form-group">
-          <label>Is she getting any scholarship / Govt help / financial assistance?</label>
+          <label>Is she getting any scholarship / Govt help / financial assistance?<span className="required">*</span></label>
 
           <div className="radio-inline">
             <label>
@@ -876,17 +876,20 @@ if (result.error) {
               No
             </label>
           </div>
+          {errors.has_scholarship && <p className="error-text">{errors.has_scholarship}</p>}
 
           {formData.has_scholarship === "YES" && (
             <label className="full-width">
-              Scholarship / Assistance Details
+              Scholarship / Assistance Details<span className="required">*</span>
               <input
                 type="text"
                 name="scholarship"
                 value={formData.scholarship}
                 onChange={handleInputChange}
                 placeholder="Enter Scholarship Details"
+                className={errors.scholarship ? "input-error" : ""}
               />
+              {errors.scholarship && <p className="error-text">{errors.scholarship}</p>}
             </label>
           )}
         </div>
