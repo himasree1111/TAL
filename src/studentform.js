@@ -152,6 +152,28 @@ export default function StudentForm() {
       return "";
     }
 
+    // Percentage fields: only numbers and decimal points
+    if (name === "prev_percent" || name === "present_percent") {
+      if (!value) return `${name === "prev_percent" ? "Previous Year" : "Present Year"} Percentage is required`;
+      if (!/^\d+(\.\d+)?$/.test(value)) {
+        return "Only numbers and decimal points are allowed";
+      }
+      const numValue = parseFloat(value);
+      if (numValue < 0 || numValue > 100) {
+        return "Percentage must be between 0 and 100";
+      }
+      return "";
+    }
+
+    // Fee structure: only numbers, decimal points, and currency symbols
+    if (name === "fee_structure") {
+      if (!value) return "Tuition Fee is required";
+      if (!/^[\d\s.,₹$£€¥\-\s]+$/.test(value)) {
+        return "Only numbers, currency symbols, and punctuation are allowed";
+      }
+      return "";
+    }
+
     // Volunteer name: only alphabets and spaces
     if (name === "volunteer_name") {
       if (!value) return "Volunteer name is required";
@@ -187,6 +209,21 @@ export default function StudentForm() {
     if (name === "ifsc_code") {
       value = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (value.length > 11) value = value.slice(0, 11);
+    }
+
+    // Percentage fields: only allow numbers and decimal points
+    if (name === "prev_percent" || name === "present_percent") {
+      value = value.replace(/[^\d.]/g, ""); // Remove any non-digit and non-decimal characters
+      // Prevent multiple decimal points
+      const parts = value.split('.');
+      if (parts.length > 2) {
+        value = parts[0] + '.' + parts.slice(1).join('');
+      }
+    }
+
+    // Fee structure: only allow numbers, currency symbols, and punctuation
+    if (name === "fee_structure") {
+      value = value.replace(/[^\d.,₹$£€¥\-\s]/g, ""); // Allow digits, currency symbols, punctuation, and spaces
     }
 
     // Handle number of family members
@@ -966,18 +1003,42 @@ export default function StudentForm() {
           <div className="form-group">
             <label>
               <span className="field-label">Percentage scored in previous academic year (Not CGPA)<span className="required">*</span></span>
-              <input type="text" name="prev_percent" value={formData.prev_percent} onChange={handleInputChange} required />
+              <input 
+                type="text" 
+                name="prev_percent" 
+                value={formData.prev_percent} 
+                onChange={handleInputChange} 
+                className={errors.prev_percent ? "input-error" : ""}
+                required 
+              />
+              {errors.prev_percent && <p className="error-text">{errors.prev_percent}</p>}
             </label>
             <label>
               <span className="field-label">Percentage scored in present academic year (Not CGPA)<span className="required">*</span></span>
-              <input type="text" name="present_percent" value={formData.present_percent} onChange={handleInputChange} required />
+              <input 
+                type="text" 
+                name="present_percent" 
+                value={formData.present_percent} 
+                onChange={handleInputChange} 
+                className={errors.present_percent ? "input-error" : ""}
+                required 
+              />
+              {errors.present_percent && <p className="error-text">{errors.present_percent}</p>}
             </label>
           </div>
 
           <div className="form-group">
             <label className="full-width">
               <span className="field-label">Tuition Fee<span className="required">*</span></span>
-              <input type="text" name="fee_structure" value={formData.fee_structure || ""} onChange={handleInputChange} className={errors.fee_structure ? 'input-error' : ''} required />
+              <input 
+                type="text" 
+                name="fee_structure" 
+                value={formData.fee_structure || ""} 
+                onChange={handleInputChange} 
+                className={errors.fee_structure ? 'input-error' : ''} 
+                required 
+                placeholder="Enter tuition fee amount"
+              />
               {errors.fee_structure && <p className="error-text">{errors.fee_structure}</p>}
             </label>
           </div>
