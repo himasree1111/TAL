@@ -80,7 +80,8 @@ export default function StudentForm() {
     special_remarks: "",
     volunteer_name: "",
     academic_achievements: "",
-    non_academic_achievements: ""
+    non_academic_achievements: "",
+    is_single_parent: ""
   });
 
   const [files, setFiles] = useState({
@@ -467,6 +468,16 @@ export default function StudentForm() {
     // Email
     const emailErr = validateField("email", formData.email);
     if (emailErr) newErrors.email = emailErr;
+
+    // Single parent validation
+    if (!formData.is_single_parent) {
+      newErrors.is_single_parent = "Please select Yes or No for single parent question.";
+    }
+
+    // Does work validation
+    if (!formData.does_work) {
+      newErrors.does_work = "Please select Yes or No for work question.";
+    }
 
     return newErrors;
   };
@@ -944,18 +955,50 @@ export default function StudentForm() {
               />
               {errors.email && <p className="error-text">{errors.email}</p>}
             </label>
+          </div>
 
+          {/* --- Single Parent Question --- */}
+          <div className="form-group">
+            <label>Are you a single parent child?<span className="required">*</span></label>
+
+            <div className="radio-inline">
+              <label>
+                <input
+                  type="radio"
+                  name="is_single_parent"
+                  value="YES"
+                  checked={formData.is_single_parent === "YES"}
+                  onChange={handleInputChange}
+                />
+                Yes
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="is_single_parent"
+                  value="NO"
+                  checked={formData.is_single_parent === "NO"}
+                  onChange={handleInputChange}
+                />
+                No
+              </label>
+            </div>
+            {errors.is_single_parent && <p className="error-text">{errors.is_single_parent}</p>}
+          </div>
+
+          <div className="form-group">
             <label className="full-width">
               <span className="field-label">How many family members are there in total?<span className="required">*</span></span>
-              <input 
-                type="number" 
-                name="num_family_members" 
-                value={formData.num_family_members} 
-                onChange={handleInputChange} 
-                min="0" 
-                max="15" 
-                placeholder="Enter total number of family members" 
-                required 
+              <input
+                type="number"
+                name="num_family_members"
+                value={formData.num_family_members}
+                onChange={handleInputChange}
+                min="0"
+                max="15"
+                placeholder="Enter total number of family members"
+                required
               />
             </label>
             
@@ -1049,7 +1092,7 @@ export default function StudentForm() {
 
         {/* --- Does she work to support her family? --- */}
         <div className="form-group">
-          <label>Does she work to support her family?</label>
+          <label>Does she work to support her family?<span className="required">*</span></label>
 
           <div className="radio-inline">
             <label>
@@ -1074,6 +1117,7 @@ export default function StudentForm() {
               No
             </label>
           </div>
+          {errors.does_work && <p className="error-text">{errors.does_work}</p>}
 
           {formData.does_work === "YES" && (
             <label className="full-width">
