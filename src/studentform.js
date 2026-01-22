@@ -13,11 +13,10 @@ import { useParams } from "react-router-dom";
   - Attaches volunteer's logged-in email as volunteer_email
 */
 
-
 export default function StudentForm() {
   const navigate = useNavigate();
   const { id } = useParams();   // student id
-const isEditMode = !!id;
+  const isEditMode = !!id;
   const [volunteerEmail, setVolunteerEmail] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errors, setErrors] = useState({}); // <-- validation errors
@@ -33,67 +32,12 @@ const isEditMode = !!id;
         }
         if (data?.user) {
           setVolunteerEmail(data.user.email);
-          // REMOVE this line — no user_id in your table
-          // setFormData(prevData => ({ ...prevData, user_id: data.user.id }));
         }
       } catch (err) {
         console.error("getUser error:", err);
       }
     };
     getUser();
-
-    // Check if there's edit data in localStorage
-    // const editData = localStorage.getItem("editFormData");
-    // if (editData) {
-    //   try {
-    //     const parsedData = JSON.parse(editData);
-    //     // Populate form with edit data
-    //     setFormData({
-    //       first_name: parsedData.first_name || "",
-    //       last_name: parsedData.last_name || "",
-    //       middle_name: parsedData.middle_name || "",
-    //       dob: parsedData.dob || "",
-    //       age: parsedData.age || "",
-    //       pob: parsedData.pob || "",
-    //       camp_name: parsedData.camp_name || "",
-    //       nationality: parsedData.nationality || "",
-    //       address: parsedData.address || "",
-    //       class: parsedData.class || "",
-    //       educationcategory: parsedData.educationcategory || "",
-    //       educationsubcategory: parsedData.educationsubcategory || "",
-    //       educationyear: parsedData.educationyear || "",
-    //       fee_structure: parsedData.fee_structure || "",
-    //       email: parsedData.email || "",
-    //       contact: parsedData.contact || "",
-    //       whatsapp: parsedData.whatsapp || "",
-    //       student_contact: parsedData.student_contact || "",
-    //       school: parsedData.school || "",
-    //       branch: parsedData.branch || "",
-    //       prev_percent: parsedData.prev_percent || "",
-    //       present_percent: parsedData.present_percent || "",
-    //       fee: parsedData.fee || "",
-    //       job: parsedData.job || "",
-    //       aspiration: parsedData.aspiration || "",
-    //       scholarship: parsedData.scholarship || "",
-    //       certificates: parsedData.certificates || "",
-    //       years_area: parsedData.years_area || "",
-    //       parents_full_names: parsedData.parents_full_names || "",
-    //       family_members: parsedData.family_members || "",
-    //       earning_members: parsedData.earning_members || "",
-    //       account_no: parsedData.account_no || "",
-    //       bank_name: parsedData.bank_name || "",
-    //       bank_branch: parsedData.bank_branch || "",
-    //       ifsc_code: parsedData.ifsc_code || "",
-    //       special_remarks: parsedData.special_remarks || "",
-    //       does_work: parsedData.does_work || "",
-    //       has_scholarship: parsedData.has_scholarship || ""
-    //     });
-    //     // Clear the edit data after loading
-    //     localStorage.removeItem("editFormData");
-    //   } catch (error) {
-    //     console.error("Error loading edit data:", error);
-    //   }
-    // }
   }, []);
 
   const [formData, setFormData] = useState({
@@ -125,9 +69,10 @@ const isEditMode = !!id;
     scholarship: "",
     certificates: "",
     years_area: "",
-    parents_full_names: "",
-    family_members: "",
-    earning_members: "",
+    num_family_members: "",  // New field for number of family members
+    family_members_details: [],  // New field to store family members details
+    num_earning_members: "",  // New field for number of earning members
+    earning_members_details: [],  // New field to store earning members details
     account_no: "",
     bank_name: "",
     bank_branch: "",
@@ -145,8 +90,6 @@ const isEditMode = !!id;
     volunteer_signature: null,
     student_signature: null,
   });
-
-
 
   // Helper: validate a single field and return error message (or empty string)
   const validateField = (name, value) => {
@@ -183,7 +126,6 @@ const isEditMode = !!id;
     }
 
     // IFSC: 4 letters + 0 + 6 numbers (common pattern)
-    // We'll enforce uppercase letters automatically in handleInputChange
     if (name === "ifsc_code") {
       if (!value || !/^[A-Z]{4}0[0-9]{6}$/.test(value)) {
         return "Enter a valid IFSC code (e.g. ABCD0123456)";
@@ -233,6 +175,80 @@ const isEditMode = !!id;
     if (name === "ifsc_code") {
       value = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (value.length > 11) value = value.slice(0, 11);
+    }
+
+    // Handle number of family members
+    if (name === "num_family_members") {
+      value = value.replace(/\D/g, ""); // Only allow digits
+      if (value > 15) value = "15"; // Limit to 15 family members max
+      
+      // Initialize family_members_details array based on the number
+      const num = parseInt(value) || 0;
+      const newDetails = [...formData.family_members_details];
+      
+      // Add new entries if increasing
+      while (newDetails.length < num) {
+        newDetails.push({ name: "", relation: "" });
+      }
+      
+      // Remove extra entries if decreasing
+      while (newDetails.length > num) {
+        newDetails.pop();
+      }
+      
+      setFormData(prev => ({ ...prev, num_family_members: value, family_members_details: newDetails }));
+      return;
+    }
+
+    // Handle family member details changes
+    if (name.startsWith("family_member_name_") || name.startsWith("family_member_relation_")) {
+      const index = parseInt(name.split('_')[3]); // Extract index from "family_member_name_0" or "family_member_relation_0"
+      const field = name.includes("_name_") ? "name" : "relation";
+      
+      const updatedDetails = [...formData.family_members_details];
+      if (updatedDetails[index]) {
+        updatedDetails[index][field] = value;
+      }
+      
+      setFormData(prev => ({ ...prev, family_members_details: updatedDetails }));
+      return;
+    }
+
+    // Handle number of earning members
+    if (name === "num_earning_members") {
+      value = value.replace(/\D/g, ""); // Only allow digits
+      if (value > 10) value = "10"; // Limit to 10 earning members max
+      
+      // Initialize earning_members_details array based on the number
+      const num = parseInt(value) || 0;
+      const newDetails = [...formData.earning_members_details];
+      
+      // Add new entries if increasing
+      while (newDetails.length < num) {
+        newDetails.push({ name: "", occupation: "" });
+      }
+      
+      // Remove extra entries if decreasing
+      while (newDetails.length > num) {
+        newDetails.pop();
+      }
+      
+      setFormData(prev => ({ ...prev, num_earning_members: value, earning_members_details: newDetails }));
+      return;
+    }
+
+    // Handle earning member details changes
+    if (name.startsWith("earning_member_name_") || name.startsWith("earning_member_occ_")) {
+      const index = parseInt(name.split('_')[3]); // Extract index from "earning_member_name_0" or "earning_member_occ_0"
+      const field = name.includes("_name_") ? "name" : "occupation";
+      
+      const updatedDetails = [...formData.earning_members_details];
+      if (updatedDetails[index]) {
+        updatedDetails[index][field] = value;
+      }
+      
+      setFormData(prev => ({ ...prev, earning_members_details: updatedDetails }));
+      return;
     }
 
     // DOB handling (existing logic preserved)
@@ -328,8 +344,7 @@ const isEditMode = !!id;
       { key: 'prev_percent', label: 'Previous Year Percentage' },
       { key: 'present_percent', label: 'Present Year Percentage' },
       { key: 'fee_structure', label: 'Fee Structure' },
-      { key: 'parents_full_names', label: 'Parents Full Names' },
-      { key: 'earning_members', label: 'Earning Members' },
+      { key: 'num_earning_members', label: 'Number of Earning Members' },
       { key: 'first_name', label: 'First Name' },
       { key: 'last_name', label: 'Last Name' },
       { key: 'email', label: 'Email' },
@@ -343,6 +358,36 @@ const isEditMode = !!id;
 
     if (missing.length > 0) {
       newErrors._missing = 'Please fill in all mandatory fields: ' + missing.map(m => m.label).join(', ');
+    }
+
+    // Validate family members details if number is specified
+    if (formData.num_family_members) {
+      const num = parseInt(formData.num_family_members);
+      if (num > 0) {
+        for (let i = 0; i < num; i++) {
+          if (!formData.family_members_details[i] || 
+              !formData.family_members_details[i].name.trim() || 
+              !formData.family_members_details[i].relation.trim()) {
+            newErrors.family_members = `Please provide name and relation for family member ${i + 1}`;
+            break;
+          }
+        }
+      }
+    }
+
+    // Validate earning members details if number is specified
+    if (formData.num_earning_members) {
+      const num = parseInt(formData.num_earning_members);
+      if (num > 0) {
+        for (let i = 0; i < num; i++) {
+          if (!formData.earning_members_details[i] || 
+              !formData.earning_members_details[i].name.trim() || 
+              !formData.earning_members_details[i].occupation.trim()) {
+            newErrors.earning_members = `Please provide name and occupation for earning member ${i + 1}`;
+            break;
+          }
+        }
+      }
     }
 
     // Age check (existing)
@@ -375,30 +420,62 @@ const isEditMode = !!id;
 
     return newErrors;
   };
-useEffect(() => {
-  if (!isEditMode) return;
 
-  const fetchStudent = async () => {
-    const { data, error } = await supabase
-      .from("student_form_submissions")
-      .select("*")
-      .eq("id", parseInt(id))
-      .single();
+  useEffect(() => {
+    if (!isEditMode) return;
 
-    if (error) {
-      alert("Error loading student data");
-      return;
-    }
+    const fetchStudent = async () => {
+      const { data, error } = await supabase
+        .from("student_form_submissions")
+        .select("*")
+        .eq("id", parseInt(id))
+        .single();
 
-    setFormData(prev => ({
-  ...prev,
-  ...data
-}));
+      if (error) {
+        alert("Error loading student data");
+        return;
+      }
 
-  };
+      // Parse family members details if it exists
+      let updatedData = { ...data };
+      if (data.family_members_details) {
+        try {
+          updatedData.family_members_details = JSON.parse(data.family_members_details);
+          updatedData.num_family_members = updatedData.family_members_details.length.toString();
+        } catch (e) {
+          console.error("Error parsing family members details:", e);
+          updatedData.family_members_details = [];
+          updatedData.num_family_members = "0";
+        }
+      } else {
+        updatedData.family_members_details = [];
+        updatedData.num_family_members = data.num_family_members || "0";
+      }
 
-  fetchStudent();
-}, [id]);
+      // Parse earning members details if it exists
+      if (data.earning_members_details) {
+        try {
+          updatedData.earning_members_details = JSON.parse(data.earning_members_details);
+          updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
+        } catch (e) {
+          console.error("Error parsing earning members details:", e);
+          updatedData.earning_members_details = [];
+          updatedData.num_earning_members = "0";
+        }
+      } else {
+        updatedData.earning_members_details = [];
+        updatedData.num_earning_members = data.earning_members || "0";
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        ...updatedData
+      }));
+
+    };
+
+    fetchStudent();
+  }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -469,9 +546,10 @@ useEffect(() => {
         scholarship: formData.scholarship || null,
         certificates: formData.certificates || null,
         years_area: formData.years_area || null,
-        parents_full_names: formData.parents_full_names,
-        family_members: formData.family_members,
-        earning_members: formData.earning_members,
+        num_family_members: formData.num_family_members,  // Store the count
+        family_members_details: JSON.stringify(formData.family_members_details),  // Store the details as JSON
+        earning_members: formData.num_earning_members,  // Store the count
+        earning_members_details: JSON.stringify(formData.earning_members_details),  // Store the details as JSON
         account_no: formData.account_no || null,
         bank_name: formData.bank_name || null,
         bank_branch: formData.bank_branch || null,
@@ -493,39 +571,30 @@ useEffect(() => {
       // Insert into Supabase
       let result;
 
-if (isEditMode && id) {
-  // ✅ UPDATE existing record
-  result = await supabase
-    .from("student_form_submissions")
-    .update(payload)
-    .eq("id", parseInt(id));
-} else {
-  // ✅ INSERT new record
-  result = await supabase
-    .from("student_form_submissions")
-    .insert([payload]);
-}
+      if (isEditMode && id) {
+        // ✅ UPDATE existing record
+        result = await supabase
+          .from("student_form_submissions")
+          .update(payload)
+          .eq("id", parseInt(id));
+      } else {
+        // ✅ INSERT new record
+        result = await supabase
+          .from("student_form_submissions")
+          .insert([payload]);
+      }
 
-if (result.error) {
-  console.error("Supabase save error:", result.error);
-  alert("❌ Error saving student: " + result.error.message);
-  return;
-}
-
-
-
-      // if (error) {
-      //   console.error("Supabase insert error:", error);
-      //   alert("❌ Error saving student: " + error.message);
-      //   return;
-      // }
+      if (result.error) {
+        console.error("Supabase save error:", result.error);
+        alert("❌ Error saving student: " + result.error.message);
+        return;
+      }
 
       // Success
       alert("🎉 Form submitted successfully!");
       setSuccessMessage("Form submitted successfully!");
       // Navigate back to dashboard and force refresh to show new form
       navigate('/volunteer-dashboard');
-
 
       // optionally reset form
       setFormData({
@@ -557,9 +626,10 @@ if (result.error) {
         scholarship: "",
         certificates: "",
         years_area: "",
-        parents_full_names: "",
-        family_members: "",
-        earning_members: "",
+        num_family_members: "",
+        family_members_details: [],
+        num_earning_members: "",
+        earning_members_details: [],
         account_no: "",
         bank_name: "",
         bank_branch: "",
@@ -599,6 +669,92 @@ if (result.error) {
       </div>
     </div>
   );
+
+  // Render family members details dynamically
+  const renderFamilyMembers = () => {
+    const num = parseInt(formData.num_family_members) || 0;
+    
+    if (num <= 0) return null;
+    
+    return (
+      <div className="family-members-section">
+        <h3>Family Members Details</h3>
+        {Array.from({ length: num }, (_, index) => (
+          <div key={index} className="family-member-card">
+            <div className="form-group">
+              <label>
+                <span className="field-label">Family Member {index + 1} Name<span className="required">*</span></span>
+                <input
+                  type="text"
+                  name={`family_member_name_${index}`}
+                  value={formData.family_members_details[index]?.name || ""}
+                  onChange={handleInputChange}
+                  placeholder="Enter family member name"
+                />
+              </label>
+              <label>
+                <span className="field-label">Relationship to Student<span className="required">*</span></span>
+                <select
+                  name={`family_member_relation_${index}`}
+                  value={formData.family_members_details[index]?.relation || ""}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select relationship</option>
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Brother">Brother</option>
+                  <option value="Sister">Sister</option>
+                  <option value="Grandfather">Grandfather</option>
+                  <option value="Grandmother">Grandmother</option>
+                  <option value="Uncle">Uncle</option>
+                  <option value="Aunt">Aunt</option>
+                  <option value="Cousin">Cousin</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Render earning members details dynamically
+  const renderEarningMembers = () => {
+    const num = parseInt(formData.num_earning_members) || 0;
+    
+    if (num <= 0) return null;
+    
+    return (
+      <div className="earning-members-section">
+        <h3>Earning Members Details</h3>
+        {Array.from({ length: num }, (_, index) => (
+          <div key={index} className="earning-member-group">
+            <div className="form-group">
+              <label>
+                <span className="field-label">Earning Member {index + 1} Name<span className="required">*</span></span>
+                <input
+                  type="text"
+                  name={`earning_member_name_${index}`}
+                  value={formData.earning_members_details[index]?.name || ""}
+                  onChange={handleInputChange}
+                />
+              </label>
+              <label>
+                <span className="field-label"> Occupation<span className="required">*</span></span>
+                <input
+                  type="text"
+                  name={`earning_member_occ_${index}`}
+                  value={formData.earning_members_details[index]?.occupation || ""}
+                  onChange={handleInputChange}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -740,17 +896,40 @@ if (result.error) {
             </label>
 
             <label className="full-width">
-              <span className="field-label">Who all are there in the family?<span className="required">*</span></span>
-              <input type="text" name="family_members" value={formData.family_members || ""} placeholder="e.g. Mother, Father, 2 siblings" onChange={handleInputChange} required />
+              <span className="field-label">How many family members are there in total?<span className="required">*</span></span>
+              <input 
+                type="number" 
+                name="num_family_members" 
+                value={formData.num_family_members} 
+                onChange={handleInputChange} 
+                min="0" 
+                max="15" 
+                placeholder="Enter total number of family members" 
+                required 
+              />
             </label>
+            
+            {renderFamilyMembers()}
+            
+            {errors.family_members && <p className="error-text">{errors.family_members}</p>}
+            
             <label className="full-width">
-              <span className="field-label">Parents Full Names<span className="required">*</span></span>
-              <input type="text" name="parents_full_names" value={formData.parents_full_names || ""} placeholder="e.g. Asha Devi (Mother), Rajesh Kumar (Father)" onChange={handleInputChange} required />
+              <span className="field-label">How many earning members are there in the family?<span className="required">*</span></span>
+              <input 
+                type="number" 
+                name="num_earning_members" 
+                value={formData.num_earning_members} 
+                onChange={handleInputChange} 
+                min="0" 
+                max="10" 
+                placeholder="Enter number of earning members" 
+                required 
+              />
             </label>
-            <label className="full-width">
-              <span className="field-label">Who are the earning members and their Occupation?<span className="required">*</span></span>
-              <input type="text" name="earning_members" value={formData.earning_members || ""} placeholder="e.g. Father - Farmer; Mother - Sewing work" onChange={handleInputChange} required />
-            </label>
+            
+            {renderEarningMembers()}
+            
+            {errors.earning_members && <p className="error-text">{errors.earning_members}</p>}
           </div>
         </div>
 
@@ -928,7 +1107,6 @@ if (result.error) {
             <span className="bank-details-title">Bank Account Details</span>
             <div className="form-group">
               <label>
-
                 <span className="field-label">Account No.<span className="form-group"></span></span>
                 <input
                   type="text"
@@ -980,4 +1158,3 @@ if (result.error) {
     </div>
   );
 }
- 
