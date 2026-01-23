@@ -54,6 +54,9 @@ export default function StudentForm() {
     educationcategory: "",
     educationsubcategory: "",
     educationyear: "",
+    educationcategory_custom: "",
+    educationsubcategory_custom: "",
+    educationyear_custom: "",
     email: "",
     contact: "",
     whatsapp: "",
@@ -322,19 +325,67 @@ export default function StudentForm() {
 
     // Education category/subcategory/year handling
     if (name === "educationcategory") {
-      setFormData(prev => ({ ...prev, educationcategory: value, educationsubcategory: "", educationyear: "" }));
+      if (value === "Other") {
+        // When "Other" is selected, clear subcategory and year, and set custom fields
+        setFormData(prev => ({
+          ...prev,
+          educationcategory: value,
+          educationsubcategory: "",
+          educationyear: "",
+          educationsubcategory_custom: "",
+          educationyear_custom: "",
+          class: ""
+        }));
+      } else {
+        // For other categories, reset everything
+        setFormData(prev => ({
+          ...prev,
+          educationcategory: value,
+          educationsubcategory: "",
+          educationyear: "",
+          educationcategory_custom: "",
+          educationsubcategory_custom: "",
+          educationyear_custom: "",
+          class: ""
+        }));
+      }
       return;
     }
 
     if (name === "educationsubcategory") {
-      setFormData(prev => ({ ...prev, educationsubcategory: value, educationyear: "" }));
+      setFormData(prev => ({
+        ...prev,
+        educationsubcategory: value,
+        educationyear: "",
+        educationsubcategory_custom: value === "Other" ? prev.educationsubcategory_custom : "",
+        educationyear_custom: ""
+      }));
       return;
     }
 
     if (name === "educationyear") {
-      const subcategoryPart = formData.educationsubcategory ? ` - ${formData.educationsubcategory}` : "";
-      const combinedClass = value ? `${formData.educationcategory}${subcategoryPart} - ${value}` : "";
-      setFormData(prev => ({ ...prev, educationyear: value, class: combinedClass }));
+      const subcategoryValue = formData.educationsubcategory === "Other" ? formData.educationsubcategory_custom : formData.educationsubcategory;
+      const categoryValue = formData.educationcategory === "Other" ? formData.educationcategory_custom : formData.educationcategory;
+      const yearValue = value === "Other" ? formData.educationyear_custom : value;
+      const subcategoryPart = subcategoryValue ? ` - ${subcategoryValue}` : "";
+      const combinedClass = yearValue ? `${categoryValue}${subcategoryPart} - ${yearValue}` : "";
+      setFormData(prev => ({
+        ...prev,
+        educationyear: value,
+        educationyear_custom: value === "Other" ? prev.educationyear_custom : "",
+        class: combinedClass
+      }));
+      return;
+    }
+
+    // Handle custom inputs
+    if (name === "educationcategory_custom" || name === "educationsubcategory_custom" || name === "educationyear_custom") {
+      const categoryValue = formData.educationcategory_custom;
+      const subcategoryValue = formData.educationsubcategory_custom;
+      const yearValue = formData.educationyear_custom;
+      const subcategoryPart = subcategoryValue ? ` - ${subcategoryValue}` : "";
+      const combinedClass = yearValue ? `${categoryValue}${subcategoryPart} - ${yearValue}` : "";
+      setFormData(prev => ({ ...prev, [name]: value, class: combinedClass }));
       return;
     }
 
@@ -480,6 +531,19 @@ export default function StudentForm() {
       newErrors.does_work = "Please select Yes or No for work question.";
     }
 
+    // Custom education field validations
+    if (formData.educationcategory === "Other" && !formData.educationcategory_custom.trim()) {
+      newErrors.educationcategory_custom = "Please specify your education level.";
+    }
+
+    if (formData.educationsubcategory === "Other" && !formData.educationsubcategory_custom.trim()) {
+      newErrors.educationsubcategory_custom = "Please specify your stream/branch/course.";
+    }
+
+    if (formData.educationyear === "Other" && !formData.educationyear_custom.trim()) {
+      newErrors.educationyear_custom = "Please specify your academic year.";
+    }
+
     return newErrors;
   };
 
@@ -590,9 +654,9 @@ export default function StudentForm() {
         nationality: formData.nationality || null,
         address: formData.address,
         class: formData.class,
-        educationcategory: formData.educationcategory || null,
-        educationsubcategory: formData.educationsubcategory || null,
-        educationyear: formData.educationyear || null,
+        educationcategory: formData.educationcategory === "Other" ? formData.educationcategory_custom : formData.educationcategory || null,
+        educationsubcategory: formData.educationsubcategory === "Other" ? formData.educationsubcategory_custom : formData.educationsubcategory || null,
+        educationyear: formData.educationyear === "Other" ? formData.educationyear_custom : formData.educationyear || null,
         email: formData.email,
         contact: formData.contact,
         whatsapp: formData.whatsapp,
@@ -1061,6 +1125,9 @@ export default function StudentForm() {
             educationcategory={formData.educationcategory}
             educationsubcategory={formData.educationsubcategory}
             educationyear={formData.educationyear}
+            educationcategory_custom={formData.educationcategory_custom}
+            educationsubcategory_custom={formData.educationsubcategory_custom}
+            educationyear_custom={formData.educationyear_custom}
             onChange={handleInputChange}
           />
 
