@@ -35,17 +35,18 @@
 /* ===== SIDEBAR ===== */
 .volunteer-dashboard .sidebar {
   width: 260px;
-  background-color: var(--primary-color);
+  background: linear-gradient(180deg, #1F2933 0%, #111827 100%);
   color: white;
   padding: 24px 18px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 2px 0 12px rgba(53, 209, 42, 0.08);
+  box-shadow: 2px 0 16px rgba(31, 41, 55, 0.12);
   position: fixed;
   left: 0; top: 0; bottom: 0;
 }
+
 
 .volunteer-dashboard .sidebar .profile {
   text-align: center;
@@ -102,15 +103,11 @@
   background: #fff;
   color: #222;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(30, 40, 80, 0.08);
+  box-shadow: 0 6px 18px rgba(31, 41, 55, 0.08);
+  border: 1px solid #eef2f6;
   padding: 14px 12px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
 }
+
 
 .stats .card h3 {
   margin: 0;
@@ -302,7 +299,7 @@
   font-size: 1rem;
   letter-spacing: 0.3px;
   white-space: nowrap;
-  background-color: #f6f8fa;
+  background-color: #F9FAFB;
 }
 
 .volunteer-dashboard .forms-table td {
@@ -551,4 +548,18 @@
     width: 100%;
     justify-content: center;
   }
+}
+.stats .card {
+  border-left: 4px solid #34A853;
+}
+.navigation-menu .nav-btn.active,
+.navigation-menu .nav-btn:hover {
+  background-color: #E6F4EA;
+  color: #1E7F43;
+}
+.fill-form-btn:hover {
+  background-color: #1E7F43;
+}
+.forms-table tbody tr:hover {
+  background-color: #F1FBF4;
 }
