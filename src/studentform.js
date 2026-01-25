@@ -82,6 +82,7 @@ export default function StudentForm() {
     ifsc_code: "",
     special_remarks: "",
     volunteer_name: "",
+    volunteer_contact: "",
     academic_achievements: "",
     non_academic_achievements: "",
     is_single_parent: ""
@@ -110,7 +111,7 @@ export default function StudentForm() {
     }
 
     // Phone fields (exactly 10 digits)
-    if (name === "contact" || name === "whatsapp") {
+    if (name === "contact" || name === "whatsapp" || name === "volunteer_contact") {
       if (!value || !/^\d{10}$/.test(value)) {
         return "Must be exactly 10 digits";
       }
@@ -196,7 +197,7 @@ export default function StudentForm() {
     let { value } = e.target;
 
     // PHONE FIELDS: block non-digits and limit to 10
-    if (["contact", "whatsapp", "student_contact"].includes(name)) {
+    if (["contact", "whatsapp", "student_contact", "volunteer_contact"].includes(name)) {
       // remove non-digits
       value = value.replace(/\D/g, "");
       // limit length to 10 digits
@@ -451,6 +452,7 @@ export default function StudentForm() {
       { key: 'email', label: 'Email' },
       { key: 'contact', label: 'Parent Number' },
       { key: 'volunteer_name', label: 'Volunteer Name' },
+      { key: 'volunteer_contact', label: 'Volunteer Contact Number' },
       { key: 'camp_date', label: 'Date of Camp' }
     ];
 
@@ -644,6 +646,8 @@ export default function StudentForm() {
       // Prepare payload for Supabase. Map form fields to table columns.
       const payload = {
         volunteer_email: volunteerEmail,
+        volunteer_name: formData.volunteer_name,
+        volunteer_contact: formData.volunteer_contact,
         first_name: formData.first_name,
         middle_name: formData.middle_name || null,
         last_name: formData.last_name,
@@ -820,23 +824,13 @@ export default function StudentForm() {
               </label>
               <label>
                 <span className="field-label">Relationship to Applicant<span className="required">*</span></span>
-                <select
+                <input
+                  type="text"
                   name={`family_member_relation_${index}`}
                   value={formData.family_members_details[index]?.relation || ""}
                   onChange={handleInputChange}
-                >
-                  <option value="">Select relationship</option>
-                  <option value="Father">Father</option>
-                  <option value="Mother">Mother</option>
-                  <option value="Brother">Brother</option>
-                  <option value="Sister">Sister</option>
-                  <option value="Grandfather">Grandfather</option>
-                  <option value="Grandmother">Grandmother</option>
-                  <option value="Uncle">Uncle</option>
-                  <option value="Aunt">Aunt</option>
-                  <option value="Cousin">Cousin</option>
-                  <option value="Other">Other</option>
-                </select>
+                  placeholder="Enter relationship"
+                />
               </label>
             </div>
           </div>
@@ -895,11 +889,11 @@ export default function StudentForm() {
         </div>
       )}
 
-        {/* Volunteer Name */}
+        {/* Volunteer Details */}
         <div className="section">
           <h2>1. Volunteer Details</h2>
           <div className="form-group">
-            <label className="full-width">
+            <label>
               <span className="field-label">Name<span className="required">*</span></span>
               <input
                 type="text"
@@ -911,6 +905,20 @@ export default function StudentForm() {
                 required
               />
               {errors.volunteer_name && <p className="error-text">{errors.volunteer_name}</p>}
+            </label>
+            <label>
+              <span className="field-label">Contact Number<span className="required">*</span></span>
+              <input
+                type="text"
+                name="volunteer_contact"
+                value={formData.volunteer_contact || ""}
+                onChange={handleInputChange}
+                placeholder="Enter Contact Number"
+                maxLength={10}
+                className={errors.volunteer_contact ? "input-error" : ""}
+                required
+              />
+              {errors.volunteer_contact && <p className="error-text">{errors.volunteer_contact}</p>}
             </label>
           </div>
         </div>

@@ -109,6 +109,14 @@ textarea {
   color: #555;
 }
 
+/* --- FIELD LABEL --- */
+.field-label {
+  font-size: 16px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+}
+
 /* --- REQUIRED STAR --- */
 .required {
   color: red;
