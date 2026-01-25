@@ -858,7 +858,7 @@ export default function StudentForm() {
           <div key={index} className="earning-member-group">
             <div className="form-group">
               <label>
-                <span className="field-label">Name<span className="required">*</span></span>
+                <span className="field-label">Relation<span className="required">*</span></span>
                 <input
                   type="text"
                   name={`earning_member_name_${index}`}
