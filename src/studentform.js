@@ -999,7 +999,7 @@ export default function StudentForm() {
 
           <div className="form-group">
             <label>
-              <span className="field-label">Parent Number<span className="required">*</span></span>
+              <span className="field-label">Parent's Contact Number<span className="required">*</span></span>
               <input
                 type="text"
                 name="contact"
@@ -1025,7 +1025,7 @@ export default function StudentForm() {
               {errors.whatsapp && <p className="error-text">{errors.whatsapp}</p>}
             </label>
             <label>
-              Student Number
+              Student's Contact Number
               <input
                 type="text"
                 name="student_contact"
