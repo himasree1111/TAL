@@ -35,10 +35,12 @@ export default function AdminDashboard() {
         }
 
         // Fetch student form submissions
-        const { data: studentData, error: studentError } = await supabase
-          .from('admin_student_info')
-          .select('*')
-          .order('created_at', { ascending: false });
+       const { data: studentData, error: studentError } = await supabase
+  .from('admin_student_info')
+  .select('*')
+  .not('status', 'in', ['Eligible', 'Not Eligible']) // <-- ignore approved/rejected
+  .order('created_at', { ascending: false });
+
         // Save raw fetch result for debugging
         setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
 
@@ -172,79 +174,35 @@ export default function AdminDashboard() {
   };
 
 const handleApprove = async (studentId) => {
-  try {
-    // 1️⃣ Fetch student
-    const { data: student, error: fetchError } = await supabase
-      .from("admin_student_info")
-      .select("*")
-      .eq("student_id", studentId)
-      .single();
+  const { error } = await supabase
+    .from('admin_student_info')
+    .update({ status: 'Eligible' })
+    .eq('student_id', studentId);
 
-    if (fetchError) throw fetchError;
-
-    // ❗ Remove auto-generated columns
-    const { id, created_at, ...studentData } = student;
-
-    // 2️⃣ Insert into eligible_students
-    const { error: insertError } = await supabase
-      .from("eligible_students")
-      .insert([studentData]);
-
-    if (insertError) throw insertError;
-
-    // 3️⃣ Delete from admin_student_info
-    const { error: deleteError } = await supabase
-      .from("admin_student_info")
-      .delete()
-      .eq("student_id", studentId);
-
-    if (deleteError) throw deleteError;
-
-    // 4️⃣ Update UI
+  if (error) {
+    console.error('Approve failed:', error);
+    alert('Approval failed');
+  } else {
     setStudents(prev => prev.filter(s => s.student_id !== studentId));
-
-    alert("Student moved to Eligible Students ✅");
-
-  } catch (err) {
-    console.error("Approve failed:", err);
-    alert("Approval failed");
+    alert('Student approved ✅');
   }
 };
 
 const handleNotApprove = async (studentId) => {
-  try {
-    const { data: student, error: fetchError } = await supabase
-      .from("admin_student_info")
-      .select("*")
-      .eq("student_id", studentId)
-      .single();
+  const { error } = await supabase
+    .from('admin_student_info')
+    .update({ status: 'Not Eligible' })
+    .eq('student_id', studentId);
 
-    if (fetchError) throw fetchError;
-
-    const { id, created_at, ...studentData } = student;
-
-    const { error: insertError } = await supabase
-      .from("non_eligible_students")
-      .insert([studentData]);
-
-    if (insertError) throw insertError;
-
-    const { error: deleteError } = await supabase
-      .from("admin_student_info")
-      .delete()
-      .eq("student_id", studentId);
-
-    if (deleteError) throw deleteError;
-
+  if (error) {
+    console.error('Rejection failed:', error);
+    alert('Rejection failed');
+  } else {
     setStudents(prev => prev.filter(s => s.student_id !== studentId));
-
-    alert("Student marked Not Eligible ❌");
-
-  } catch (err) {
-    console.error("Not approve failed:", err);
-    alert("Rejection failed");
+    alert('Student marked Not Eligible ❌');
   }
 };
+
 
   const handleEditSave = (data) => {
     // Data contains id + updated fields
