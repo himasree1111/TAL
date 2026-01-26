@@ -38,7 +38,8 @@ export default function AdminDashboard() {
        const { data: studentData, error: studentError } = await supabase
   .from('admin_student_info')
   .select('*')
-  .not('status', 'in', ['Eligible', 'Not Eligible']) // <-- ignore approved/rejected
+ .or('status.eq.Pending,status.is.null')
+ // <-- ignore approved/rejected
   .order('created_at', { ascending: false });
 
         // Save raw fetch result for debugging
