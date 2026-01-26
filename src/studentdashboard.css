@@ -1,10 +1,15 @@
 .student-container {
-  font-family: 'Segoe UI', 'Arial', 'sans-serif';
-  background: #f6f8fa;
+  display: flex;
   min-height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
+  width: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
+  background: #F6F7F6;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -67,15 +72,17 @@
 
 /* Sidebar */
 .sidebar {
-  background: #1D2B4A;
-  color: #fff;
+  background: #F6F7F6;
+  color: #2E2E2E;
   min-width: 270px;
   max-width: 320px;
   padding: 32px 18px 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  box-shadow: 2px 0 12px rgba(30, 40, 80, 0.04);
+  box-shadow: 2px 0 12px rgba(13,20,40,0.08);
+  position: fixed;
+  left: 0; top: 80px; bottom: 0;
 }
 
 .sidebar-card {

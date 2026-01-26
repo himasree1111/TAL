@@ -2,8 +2,18 @@
 /* ---------- General Layout ---------- */
 /* ---------- General Layout ---------- */
 .app-container {
+  display: flex;
   min-height: 100vh;
-  background-color: #f7f7f7;
+  width: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
+  background: #F6F7F6;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dashboard-layout {

@@ -553,7 +553,7 @@ const handleNotApprove = async (studentId) => {
                 </div>
 
                 <div className="manage-actions">
-                  <button className="btn" onClick={exportCSV}>Export CSV</button>
+                  <button className="btn primary" onClick={exportCSV}>Export CSV</button>
                 </div>
               </div>
 
@@ -625,7 +625,7 @@ const handleNotApprove = async (studentId) => {
                 <h3>Donor Mapping</h3>
                 <div className="section-actions">
                   <button className="btn primary" onClick={handleAddDonor}>Add New Donor</button>
-                  <button className="btn" onClick={handleExportDonorReport}>Export Report</button>
+                  <button className="btn primary" onClick={handleExportDonorReport}>Export Report</button>
                 </div>
               </div>
 

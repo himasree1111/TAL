@@ -1,9 +1,9 @@
- the buttons .admin-root{
+.admin-root{
   display: flex;
   min-height: 100vh;
   width: 100%;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
-  background: #f6f8fa;
+  background: #F6F7F6;
   position: fixed;
   top: 0;
   left: 0;
@@ -19,7 +19,7 @@
 
 .admin-sidebar{
   width:260px;
-  background:#1D2B4A;
+  background:#F6F7F6;
   color:#fff;
   padding:24px 18px;
   box-shadow:2px 0 12px rgba(13,20,40,0.08);
@@ -33,35 +33,40 @@
   flex-grow:1;
 }
 .admin-sidebar .brand{
-  font-weight:700; color:#fff; margin-bottom:18px; font-size:16px;
+  font-weight:700; color:#2E2E2E; margin-bottom:18px; font-size:16px;
 }
-.admin-sidebar nav ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.admin-sidebar nav ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
 .admin-sidebar nav li{
   padding:12px 16px;
   border-radius:20px;
   cursor:pointer;
-  color:#dbe9ea;
-  background: rgba(255,255,255,0.1);
+  color:#2E2E2E;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
   transition: all 0.3s ease;
-  margin-bottom: 4px;
 }
 .logout-btn {
   width:100%;
   padding:12px;
-  background:#2A686B;
-  color:#fff;
+  background:rgba(127, 199, 74, 0.8);
+  color:#FFFFFF;
   border:none;
-  border-radius:8px;
+  border-radius:20px;
   cursor:pointer;
   font-weight:600;
   transition:background 0.2s;
   margin-top:16px;
 }
 .logout-btn:hover {
-  background:#235557;
+  background:rgba(127, 199, 74, 1);
 }
-.admin-sidebar nav li.active, .admin-sidebar nav li:hover{
-  background: rgba(42, 104, 107, 0.8);
+.admin-sidebar nav li.active{
+  background: rgba(127, 199, 74, 0.8);
+  color:#FFFFFF;
+  transform: translateX(4px);
+}
+.admin-sidebar nav li:hover{
+  background: #2E2E2E;
   color:#fff;
   transform: translateX(4px);
 }
@@ -133,13 +138,13 @@
 }
 
 .btn.primary {
-  background: #2A686B;
-  color: #ffffff;
+  background: rgba(127, 199, 74, 0.8);
+  color: #2E2E2E;
   border: none;
 }
 
 .btn.primary:hover {
-  background: #235557;
+  background: rgba(127, 199, 74, 1);
 }
 
 .btn.danger {
@@ -378,7 +383,7 @@
   margin-top: 6px;
 }
 
-.activity-dot.green { background: #10b981; }
+.activity-dot.green { background: rgba(127, 199, 74, 0.8); }
 .activity-dot.blue { background: #3b82f6; }
 .activity-dot.orange { background: #f59e0b; }
 
@@ -430,7 +435,7 @@
   transition: width 0.3s ease;
 }
 
-.status-fill.green { background: #10b981; }
+.status-fill.green { background: rgba(127, 199, 74, 0.8); }
 .status-fill.orange { background: #f59e0b; }
 .status-fill.red { background: #ef4444; }
 
@@ -615,13 +620,13 @@
   margin-bottom: 16px;
 }
 .stat-box{background:#fff;padding:16px;border-radius:10px;text-align:center;box-shadow:0 4px 12px rgba(20,24,40,0.04)}
-.stat-box .value{font-size:20px;font-weight:700;color:#2A686B;margin:6px 0}
+.stat-box .value{font-size:20px;font-weight:700;color:rgba(127, 199, 74, 0.8);margin:6px 0}
 .stat-box .label{color:#6b7280;font-size:13px}
 
 .map-stats{display:flex;gap:12px;margin-top:8px}
 .map-stat{flex:1;padding:10px;background:#f8fafa;border-radius:8px;text-align:center}
 .map-stat .label{font-size:12px;color:#6b7280;margin-bottom:6px}
-.map-stat .value{font-weight:700;color:#2A686B}
+.map-stat .value{font-weight:700;color:rgba(127, 199, 74, 0.8)}
 
 /* Fee tracking summary */
 .fee-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
@@ -645,7 +650,7 @@
 /* Settings */
 .settings-section {
   padding: 32px;
-  background: linear-gradient(135deg, #f6f8fa 0%, #e2e8f0 100%);
+  background: transparent;
   border-radius: 16px;
   margin: 0;
   width: 100%;
@@ -687,11 +692,10 @@
 }
 
 .settings-card {
-  background: #fff;
-  padding: 24px;
+  background: #FFFFFF;
+  padding: 32px;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(20,24,40,0.08);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -705,10 +709,10 @@
 
 .settings-card h4 {
   margin: 0 0 20px 0;
-  color: #1D2B4A;
+  color: #2E2E2E;
   font-size: 18px;
   font-weight: 600;
-  border-bottom: 2px solid #2A686B;
+  border-bottom: 2px solid rgba(127, 199, 74, 0.8);
   padding-bottom: 8px;
 }
 
@@ -723,15 +727,21 @@
   width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #A4A5A6;
+  background: #FFFFFF;
+  color: #2E2E2E;
   font-size: 14px;
   transition: border-color 0.2s ease;
 }
 
+.form-input::placeholder {
+  color: #878981;
+}
+
 .form-input:focus {
   outline: none;
-  border-color: #2A686B;
-  box-shadow: 0 0 0 3px rgba(42, 104, 107, 0.1);
+  border-color: rgba(127, 199, 74, 0.8);
+  box-shadow: 0 0 0 3px rgba(127, 199, 74, 0.2);
 }
 
 .checkbox-label {
@@ -739,7 +749,7 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: #374151;
+  color: #A4A5A6;
 }
 
 /* Tooltip styles */
@@ -815,4 +825,33 @@
 
 .forgot-password:hover {
   text-decoration: underline;
+}
+
+/* Custom checkbox styles */
+input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #6B6C69;
+  border-radius: 4px;
+  background: #FFFFFF;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  background: rgba(127, 199, 74, 0.8);
+  border-color: rgba(127, 199, 74, 0.8);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: bold;
 }
