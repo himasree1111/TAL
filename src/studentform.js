@@ -85,7 +85,10 @@ export default function StudentForm() {
     volunteer_contact: "",
     academic_achievements: "",
     non_academic_achievements: "",
-    is_single_parent: ""
+    is_single_parent: "",
+does_work: "",
+has_scholarship: "",
+
   });
 
   const [files, setFiles] = useState({
@@ -567,7 +570,11 @@ export default function StudentForm() {
       let updatedData = { ...data };
       if (data.family_members_details) {
         try {
-          updatedData.family_members_details = JSON.parse(data.family_members_details);
+         updatedData.family_members_details = data.family_members_details || [];
+updatedData.num_family_members = (data.family_members_details || []).length.toString();
+
+updatedData.earning_members_details = data.earning_members_details || [];
+updatedData.num_earning_members = (data.earning_members_details || []).length.toString();
           updatedData.num_family_members = updatedData.family_members_details.length.toString();
         } catch (e) {
           console.error("Error parsing family members details:", e);
@@ -582,7 +589,10 @@ export default function StudentForm() {
       // Parse earning members details if it exists
       if (data.earning_members_details) {
         try {
-          updatedData.earning_members_details = JSON.parse(data.earning_members_details);
+      updatedData.earning_members_details = data.earning_members_details || [];
+updatedData.num_earning_members =
+  (data.earning_members_details || []).length.toString();
+
           updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
         } catch (e) {
           console.error("Error parsing earning members details:", e);
@@ -593,6 +603,9 @@ export default function StudentForm() {
         updatedData.earning_members_details = [];
         updatedData.num_earning_members = data.earning_members || "0";
       }
+updatedData.is_single_parent = data.is_single_parent ? "YES" : "NO";
+updatedData.does_work = data.does_work ? "YES" : "NO";
+updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
 
       setFormData(prev => ({
         ...prev,
@@ -603,6 +616,12 @@ export default function StudentForm() {
 
     fetchStudent();
   }, [id]);
+  const yesNoToBool = (val) => {
+  if (typeof val === "boolean") return val;
+  if (typeof val === "string") return val.toUpperCase() === "YES";
+  return false;
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -641,61 +660,98 @@ export default function StudentForm() {
           uploadedFiles[key] = url;
         }
       }
-
+const doesWork = yesNoToBool(formData.does_work);
+const hasScholarship = yesNoToBool(formData.has_scholarship);
+const isSingleParent = yesNoToBool(formData.is_single_parent);
       // Prepare payload for Supabase. Map form fields to table columns.
-      const payload = {
-        volunteer_email: volunteerEmail,
-        volunteer_name: formData.volunteer_name,
-        volunteer_contact: formData.volunteer_contact,
-        first_name: formData.first_name,
-        middle_name: formData.middle_name || null,
-        last_name: formData.last_name,
-        dob: formData.dob || null,
-        age: parseInt(formData.age),
-        pob: formData.pob || null,
-        camp_name: formData.camp_name || null,
-        nationality: formData.nationality || null,
-        address: formData.address,
-        class: formData.class,
-        educationcategory: formData.educationcategory === "Other" ? formData.educationcategory_custom : formData.educationcategory || null,
-        educationsubcategory: formData.educationsubcategory === "Other" ? formData.educationsubcategory_custom : formData.educationsubcategory || null,
-        educationyear: formData.educationyear === "Other" ? formData.educationyear_custom : formData.educationyear || null,
-        email: formData.email,
-        contact: formData.contact,
-        whatsapp: formData.whatsapp,
-        student_contact: formData.student_contact || null,
-        school: formData.school,
-        branch: formData.branch || null,
-        prev_percent: parseFloat(formData.prev_percent) || null,
-        present_percent: parseFloat(formData.present_percent) || null,
-        fee: formData.fee || null,
-        fee_structure: formData.fee_structure,
-        job: formData.job || null,
-        aspiration: formData.aspiration || null,
-        scholarship: formData.scholarship || null,
-        certificates: formData.certificates || null,
-        years_area: formData.years_area || null,
-        num_family_members: formData.num_family_members,  // Store the count
-        family_members_details: JSON.stringify(formData.family_members_details),  // Store the details as JSON
-        earning_members: formData.num_earning_members,  // Store the count
-        earning_members_details: JSON.stringify(formData.earning_members_details),  // Store the details as JSON
-        account_no: formData.account_no || null,
-        bank_name: formData.bank_name || null,
-        bank_branch: formData.bank_branch || null,
-        ifsc_code: formData.ifsc_code || null,
-        special_remarks: formData.special_remarks || null,
-        does_work: formData.does_work || null,
-        has_scholarship: formData.has_scholarship || null,
-        // File URLs
-        school_id_url: uploadedFiles.school_id || null,
-        aadhaar_url: uploadedFiles.aadhaar || null,
-        income_proof_url: uploadedFiles.income_proof || null,
-        marksheet_url: uploadedFiles.marksheet || null,
-        passport_photo_url: uploadedFiles.passport_photo || null,
-        fees_receipt_url: uploadedFiles.fees_receipt || null,
-        volunteer_signature_url: uploadedFiles.volunteer_signature || null,
-        student_signature_url: uploadedFiles.student_signature || null,
-      };
+     const payload = {
+  volunteer_email: volunteerEmail,
+  volunteer_name: formData.volunteer_name,
+  volunteer_contact: formData.volunteer_contact,
+
+  first_name: formData.first_name,
+  middle_name: formData.middle_name || null,
+  last_name: formData.last_name,
+
+  dob: formData.dob || null,
+  age: parseInt(formData.age),
+  pob: formData.pob || null,
+
+  camp_name: formData.camp_name || null,
+  camp_date: formData.camp_date || null,
+
+  nationality: formData.nationality || null,
+  address: formData.address,
+
+  class: formData.class,
+
+  educationcategory:
+    formData.educationcategory === "Other"
+      ? formData.educationcategory_custom
+      : formData.educationcategory || null,
+
+  educationsubcategory:
+    formData.educationsubcategory === "Other"
+      ? formData.educationsubcategory_custom
+      : formData.educationsubcategory || null,
+
+  educationyear:
+    formData.educationyear === "Other"
+      ? formData.educationyear_custom
+      : formData.educationyear || null,
+
+  school: formData.school,
+  branch: formData.branch || null,
+
+  prev_percent: parseFloat(formData.prev_percent) || null,
+  present_percent: parseFloat(formData.present_percent) || null,
+
+  email: formData.email,
+  contact: formData.contact,
+  whatsapp: formData.whatsapp,
+  student_contact: formData.student_contact || null,
+
+  num_family_members: parseInt(formData.num_family_members) || 0,
+  family_members_details: formData.family_members_details,
+
+earning_members: parseInt(formData.num_earning_members) || 0,
+
+  earning_members_details: formData.earning_members_details,
+
+  fee: formData.fee || null,
+  fee_structure: formData.fee_structure,
+
+is_single_parent: isSingleParent,
+
+does_work: doesWork,
+job: doesWork ? formData.job : null,
+
+has_scholarship: hasScholarship,
+scholarship: hasScholarship ? formData.scholarship : null,
+
+
+  aspiration: formData.aspiration || null,
+  academic_achievements: formData.academic_achievements || null,
+  non_academic_achievements: formData.non_academic_achievements || null,
+
+  years_area: formData.years_area || null,
+
+  account_no: formData.account_no || null,
+  bank_name: formData.bank_name || null,
+  bank_branch: formData.bank_branch || null,
+  ifsc_code: formData.ifsc_code || null,
+
+  special_remarks: formData.special_remarks || null,
+
+  school_id_url: uploadedFiles.school_id || null,
+  aadhaar_url: uploadedFiles.aadhaar || null,
+  income_proof_url: uploadedFiles.income_proof || null,
+  marksheet_url: uploadedFiles.marksheet || null,
+  passport_photo_url: uploadedFiles.passport_photo || null,
+  fees_receipt_url: uploadedFiles.fees_receipt || null,
+  volunteer_signature_url: uploadedFiles.volunteer_signature || null,
+  student_signature_url: uploadedFiles.student_signature || null,
+};
 
       // Insert into Supabase
       let result;
@@ -763,7 +819,11 @@ export default function StudentForm() {
         bank_name: "",
         bank_branch: "",
         ifsc_code: "",
-        special_remarks: ""
+        special_remarks: "",
+        is_single_parent: "",
+does_work: "",
+has_scholarship: "",
+
       });
       setFiles({
         school_id: null,
@@ -921,6 +981,9 @@ export default function StudentForm() {
             </label>
           </div>
         </div>
+        
+
+
 
       <form onSubmit={handleSubmit}>
         {/* Personal Data */}
