@@ -21,7 +21,12 @@ export default function AdminDashboard() {
   const [eligibleStudents, setEligibleStudents] = useState([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
   const [eligibleCount, setEligibleCount] = useState(0);
+  const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
+  const [loadingNonEligible, setLoadingNonEligible] = useState(false);
+  const [nonEligibleCount, setNonEligibleCount] = useState(0);
   // const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
+  const [activeReportList, setActiveReportList] = useState(null);
+
 
   // Fetch user and real data from Supabase
   useEffect(() => {
@@ -125,6 +130,7 @@ export default function AdminDashboard() {
 
    fetchUserData();
 fetchEligibleCount();
+fetchNonEligibleCount();
 }, []);
 
 
@@ -137,6 +143,7 @@ fetchEligibleCount();
   const [editStudent, setEditStudent] = useState(null);
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
+  const [viewNonEligibleStudent, setViewNonEligibleStudent] = useState(null);
 
   const totals = useMemo(() => {
     const totalStudents = students.length;
@@ -176,6 +183,18 @@ const fetchEligibleCount = async () => {
   }
 };
 
+const fetchNonEligibleCount = async () => {
+  const { count, error } = await supabase
+    .from("non_eligible_students")
+    .select("*", { count: "exact", head: true });
+
+  if (error) {
+    console.error("Error fetching non-eligible count:", error);
+  } else {
+    setNonEligibleCount(count || 0);
+  }
+};
+
   const fetchEligibleStudents = async () => {
     setLoadingEligible(true);
     try {
@@ -199,6 +218,29 @@ setEligibleCount(data?.length || 0);
     }
   };
 
+  const fetchNonEligibleStudents = async () => {
+    setLoadingNonEligible(true);
+    try {
+      const { data, error } = await supabase
+        .from('non_eligible_students')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching non-eligible students:', error);
+        alert('Error fetching non-eligible students: ' + error.message);
+      } else {
+        setNonEligibleStudents(data || []);
+        setNonEligibleCount(data?.length || 0);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Error fetching data');
+    } finally {
+      setLoadingNonEligible(false);
+    }
+  };
+
   const handleDownloadEligibleReport = () => {
     if (eligibleStudents.length === 0) {
       alert('No eligible students to export');
@@ -217,6 +259,29 @@ setEligibleCount(data?.length || 0);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'eligible-students-report.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('Report downloaded successfully!');
+  };
+
+  const handleDownloadNonEligibleReport = () => {
+    if (nonEligibleStudents.length === 0) {
+      alert('No non-eligible students to export');
+      return;
+    }
+
+    const rows = [
+      "id,student_name,email,contact,education,year,school,college,reason,created_at",
+      ...nonEligibleStudents.map(s => 
+        `${s.id},"${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.reason || ''}","${s.created_at || ''}"`
+      )
+    ];
+    
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'non-eligible-students-report.csv';
     a.click();
     URL.revokeObjectURL(url);
     alert('Report downloaded successfully!');
@@ -886,11 +951,7 @@ const handleNotApprove = async (id) => {
                   <div className="chart-placeholder">Fund Utilization Chart</div>
                   <button className="btn small" onClick={() => handleDownloadSpecificReport('financial')}>Download Report</button>
                 </div>
-                <div className="report-card">
-                  <h4>Student Performance</h4>
-                  <div className="chart-placeholder">Performance Metrics</div>
-                  <button className="btn small" onClick={() => handleDownloadSpecificReport('performance')}>Download Report</button>
-                </div>
+
                 <div className="report-card">
                   <h4>Donor Contributions</h4>
                   <div className="chart-placeholder">Contribution Analysis</div>
@@ -903,7 +964,17 @@ const handleNotApprove = async (id) => {
                      <p>Total Eligible: <strong>{eligibleCount}</strong></p>
                   </div>
                   <div className="report-actions">
-                    <button className="btn small" onClick={fetchEligibleStudents} disabled={loadingEligible}>
+<button
+  className="btn small"
+  onClick={() => {
+    setActiveReportList("eligible");
+    fetchEligibleStudents();
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    }, 200);
+  }}
+  disabled={loadingEligible}
+>
                       {loadingEligible ? 'Loading...' : 'View Data'}
                     </button>
                     <button className="btn small" onClick={handleDownloadEligibleReport} disabled={eligibleStudents.length === 0}>
@@ -911,10 +982,36 @@ const handleNotApprove = async (id) => {
                     </button>
                   </div>
                 </div>
+                
+                {/* Non-Eligible Students Report */}
+                <div className="report-card">
+                  <h4>Non-Eligible Students</h4>
+                  <div className="report-meta">
+                     <p>Total Non-Eligible: <strong>{nonEligibleCount}</strong></p>
+                  </div>
+                  <div className="report-actions">
+<button
+  className="btn small"
+  onClick={() => {
+    setActiveReportList("nonEligible");
+    fetchNonEligibleStudents();
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    }, 200);
+  }}
+  disabled={loadingNonEligible}
+>
+                      {loadingNonEligible ? 'Loading...' : 'View Data'}
+                    </button>
+                    <button className="btn small" onClick={handleDownloadNonEligibleReport} disabled={nonEligibleStudents.length === 0}>
+                      Download Report
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Eligible Students Table */}
-              {eligibleStudents.length > 0 && (
+{activeReportList === "eligible" && (
                 <div className="table-wrap" style={{marginTop: '24px'}}>
                   <h3>Eligible Students List</h3>
                   <table className="data-table">
@@ -949,6 +1046,53 @@ const handleNotApprove = async (id) => {
                             <button 
                               className="btn small" 
                               onClick={() => setViewEligibleStudent(s)}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Non-Eligible Students Table */}
+{activeReportList === "nonEligible" && (
+                <div className="table-wrap" style={{marginTop: '24px'}}>
+                  <h3>Non-Eligible Students List</h3>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Contact</th>
+                        <th>Education</th>
+                        <th>School/College</th>
+                        <th>Reason</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nonEligibleStudents.map(s => (
+                        <tr key={s.id}>
+                          <td>{s.student_name || s.full_name}</td>
+                          <td>{s.email || s.email}</td>
+                          <td>{s.contact || s.contact}</td>
+                          <td>{s.education || s.class}</td>
+                          <td>{s.school || s.college || '-'}</td>
+                          <td>{s.reason || '-'}</td>
+                          <td>
+                            {s.created_at 
+                              ? new Date(s.created_at).toLocaleDateString() 
+                              : '-'
+                            }
+                          </td>
+                          <td>
+                            <button 
+                              className="btn small" 
+                              onClick={() => setViewNonEligibleStudent(s)}
                             >
                               View
                             </button>
@@ -1252,6 +1396,35 @@ const handleNotApprove = async (id) => {
             </div>
             <div style={{display:'flex',gap:8,marginTop:12}}>
               <button className="btn primary" onClick={() => setViewEligibleStudent(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewNonEligibleStudent && (
+        <div className="modal-overlay" onClick={() => setViewNonEligibleStudent(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Non-Eligible Student Details</h3>
+            <div className="view-grid">
+              <p><strong>Full Name:</strong> {viewNonEligibleStudent.student_name || '-'}</p>
+              <p><strong>Email:</strong> {viewNonEligibleStudent.email || '-'}</p>
+              <p><strong>Contact:</strong> {viewNonEligibleStudent.contact || '-'}</p>
+              <p><strong>Education Level:</strong> {viewNonEligibleStudent.education || '-'}</p>
+              <p><strong>Year:</strong> {viewNonEligibleStudent.year || '-'}</p>
+              <p><strong>School:</strong> {viewNonEligibleStudent.school || '-'}</p>
+              <p><strong>College:</strong> {viewNonEligibleStudent.college || '-'}</p>
+              <p><strong>Reason:</strong> {viewNonEligibleStudent.reason || '-'}</p>
+              <p><strong>Date Added:</strong> {
+                viewNonEligibleStudent.created_at 
+                  ? new Date(viewNonEligibleStudent.created_at).toLocaleString()
+                  : '-'
+              }</p>
+              {viewNonEligibleStudent.student_id && (
+                <p><strong>Student ID:</strong> {viewNonEligibleStudent.student_id}</p>
+              )}
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:12}}>
+              <button className="btn primary" onClick={() => setViewNonEligibleStudent(null)}>Close</button>
             </div>
           </div>
         </div>
