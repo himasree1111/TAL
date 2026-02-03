@@ -272,9 +272,9 @@ setEligibleCount(data?.length || 0);
     }
 
     const rows = [
-      "id,student_name,email,contact,education,year,school,college,reason,created_at",
+      "id,student_name,email,contact,education,year,school,college,created_at",
       ...nonEligibleStudents.map(s => 
-        `${s.id},"${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.reason || ''}","${s.created_at || ''}"`
+        `${s.id},"${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
       )
     ];
     
@@ -540,7 +540,7 @@ const handleNotApprove = async (id) => {
                 <div className="card">
                   <div className="card-icon student-icon">👥</div>
                   <div className="card-content">
-                    <div className="card-title">Total Students</div>
+                    <div className="card-title">Students Under Review</div>
                     <div className="card-value">{totals.totalStudents}</div>
                     <div className="card-trend positive">↑ 12% from last month</div>
                   </div>
@@ -1075,7 +1075,6 @@ const handleNotApprove = async (id) => {
                         <th>Contact</th>
                         <th>Education</th>
                         <th>School/College</th>
-                        <th>Reason</th>
                         <th>Date Added</th>
                         <th>Actions</th>
                       </tr>
@@ -1088,7 +1087,7 @@ const handleNotApprove = async (id) => {
                           <td>{s.contact || s.contact}</td>
                           <td>{s.education || s.class}</td>
                           <td>{s.school || s.college || '-'}</td>
-                          <td>{s.reason || '-'}</td>
+                         
                           <td>
                             {s.created_at 
                               ? new Date(s.created_at).toLocaleDateString() 
@@ -1412,14 +1411,14 @@ const handleNotApprove = async (id) => {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Non-Eligible Student Details</h3>
             <div className="view-grid">
-              <p><strong>Full Name:</strong> {viewNonEligibleStudent.student_name || '-'}</p>
+              <p><strong>Full Name:</strong> {viewNonEligibleStudent.full_name || '-'}</p>
               <p><strong>Email:</strong> {viewNonEligibleStudent.email || '-'}</p>
               <p><strong>Contact:</strong> {viewNonEligibleStudent.contact || '-'}</p>
-              <p><strong>Education Level:</strong> {viewNonEligibleStudent.education || '-'}</p>
-              <p><strong>Year:</strong> {viewNonEligibleStudent.year || '-'}</p>
+              <p><strong>Education Level:</strong> {viewNonEligibleStudent.class || '-'}</p>
+              <p><strong>Camp Name:</strong> {viewNonEligibleStudent.camp_name || '-'}</p>
               <p><strong>School:</strong> {viewNonEligibleStudent.school || '-'}</p>
-              <p><strong>College:</strong> {viewNonEligibleStudent.college || '-'}</p>
-              <p><strong>Reason:</strong> {viewNonEligibleStudent.reason || '-'}</p>
+             
+              
               <p><strong>Date Added:</strong> {
                 viewNonEligibleStudent.created_at 
                   ? new Date(viewNonEligibleStudent.created_at).toLocaleString()
