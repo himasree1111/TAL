@@ -201,7 +201,7 @@ const fetchNonEligibleCount = async () => {
       const { data, error } = await supabase
         .from('eligible_students')
         .select('*')
-        .eq('status', 'Pending')
+        
         .order('created_at', { ascending: false });
 
       if (error) {
