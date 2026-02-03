@@ -882,7 +882,7 @@ has_scholarship: "",
                 />
               </label>
               <label>
-                <span className="field-label">Relationship to Applicant<span className="required">*</span></span>
+                <span className="field-label">Relationship with Applicant<span className="required">*</span></span>
                 <input
                   type="text"
                   name={`family_member_relation_${index}`}
@@ -988,7 +988,7 @@ has_scholarship: "",
       <form onSubmit={handleSubmit}>
         {/* Personal Data */}
         <div className="section">
-          <h2>2. Personal Data</h2>
+          <h2>2. Student Data</h2>
           <div className="form-group">
             <label>
               <span className="field-label">First Name<span className="required">*</span></span>
@@ -1114,7 +1114,7 @@ has_scholarship: "",
 
           {/* --- Single Parent Question --- */}
           <div className="form-group">
-            <label>Are you currently being raised by a single parent or guardian?<span className="required">*</span></label>
+            <label>Is she currently being raised by a single parent or guardian?<span className="required">*</span></label>
 
             <div className="radio-inline">
               <label>
@@ -1144,7 +1144,7 @@ has_scholarship: "",
 
           <div className="form-group">
             <label className="full-width">
-              <span className="field-label">Total number of family members?(Including Yourself)<span className="required">*</span></span>
+              <span className="field-label">Total number of family members?<span className="required">*</span></span>
               <input
                 type="number"
                 name="num_family_members"
@@ -1186,7 +1186,7 @@ has_scholarship: "",
           <h2>3. Academic Data</h2>
           <div className="form-group">
             <label>
-              <span className="field-label">Name of School/College/University<span className="required">*</span></span>
+              <span className="field-label">Name of School/College/University(with Branch Name)<span className="required">*</span></span>
               <input type="text" name="school" value={formData.school} onChange={handleInputChange} required />
             </label>
           </div>
