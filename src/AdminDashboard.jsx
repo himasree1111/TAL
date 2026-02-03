@@ -1380,13 +1380,13 @@ const handleNotApprove = async (id) => {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Eligible Student Details</h3>
             <div className="view-grid">
-              <p><strong>Full Name:</strong> {viewEligibleStudent.student_name || '-'}</p>
+              <p><strong>Full Name:</strong> {viewEligibleStudent.full_name || '-'}</p>
               <p><strong>Email:</strong> {viewEligibleStudent.email || '-'}</p>
               <p><strong>Contact:</strong> {viewEligibleStudent.contact || '-'}</p>
-              <p><strong>Education Level:</strong> {viewEligibleStudent.education || '-'}</p>
-              <p><strong>Year:</strong> {viewEligibleStudent.year || '-'}</p>
+              <p><strong>Education Level:</strong> {viewEligibleStudent.class || '-'}</p>
+              {/* <p><strong>Camp name:</strong> {viewEligibleStudent.year || '-'}</p> */}
               <p><strong>School:</strong> {viewEligibleStudent.school || '-'}</p>
-              <p><strong>College:</strong> {viewEligibleStudent.college || '-'}</p>
+              {/* <p><strong>College:</strong> {viewEligibleStudent.college || '-'}</p> */}
               <p><strong>Date Added:</strong> {
                 viewEligibleStudent.created_at 
                   ? new Date(viewEligibleStudent.created_at).toLocaleString()
