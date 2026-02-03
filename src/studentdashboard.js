@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+{/*import React, { useState } from "react";
 import "./studentdashboard.css";
 import { useNavigate } from "react-router-dom";
 import supabase from "./supabaseClient";
@@ -95,14 +95,14 @@ const StudentDashboard = () => {
 
   return (
     <div className="student-container">
-      {/* Header */}
+      // Header *
       <header className="student-header">
         <div className="header-content">
           <h1>Student Dashboard</h1>
           <div className="user-info">
             <span>Welcome, {student.name}!</span>
             <div className="student-id">{student.studentId}</div>
-            {/* ✅ Logout Button */}
+            // ✅ Logout Button *
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
@@ -111,7 +111,7 @@ const StudentDashboard = () => {
       </header>
 
       <div className="dashboard-body">
-        {/* Sidebar */}
+        // Sidebar 
         <aside className="sidebar">
           <div className="sidebar-card">
             <h3>Student Profile</h3>
@@ -164,7 +164,7 @@ const StudentDashboard = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
+        // Main Content 
         <main className="main-section">
           <section className="alerts-section">
             <div className="section-header">
@@ -228,3 +228,4 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
+*/}

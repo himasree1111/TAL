@@ -1,4 +1,5 @@
 // src/DonorLogin.js
+{/*}
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -20,7 +21,7 @@ export default function DonorLogin() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  /* ---------------- VALIDATIONS ---------------- */
+  // ---------------- VALIDATIONS ---------------- 
 
   const validateName = (value) => {
     if (!value.trim()) return "Full name is required";
@@ -47,7 +48,7 @@ export default function DonorLogin() {
     return errors;
   };
 
-  /* ---------------- RESET SESSION ---------------- */
+  // ---------------- RESET SESSION ---------------- 
 
   useEffect(() => {
     const resetSession = async () => {
@@ -57,7 +58,7 @@ export default function DonorLogin() {
     resetSession();
   }, []);
 
-  /* ---------------- SUBMIT ---------------- */
+  // ---------------- SUBMIT ---------------- 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,7 +117,7 @@ export default function DonorLogin() {
     }
   };
 
-  /* ---------------- FORGOT PASSWORD ---------------- */
+  // ---------------- FORGOT PASSWORD ---------------- 
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -134,7 +135,7 @@ export default function DonorLogin() {
 
   if (loading) return <div>Loading...</div>;
 
-  /* ---------------- UI ---------------- */
+  // ---------------- UI ---------------- 
 
   return (
     <div className="auth-container">
@@ -158,7 +159,7 @@ export default function DonorLogin() {
             </>
           )}
 
-          {/* EMAIL */}
+          // EMAIL 
           <input
             type="email"
             placeholder="Email Address"
@@ -171,7 +172,7 @@ export default function DonorLogin() {
           />
           {emailError && <p className="error-text">{emailError}</p>}
 
-          {/* PASSWORD WITH EYE ICON */}
+          //PASSWORD WITH EYE ICON 
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -203,7 +204,7 @@ export default function DonorLogin() {
             </span>
           </div>
 
-          {/* PASSWORD RULES */}
+          // PASSWORD RULES 
           { passwordErrors.length > 0 && (
             <ul className="error-text">
               {passwordErrors.map((err, i) => (
@@ -238,3 +239,4 @@ export default function DonorLogin() {
     </div>
   );
 }
+*/}

@@ -1,4 +1,5 @@
 // src/StudentLogin.js
+{/*}
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -20,7 +21,7 @@ export default function StudentLogin() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  /* ---------------- VALIDATIONS ---------------- */
+  // ---------------- VALIDATIONS ---------------- 
 
   const validateName = (value) => {
     if (!value.trim()) return "Full name is required";
@@ -50,7 +51,7 @@ export default function StudentLogin() {
     return errors;
   };
 
-  /* ---------------- SESSION CHECK ---------------- */
+  // ---------------- SESSION CHECK ---------------- 
 
   useEffect(() => {
     const checkSession = async () => {
@@ -63,7 +64,7 @@ export default function StudentLogin() {
     checkSession();
   }, [navigate]);
 
-  /* ---------------- SUBMIT ---------------- */
+  // ---------------- SUBMIT ---------------- 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,7 +119,7 @@ export default function StudentLogin() {
     }
   };
 
-  /* ---------------- FORGOT PASSWORD ---------------- */
+  // ---------------- FORGOT PASSWORD ---------------- 
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -136,7 +137,7 @@ export default function StudentLogin() {
 
   if (loading) return <div>Loading...</div>;
 
-  /* ---------------- UI ---------------- */
+  // ---------------- UI ---------------- 
 
   return (
     <div className="auth-container">
@@ -144,7 +145,7 @@ export default function StudentLogin() {
         <h1>{isSignIn ? "Student Sign In" : "Student Sign Up"}</h1>
 
         <form onSubmit={handleSubmit}>
-          {/* NAME */}
+          // NAME 
           {!isSignIn && (
             <>
               <input
@@ -161,7 +162,7 @@ export default function StudentLogin() {
             </>
           )}
 
-          {/* EMAIL */}
+          // EMAIL 
           <input
             type="email"
             placeholder="Email Address"
@@ -174,7 +175,7 @@ export default function StudentLogin() {
           />
           {emailError && <p className="error-text">{emailError}</p>}
 
-          {/* PASSWORD */}
+          // PASSWORD 
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -205,7 +206,7 @@ export default function StudentLogin() {
             </span>
           </div>
 
-          {/* PASSWORD ERRORS */}
+          // PASSWORD ERRORS 
           {passwordErrors.length > 0 && (
             <ul
               style={{
@@ -254,3 +255,4 @@ export default function StudentLogin() {
     </div>
   );
 }
+*/}
