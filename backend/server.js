@@ -1,338 +1,605 @@
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
+const Database = require("better-sqlite3");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 
 const app = express();
 const PORT = 4000;
-const DB_FILE = "./volunteer.db"; // <- change to "./volunteer.ds" if your DB file is named that
+const DB_FILE = path.join(__dirname, "app.db");
+const JWT_SECRET = "tal-portal-secret-key-change-in-production";
+const JWT_EXPIRY = "7d";
 
-// Email validation function
-const validateEmail = (email) => {
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return emailRegex.test(email);
-};
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use("/uploads", express.static(uploadsDir));
 
-// Open DB
-const db = new sqlite3.Database(DB_FILE, (err) => {
-  if (err) {
-    console.error("❌ Failed to open DB:", err.message);
-    process.exit(1);
+// Multer config for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = req.body.folder || "general";
+    const dest = path.join(uploadsDir, folder);
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    cb(null, dest);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}_${file.originalname.replace(/\s+/g, "_")}`;
+    cb(null, uniqueName);
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+
+// ---------- DATABASE SETUP ----------
+
+const db = new Database(DB_FILE);
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
+console.log("Connected to SQLite database");
+
+// Create tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'volunteer',
+    preferences TEXT DEFAULT '{}',
+    reset_token TEXT,
+    reset_token_expires INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS student_form_submissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    volunteer_email TEXT,
+    volunteer_name TEXT,
+    volunteer_contact TEXT,
+
+    first_name TEXT,
+    middle_name TEXT,
+    last_name TEXT,
+
+    dob TEXT,
+    age INTEGER,
+    pob TEXT,
+
+    camp_name TEXT,
+    camp_date TEXT,
+
+    nationality TEXT,
+    address TEXT,
+
+    class TEXT,
+    educationcategory TEXT,
+    educationsubcategory TEXT,
+    educationyear TEXT,
+
+    school TEXT,
+    branch TEXT,
+
+    prev_percent REAL,
+    present_percent REAL,
+
+    email TEXT,
+    contact TEXT,
+    whatsapp TEXT,
+    student_contact TEXT,
+
+    num_family_members INTEGER DEFAULT 0,
+    family_members_details TEXT DEFAULT '[]',
+
+    earning_members INTEGER DEFAULT 0,
+    earning_members_details TEXT DEFAULT '[]',
+
+    fee TEXT,
+    fee_structure TEXT,
+
+    is_single_parent INTEGER DEFAULT 0,
+    does_work INTEGER DEFAULT 0,
+    job TEXT,
+    has_scholarship INTEGER DEFAULT 0,
+    scholarship TEXT,
+
+    aspiration TEXT,
+    academic_achievements TEXT,
+    non_academic_achievements TEXT,
+
+    years_area TEXT,
+
+    account_no TEXT,
+    bank_name TEXT,
+    bank_branch TEXT,
+    ifsc_code TEXT,
+
+    special_remarks TEXT,
+
+    school_id_url TEXT,
+    aadhaar_url TEXT,
+    income_proof_url TEXT,
+    marksheet_url TEXT,
+    passport_photo_url TEXT,
+    fees_receipt_url TEXT,
+    volunteer_signature_url TEXT,
+    student_signature_url TEXT,
+
+    status TEXT DEFAULT 'pending',
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// ---------- HELPERS ----------
+
+// Create a Supabase-shaped user object from DB row
+const makeUserObject = (row) => ({
+  id: row.id,
+  email: row.email,
+  user_metadata: {
+    name: row.name,
+    user_type: row.role,
+    contact_number: "",
+    preferences: (() => {
+      try { return JSON.parse(row.preferences || "{}"); } catch { return {}; }
+    })(),
+  },
+  created_at: row.created_at,
+});
+
+// Parse JSON fields and convert booleans on read
+const transformStudentRow = (row) => {
+  if (!row) return row;
+  const r = { ...row };
+  try { r.family_members_details = JSON.parse(r.family_members_details || "[]"); } catch { r.family_members_details = []; }
+  try { r.earning_members_details = JSON.parse(r.earning_members_details || "[]"); } catch { r.earning_members_details = []; }
+  r.is_single_parent = !!r.is_single_parent;
+  r.does_work = !!r.does_work;
+  r.has_scholarship = !!r.has_scholarship;
+  return r;
+};
+
+// Prepare row for insert/update (stringify JSON, convert bools)
+const prepareStudentPayload = (payload) => {
+  const p = { ...payload };
+  if (Array.isArray(p.family_members_details)) p.family_members_details = JSON.stringify(p.family_members_details);
+  if (Array.isArray(p.earning_members_details)) p.earning_members_details = JSON.stringify(p.earning_members_details);
+  if (typeof p.is_single_parent === "boolean") p.is_single_parent = p.is_single_parent ? 1 : 0;
+  if (typeof p.does_work === "boolean") p.does_work = p.does_work ? 1 : 0;
+  if (typeof p.has_scholarship === "boolean") p.has_scholarship = p.has_scholarship ? 1 : 0;
+  delete p.id;
+  delete p.created_at;
+  return p;
+};
+
+// ---------- AUTH ENDPOINTS ----------
+
+// POST /api/auth/signup
+app.post("/api/auth/signup", async (req, res) => {
+  const { email, password, options } = req.body;
+  const name = options?.data?.name || req.body.name || "";
+  const user_type = options?.data?.user_type || req.body.user_type || "volunteer";
+
+  if (!email || !password) {
+    return res.json({ data: { user: null }, error: { message: "Email and password required" } });
   }
-  console.log("✅ Connected to SQLite database!");
+
+  try {
+    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    if (existing) {
+      return res.json({ data: { user: null }, error: { message: "User already registered" } });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const result = db.prepare(
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)"
+    ).run(name, email, password_hash, user_type);
+
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(result.lastInsertRowid);
+    console.log(`User registered: ${email} (${user_type})`);
+    return res.json({ data: { user: makeUserObject(user) }, error: null });
+  } catch (err) {
+    console.error("Signup error:", err);
+    return res.json({ data: { user: null }, error: { message: err.message } });
+  }
 });
 
-// reduce locking problems
-db.configure && db.configure("busyTimeout", 5000);
-db.serialize(() => {
-  db.run("PRAGMA foreign_keys = ON;");
-  db.run("PRAGMA journal_mode = WAL;");
+// POST /api/auth/login
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.json({ data: { user: null, session: null }, error: { message: "Email and password required" } });
+  }
+
+  try {
+    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+    if (!user) {
+      return res.json({ data: { user: null, session: null }, error: { message: "Invalid login credentials" } });
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.json({ data: { user: null, session: null }, error: { message: "Invalid login credentials" } });
+    }
+
+    const userObj = makeUserObject(user);
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
+    );
+
+    console.log(`Login: ${email} (${user.role})`);
+    return res.json({
+      data: {
+        user: userObj,
+        session: { access_token: token, user: userObj },
+      },
+      error: null,
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.json({ data: { user: null, session: null }, error: { message: err.message } });
+  }
 });
 
-// Create tables (if not exists)
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS volunteer (
-      volunteer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      email TEXT UNIQUE,
-      password_hash TEXT
-    );
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS donor (
-      donor_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      email TEXT UNIQUE,
-      password_hash TEXT
-    );
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS student_records (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      volunteer_id INTEGER,
-      full_name TEXT,
-      age INTEGER,
-      email TEXT UNIQUE,
-      contact_no TEXT,
-      whatsapp_no TEXT,
-      parent_no TEXT,
-      family_members TEXT,
-      parents_names TEXT,
-      earning_members TEXT,
-      school_college TEXT,
-      branch TEXT,
-      previous_percentage REAL,
-      present_percentage REAL,
-      course_class_fee TEXT,
-      job_details TEXT,
-      aspiration TEXT,
-      scholarship_details TEXT,
-      achievement_certificates TEXT,
-      present_scholarship_details TEXT,
-      years_in_area INTEGER,
-      scholarship_reason TEXT,
-      FOREIGN KEY (volunteer_id) REFERENCES volunteer(volunteer_id)
-    );
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS student_document (
-      doc_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      student_id INTEGER NOT NULL,
-      school_id_collected TEXT DEFAULT 'N',
-      fees_receipt_collected TEXT DEFAULT 'N',
-      aadhaar_collected TEXT DEFAULT 'N',
-      income_proof_collected TEXT DEFAULT 'N',
-      marksheets_collected TEXT DEFAULT 'N',
-      fees_transfer_details TEXT,
-      bank_account_details TEXT,
-      passport_photo_collected TEXT DEFAULT 'N',
-      volunteer_verification TEXT,
-      volunteer_signature TEXT,
-      girl_verification TEXT,
-      girl_signature TEXT,
-      parent_signature TEXT,
-      FOREIGN KEY (student_id) REFERENCES student_records(id)
-    );
-  `);
+// POST /api/auth/logout
+app.post("/api/auth/logout", (req, res) => {
+  res.json({ error: null });
 });
 
-// ---------- REGISTER VOLUNTEER ----------
+// GET /api/auth/session
+app.get("/api/auth/session", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) return res.json({ data: { session: null }, error: null });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(decoded.id);
+    if (!user) return res.json({ data: { session: null }, error: null });
+
+    const userObj = makeUserObject(user);
+    return res.json({
+      data: { session: { access_token: token, user: userObj } },
+      error: null,
+    });
+  } catch {
+    return res.json({ data: { session: null }, error: null });
+  }
+});
+
+// GET /api/auth/user
+app.get("/api/auth/user", (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) return res.json({ data: { user: null }, error: { message: "Not authenticated" } });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(decoded.id);
+    if (!user) return res.json({ data: { user: null }, error: { message: "User not found" } });
+    return res.json({ data: { user: makeUserObject(user) }, error: null });
+  } catch {
+    return res.json({ data: { user: null }, error: { message: "Invalid token" } });
+  }
+});
+
+// PUT /api/auth/user — update password and/or metadata
+app.put("/api/auth/user", async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) return res.json({ data: { user: null }, error: { message: "Not authenticated" } });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(decoded.id);
+    if (!user) return res.json({ data: { user: null }, error: { message: "User not found" } });
+
+    const { password, data: metadata } = req.body;
+
+    if (password) {
+      const hash = await bcrypt.hash(password, 10);
+      db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, user.id);
+    }
+
+    if (metadata) {
+      if (metadata.name !== undefined) {
+        db.prepare("UPDATE users SET name = ? WHERE id = ?").run(metadata.name, user.id);
+      }
+      if (metadata.preferences || metadata.contact_number !== undefined) {
+        const existing = (() => {
+          try { return JSON.parse(user.preferences || "{}"); } catch { return {}; }
+        })();
+        const merged = { ...existing };
+        if (metadata.preferences) Object.assign(merged, metadata.preferences);
+        if (metadata.contact_number !== undefined) merged.contact_number = metadata.contact_number;
+        db.prepare("UPDATE users SET preferences = ? WHERE id = ?").run(JSON.stringify(merged), user.id);
+      }
+    }
+
+    const updated = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
+    return res.json({ data: { user: makeUserObject(updated) }, error: null });
+  } catch (err) {
+    console.error("Update user error:", err);
+    return res.json({ data: { user: null }, error: { message: err.message } });
+  }
+});
+
+// POST /api/auth/reset-password
+app.post("/api/auth/reset-password", (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.json({ data: {}, error: { message: "Email required" } });
+
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  if (!user) return res.json({ data: {}, error: null }); // Don't reveal if user exists
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const expires = Date.now() + 3600000; // 1 hour
+  db.prepare("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?").run(resetToken, expires, user.id);
+
+  const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}&role=${user.role}`;
+  console.log(`\n=== PASSWORD RESET ===`);
+  console.log(`Email: ${email}`);
+  console.log(`Reset URL: ${resetUrl}`);
+  console.log(`======================\n`);
+
+  return res.json({ data: {}, error: null });
+});
+
+// POST /api/auth/reset-password/confirm
+app.post("/api/auth/reset-password/confirm", async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.json({ data: {}, error: { message: "Token and password required" } });
+
+  try {
+    const user = db.prepare(
+      "SELECT * FROM users WHERE reset_token = ? AND reset_token_expires > ?"
+    ).get(token, Date.now());
+
+    if (!user) return res.json({ data: {}, error: { message: "Invalid or expired reset token" } });
+
+    const hash = await bcrypt.hash(password, 10);
+    db.prepare(
+      "UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?"
+    ).run(hash, user.id);
+
+    return res.json({ data: {}, error: null });
+  } catch (err) {
+    console.error("Confirm reset error:", err);
+    return res.json({ data: {}, error: { message: err.message } });
+  }
+});
+
+// ---------- STUDENT FORM ENDPOINTS ----------
+
+// GET /api/student-forms
+app.get("/api/student-forms", (req, res) => {
+  try {
+    const { volunteer_email, id, single, select: selectFields, eq_field, eq_value, order_field, order_ascending } = req.query;
+
+    if (id && single === "true") {
+      const row = db.prepare("SELECT * FROM student_form_submissions WHERE id = ?").get(id);
+      return res.json({ data: transformStudentRow(row), error: null });
+    }
+
+    let sql = "SELECT";
+    sql += (selectFields && selectFields !== "*") ? ` ${selectFields}` : " *";
+    sql += " FROM student_form_submissions";
+
+    const conditions = [];
+    const params = [];
+
+    if (volunteer_email) { conditions.push("volunteer_email = ?"); params.push(volunteer_email); }
+    if (eq_field && eq_value !== undefined) { conditions.push(`${eq_field} = ?`); params.push(eq_value); }
+    if (conditions.length > 0) sql += " WHERE " + conditions.join(" AND ");
+
+    const orderCol = order_field || "created_at";
+    const orderDir = order_ascending === "true" ? "ASC" : "DESC";
+    sql += ` ORDER BY ${orderCol} ${orderDir}`;
+
+    const rows = db.prepare(sql).all(...params);
+    return res.json({ data: rows.map(transformStudentRow), error: null });
+  } catch (err) {
+    console.error("GET student-forms error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+// POST /api/student-forms
+app.post("/api/student-forms", (req, res) => {
+  try {
+    const payloadArray = Array.isArray(req.body) ? req.body : [req.body];
+    const results = [];
+
+    for (const rawPayload of payloadArray) {
+      const payload = prepareStudentPayload(rawPayload);
+      const columns = Object.keys(payload);
+      const placeholders = columns.map(() => "?").join(", ");
+      const values = columns.map((c) => payload[c] ?? null);
+
+      const result = db.prepare(
+        `INSERT INTO student_form_submissions (${columns.join(", ")}) VALUES (${placeholders})`
+      ).run(...values);
+
+      const inserted = db.prepare("SELECT * FROM student_form_submissions WHERE id = ?").get(result.lastInsertRowid);
+      results.push(transformStudentRow(inserted));
+    }
+
+    console.log(`Student form(s) inserted: ${results.map(r => r.id).join(", ")}`);
+    return res.json({ data: results, error: null });
+  } catch (err) {
+    console.error("POST student-forms error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+// PUT /api/student-forms/:id
+app.put("/api/student-forms/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const payload = prepareStudentPayload(req.body);
+    const columns = Object.keys(payload);
+    if (columns.length === 0) return res.json({ data: null, error: { message: "No fields to update" } });
+
+    const setClause = columns.map((c) => `${c} = ?`).join(", ");
+    const values = columns.map((c) => payload[c] ?? null);
+
+    db.prepare(`UPDATE student_form_submissions SET ${setClause} WHERE id = ?`).run(...values, id);
+    const updated = db.prepare("SELECT * FROM student_form_submissions WHERE id = ?").get(id);
+    console.log(`Student form updated: ${id}`);
+    return res.json({ data: transformStudentRow(updated), error: null });
+  } catch (err) {
+    console.error("PUT student-forms error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+// DELETE /api/student-forms/:id
+app.delete("/api/student-forms/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    db.prepare("DELETE FROM student_form_submissions WHERE id = ?").run(id);
+    console.log(`Student form deleted: ${id}`);
+    return res.json({ data: null, error: null });
+  } catch (err) {
+    console.error("DELETE student-forms error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+// ---------- ADMIN ENDPOINTS ----------
+
+app.get("/api/admin/students", (req, res) => {
+  try {
+    const { select: selectFields, order_field, order_ascending } = req.query;
+    let sql = "SELECT";
+    sql += (selectFields && selectFields !== "*") ? ` ${selectFields}` : " *";
+    sql += " FROM student_form_submissions";
+
+    const orderCol = order_field || "created_at";
+    const orderDir = order_ascending === "true" ? "ASC" : "DESC";
+    sql += ` ORDER BY ${orderCol} ${orderDir}`;
+
+    const rows = db.prepare(sql).all();
+    return res.json({ data: rows.map(transformStudentRow), error: null });
+  } catch (err) {
+    console.error("GET admin/students error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+app.put("/api/admin/students/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const payload = prepareStudentPayload(req.body);
+    const columns = Object.keys(payload);
+    if (columns.length === 0) return res.json({ data: null, error: { message: "No fields to update" } });
+
+    const setClause = columns.map((c) => `${c} = ?`).join(", ");
+    const values = columns.map((c) => payload[c] ?? null);
+
+    db.prepare(`UPDATE student_form_submissions SET ${setClause} WHERE id = ?`).run(...values, id);
+    const updated = db.prepare("SELECT * FROM student_form_submissions WHERE id = ?").get(id);
+    return res.json({ data: transformStudentRow(updated), error: null });
+  } catch (err) {
+    console.error("PUT admin/students error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+app.get("/api/admin/eligible", (req, res) => {
+  try {
+    const { count_only, order_field, order_ascending } = req.query;
+
+    if (count_only === "true") {
+      const row = db.prepare("SELECT COUNT(*) as count FROM student_form_submissions WHERE status = 'eligible'").get();
+      return res.json({ count: row.count, data: null, error: null });
+    }
+
+    let sql = "SELECT * FROM student_form_submissions WHERE status = 'eligible'";
+    const orderCol = order_field || "created_at";
+    const orderDir = order_ascending === "true" ? "ASC" : "DESC";
+    sql += ` ORDER BY ${orderCol} ${orderDir}`;
+
+    const rows = db.prepare(sql).all();
+    return res.json({ data: rows.map(transformStudentRow), error: null, count: rows.length });
+  } catch (err) {
+    console.error("GET admin/eligible error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+app.get("/api/admin/non-eligible", (req, res) => {
+  try {
+    const { count_only, order_field, order_ascending } = req.query;
+
+    if (count_only === "true") {
+      const row = db.prepare("SELECT COUNT(*) as count FROM student_form_submissions WHERE status = 'non_eligible'").get();
+      return res.json({ count: row.count, data: null, error: null });
+    }
+
+    let sql = "SELECT * FROM student_form_submissions WHERE status = 'non_eligible'";
+    const orderCol = order_field || "created_at";
+    const orderDir = order_ascending === "true" ? "ASC" : "DESC";
+    sql += ` ORDER BY ${orderCol} ${orderDir}`;
+
+    const rows = db.prepare(sql).all();
+    return res.json({ data: rows.map(transformStudentRow), error: null, count: rows.length });
+  } catch (err) {
+    console.error("GET admin/non-eligible error:", err);
+    return res.json({ data: null, error: { message: err.message } });
+  }
+});
+
+// ---------- FILE UPLOAD ----------
+
+app.post("/api/upload", upload.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+  const folder = req.body.folder || "general";
+  const publicUrl = `http://localhost:${PORT}/uploads/${folder}/${req.file.filename}`;
+  return res.json({ publicUrl });
+});
+
+// ---------- LEGACY ENDPOINT (backward compat with register.js) ----------
+
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) return res.json({ success: false, message: "All fields required" });
-  if (!validateEmail(email)) return res.json({ success: false, message: "Invalid email format" });
 
   try {
+    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+    if (existing) return res.json({ success: false, message: "Email already exists" });
+
     const password_hash = await bcrypt.hash(password, 10);
-    const sql = `INSERT INTO volunteer (name, email, password_hash) VALUES (?, ?, ?)`;
-    db.run(sql, [name, email, password_hash], function (err) {
-      if (err) {
-        console.error("Registration error:", err);
-        if (err.code === "SQLITE_CONSTRAINT") return res.json({ success: false, message: "Email already exists" });
-        return res.json({ success: false, message: "Registration failed" });
-      }
-      console.log(`✅ Volunteer registered with ID: ${this.lastID}`);
-      return res.json({ success: true, message: "Registered", volunteer_id: this.lastID });
-    });
+    const result = db.prepare(
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)"
+    ).run(name, email, password_hash, "volunteer");
+    console.log(`Volunteer registered (legacy): ${email}`);
+    return res.json({ success: true, message: "Registered", volunteer_id: result.lastInsertRowid });
   } catch (e) {
-    console.error("Hashing error:", e);
+    console.error("Registration error:", e);
     return res.json({ success: false, message: "Server error" });
   }
 });
 
-// ---------- REGISTER DONOR ----------
-app.post("/register-donor", async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) return res.json({ success: false, message: "All fields required" });
-  if (!validateEmail(email)) return res.json({ success: false, message: "Invalid email format" });
-
-  try {
-    const password_hash = await bcrypt.hash(password, 10);
-    const sql = `INSERT INTO donor (name, email, password_hash) VALUES (?, ?, ?)`;
-    db.run(sql, [name, email, password_hash], function (err) {
-      if (err) {
-        console.error("Donor registration error:", err);
-        if (err.code === "SQLITE_CONSTRAINT") return res.json({ success: false, message: "Email already exists" });
-        return res.json({ success: false, message: "Registration failed" });
-      }
-      console.log(`✅ Donor registered with ID: ${this.lastID}`);
-      return res.json({ success: true, message: "Registered", donor_id: this.lastID });
-    });
-  } catch (e) {
-    console.error("Hashing error:", e);
-    return res.json({ success: false, message: "Server error" });
-  }
-});
-
-// ---------- LOGIN VOLUNTEER ----------
-app.post("/login", (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
-  if (!validateEmail(email)) return res.status(400).json({ success: false, message: "Invalid email format" });
-
-  const sql = `SELECT * FROM volunteer WHERE email = ?`;
-  db.get(sql, [email], async (err, row) => {
-    if (err) {
-      console.error("Login DB error:", err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
-    if (!row) return res.status(401).json({ success: false, message: "Invalid email or password" });
-
-    try {
-      const valid = await bcrypt.compare(password, row.password_hash);
-      if (!valid) return res.status(401).json({ success: false, message: "Invalid email or password" });
-
-      // success
-      console.log(`✅ Login successful for volunteer_id=${row.volunteer_id}`);
-      return res.json({ success: true, message: "Login successful", volunteer_id: row.volunteer_id, name: row.name });
-    } catch (e) {
-      console.error("Login compare error:", e);
-      return res.status(500).json({ success: false, message: "Server error" });
-    }
-  });
-});
-
-// ---------- LOGIN DONOR ----------
-app.post("/login-donor", (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ success: false, message: "Email and password required" });
-  if (!validateEmail(email)) return res.status(400).json({ success: false, message: "Invalid email format" });
-
-  const sql = `SELECT * FROM donor WHERE email = ?`;
-  db.get(sql, [email], async (err, row) => {
-    if (err) {
-      console.error("Donor login DB error:", err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
-    if (!row) return res.status(401).json({ success: false, message: "Invalid email or password" });
-
-    try {
-      const valid = await bcrypt.compare(password, row.password_hash);
-      if (!valid) return res.status(401).json({ success: false, message: "Invalid email or password" });
-
-      // success
-      console.log(`✅ Donor login successful for donor_id=${row.donor_id}`);
-      return res.json({ success: true, message: "Login successful", donor_id: row.donor_id, name: row.name });
-    } catch (e) {
-      console.error("Donor login compare error:", e);
-      return res.status(500).json({ success: false, message: "Server error" });
-    }
-  });
-});
-
-// ---------- STUDENT (PAGE 1) ----------
-app.post("/student", (req, res) => {
-  const s = req.body;
-  if (!s.volunteer_id || !s.full_name) return res.json({ success: false, message: "Missing required fields" });
-  if (s.email && !validateEmail(s.email)) return res.json({ success: false, message: "Invalid email format" });
-
-  const query = `
-    INSERT INTO student_records
-      (volunteer_id, full_name, age, email, contact_no, whatsapp_no, parent_no, family_members, parents_names, earning_members, school_college, branch, previous_percentage, present_percentage, course_class_fee, job_details, aspiration, scholarship_details, achievement_certificates, present_scholarship_details, years_in_area, scholarship_reason)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  const values = [
-    s.volunteer_id,
-    s.full_name || null,
-    s.age || null,
-    s.email || null,
-    s.contact_no || null,
-    s.whatsapp_no || null,
-    s.parent_no || null,
-    s.family_members || null,
-    s.parents_names || null,
-    s.earning_members || null,
-    s.school_college || null,
-    s.branch || null,
-    s.previous_percentage || null,
-    s.present_percentage || null,
-    s.course_class_fee || null,
-    s.job_details || null,
-    s.aspiration || null,
-    s.scholarship_details || null,
-    s.achievement_certificates || null,
-    s.present_scholarship_details || null,
-    s.years_in_area || null,
-    s.scholarship_reason || null
-  ];
-
-  db.run(query, values, function (err) {
-    if (err) {
-      console.error("Student insert error:", err);
-      return res.json({ success: false, message: "Failed to insert student" });
-    }
-    console.log(`✅ Student saved id=${this.lastID}`);
-    return res.json({ success: true, message: "Student saved", student_id: this.lastID });
-  });
-});
-
-// ---------- STUDENT DOCS (PAGE 2) ----------
-app.post("/studentdocs", (req, res) => {
-  const d = req.body;
-  if (!d.student_id) return res.json({ success: false, message: "student_id required" });
-
-  const query = `
-    INSERT INTO student_document
-      (student_id, school_id_collected, fees_receipt_collected, aadhaar_collected, income_proof_collected, marksheets_collected, fees_transfer_details, bank_account_details, passport_photo_collected, volunteer_verification, volunteer_signature, girl_verification, girl_signature, parent_signature)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  const values = [
-    d.student_id,
-    d.school_id_collected || "N",
-    d.fees_receipt_collected || "N",
-    d.aadhaar_collected || "N",
-    d.income_proof_collected || "N",
-    d.marksheets_collected || "N",
-    d.fees_transfer_details || null,
-    d.bank_account_details || null,
-    d.passport_photo_collected || "N",
-    d.volunteer_verification || null,
-    d.volunteer_signature || null,
-    d.girl_verification || null,
-    d.girl_signature || null,
-    d.parent_signature || null
-  ];
-
-  db.run(query, values, function (err) {
-    if (err) {
-      console.error("Student docs insert error:", err);
-      return res.json({ success: false, message: "Failed to insert document info" });
-    }
-    console.log(`✅ Student docs saved doc_id=${this.lastID} for student_id=${d.student_id}`);
-    return res.json({ success: true, message: "Documents saved", doc_id: this.lastID });
-  });
-});
-
-// ---------- GET VOLUNTEER ID BY EMAIL ----------
-app.get("/volunteer-id/:email", (req, res) => {
-  const email = req.params.email;
-  const sql = `SELECT volunteer_id FROM volunteer WHERE email = ?`;
-  db.get(sql, [email], (err, row) => {
-    if (err) {
-      console.error("Get volunteer id error:", err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
-    if (!row) return res.status(404).json({ success: false, message: "Volunteer not found" });
-    return res.json({ success: true, volunteer_id: row.volunteer_id });
-  });
-});
-
-// ---------- GET ALL STUDENTS ----------
-app.get("/students", (req, res) => {
-  const volunteerEmail = req.query.volunteer_email;
-  let sql = `SELECT * FROM student_records`;
-  let params = [];
-
-  if (volunteerEmail) {
-    // Join with volunteer table to filter by email
-    sql = `
-      SELECT sr.* FROM student_records sr
-      JOIN volunteer v ON sr.volunteer_id = v.volunteer_id
-      WHERE v.email = ?
-    `;
-    params = [volunteerEmail];
-  }
-
-  sql += ` ORDER BY sr.id DESC`;
-
-  db.all(sql, params, (err, rows) => {
-    if (err) {
-      console.error("Get students error:", err);
-      return res.status(500).json({ success: false, message: "Database error" });
-    }
-    return res.json({ success: true, students: rows });
-  });
-});
+// ---------- START SERVER ----------
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

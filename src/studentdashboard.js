@@ -1,4 +1,4 @@
-{/*import React, { useState } from "react";
+import React, { useState } from "react";
 import "./studentdashboard.css";
 import { useNavigate } from "react-router-dom";
 import supabase from "./supabaseClient";
@@ -75,15 +75,15 @@ const StudentDashboard = () => {
   const getAlertIcon = (type) => {
     switch (type) {
       case "workshop":
-        return "📚";
+        return String.fromCodePoint(0x1F4DA);
       case "deadline":
-        return "⏰";
+        return String.fromCodePoint(0x23F0);
       case "fee":
-        return "💰";
+        return String.fromCodePoint(0x1F4B0);
       case "event":
-        return "🎯";
+        return String.fromCodePoint(0x1F3AF);
       default:
-        return "🔔";
+        return String.fromCodePoint(0x1F514);
     }
   };
 
@@ -95,14 +95,14 @@ const StudentDashboard = () => {
 
   return (
     <div className="student-container">
-      // Header *
+      {/* Header */}
       <header className="student-header">
         <div className="header-content">
           <h1>Student Dashboard</h1>
           <div className="user-info">
             <span>Welcome, {student.name}!</span>
             <div className="student-id">{student.studentId}</div>
-            // ✅ Logout Button *
+            {/* Logout Button */}
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
@@ -111,7 +111,7 @@ const StudentDashboard = () => {
       </header>
 
       <div className="dashboard-body">
-        // Sidebar 
+        {/* Sidebar */}
         <aside className="sidebar">
           <div className="sidebar-card">
             <h3>Student Profile</h3>
@@ -151,10 +151,10 @@ const StudentDashboard = () => {
 
           <div className="sidebar-card">
             <h3>Fee Status</h3>
-            <p>Total Fee: ₹{feeStatus.totalFee}</p>
-            <p>Paid (TAL): ₹{paidByTAL}</p>
-            <p>Paid (Student): ₹{paidByStudent}</p>
-            <p>Due: ₹{dueAmount}</p>
+            <p>Total Fee: {"\u20B9"}{feeStatus.totalFee}</p>
+            <p>Paid (TAL): {"\u20B9"}{paidByTAL}</p>
+            <p>Paid (Student): {"\u20B9"}{paidByStudent}</p>
+            <p>Due: {"\u20B9"}{dueAmount}</p>
             <p>Due Date: {feeStatus.dueDate}</p>
             <span
               className={`status ${displayStatus.toLowerCase().replace(" ", "_")}`}
@@ -164,7 +164,7 @@ const StudentDashboard = () => {
           </div>
         </aside>
 
-        // Main Content 
+        {/* Main Content */}
         <main className="main-section">
           <section className="alerts-section">
             <div className="section-header">
@@ -192,7 +192,7 @@ const StudentDashboard = () => {
             <div className="section-header">
               <h2>My Documents</h2>
               <label htmlFor="fileUpload" className="upload-btn">
-                📁 Upload
+                {String.fromCodePoint(0x1F4C1)} Upload
               </label>
               <input id="fileUpload" type="file" onChange={handleFileUpload} />
             </div>
@@ -228,4 +228,3 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
-*/}

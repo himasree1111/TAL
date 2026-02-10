@@ -412,31 +412,20 @@ has_scholarship: "",
     }
   };
 
-  // Upload single file to Supabase storage bucket "student_documents"
+  // Upload single file to backend storage
   const uploadFileToStorage = async (file, folder) => {
     if (!file) return null;
-    const fileName = `${Date.now()}_${file.name}`.replace(/\s+/g, "_");
-    const filePath = `${folder}/${fileName}`;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
 
-    // Upload
-    const { error: uploadError } = await supabase.storage
-      .from("student_documents")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false
-      });
+    const { data } = await (await import("axios")).default.post(
+      "http://localhost:4000/api/upload",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
 
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
-      throw uploadError;
-    }
-
-    // Get public URL (if your bucket is public). If private bucket, you'll need signed URLs.
-    const { data: publicData } = supabase.storage
-      .from("student_documents")
-      .getPublicUrl(filePath);
-
-    return publicData?.publicUrl ?? null;
+    return data?.publicUrl ?? null;
   };
 
   // Full form validation (runs on submit)
