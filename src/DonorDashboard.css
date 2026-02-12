@@ -1,5 +1,5 @@
 /* DonorDashboard.css */
-/* ---------- General Layout ---------- */
+
 /* ---------- General Layout ---------- */
 .app-container {
   display: flex;
@@ -18,18 +18,26 @@
 
 .dashboard-layout {
   display: flex;
+  width: 100%;
   min-height: 100vh;
 }
 
 /* ---------- Sidebar ---------- */
 .sidebar {
   width: 260px;
+  min-width: 260px;
   background-color: #1D2B4A;
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 10;
+  overflow-y: auto;
 }
 
 .logo-text {
@@ -96,8 +104,11 @@
 /* ---------- Main Content ---------- */
 .main-content {
   flex: 1;
+  margin-left: 260px;
+  width: calc(100% - 260px);
   padding: 28px 36px;
-  overflow: hidden; /* Prevent scrollbars */
+  overflow-y: auto;
+  min-width: 0;
 }
 
 .main-header {
@@ -105,6 +116,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .page-title {
@@ -134,7 +147,7 @@
 /* ---------- Metric Cards ---------- */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -189,9 +202,9 @@
 .bottom-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: auto; /* Cards adapt to content */
+  grid-auto-rows: auto;
   gap: 20px;
-  align-items: start; /* Prevent vertical stretching */
+  align-items: start;
 }
 
 /* ---------- Dashboard Card ---------- */
@@ -205,6 +218,7 @@
   flex-direction: column;
   justify-content: flex-start;
   height: auto;
+  min-width: 0;
 }
 
 .card-header-flex {
@@ -212,6 +226,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .card-header-title {
@@ -246,6 +262,8 @@
   padding: 8px 10px;
   background-color: #f9fafb;
   border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .overview-item-title {
@@ -325,6 +343,7 @@
   height: 7px;
   border-radius: 50%;
   margin-top: 5px;
+  flex-shrink: 0;
 }
 
 .dot-green {
@@ -340,4 +359,110 @@
 .activity-text {
   font-size: 13px;
   color: #374151;
+  word-break: break-word;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 20px 24px;
+  }
+
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-value {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: relative;
+    width: 100%;
+    min-width: unset;
+    flex-direction: row;
+    padding: 12px 16px;
+    bottom: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .sidebar > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .logo-text {
+    font-size: 16px;
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
+
+  .nav-menu {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 2px;
+  }
+
+  .nav-item {
+    padding: 8px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .support-box {
+    display: none;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 16px;
+  }
+
+  .app-container {
+    position: relative;
+    overflow-y: auto;
+  }
+
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .bottom-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .student-table {
+    overflow-x: auto;
+  }
+
+  .student-table table {
+    min-width: 400px;
+  }
 }

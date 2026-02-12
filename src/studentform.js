@@ -18,11 +18,13 @@ export default function StudentForm() {
   const { id } = useParams();   // student id
   const isEditMode = !!id;
   const [volunteerEmail, setVolunteerEmail] = useState("");
+  const [userRole, setUserRole] = useState(""); // "volunteer" or "student"
+  const [userEmail, setUserEmail] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errors, setErrors] = useState({}); // <-- validation errors
 
   useEffect(() => {
-    // fetch logged-in user email (volunteer)
+    // fetch logged-in user and detect role
     const getUser = async () => {
       try {
         const { data, error } = await supabase.auth.getUser();
@@ -31,7 +33,15 @@ export default function StudentForm() {
           return;
         }
         if (data?.user) {
-          setVolunteerEmail(data.user.email);
+          const role = data.user.user_metadata?.user_type || "volunteer";
+          setUserRole(role);
+          setUserEmail(data.user.email);
+          if (role === "volunteer") {
+            setVolunteerEmail(data.user.email);
+          } else if (role === "student") {
+            // Pre-fill student's email in the form
+            setFormData(prev => ({ ...prev, email: data.user.email }));
+          }
         }
       } catch (err) {
         console.error("getUser error:", err);
@@ -76,6 +86,14 @@ export default function StudentForm() {
     family_members_details: [],  // New field to store family members details
     num_earning_members: "",  // New field for number of earning members
     earning_members_details: [],  // New field to store earning members details
+    father_name: "",
+    mother_name: "",
+    guardian_name: "",
+    head_of_family: "",
+    income_source: "",
+    monthly_income: "",
+    num_dependents: "",
+    school_address: "",
     account_no: "",
     bank_name: "",
     bank_branch: "",
@@ -186,10 +204,10 @@ has_scholarship: "",
       return "";
     }
 
-    // Volunteer name: only alphabets and spaces
+    // Volunteer name: only alphabets and spaces (optional for student role)
     if (name === "volunteer_name") {
-      if (!value) return "Volunteer name is required";
-      if (!/^[a-zA-Z\s]+$/.test(value)) {
+      if (!value && userRole !== "student") return "Volunteer name is required";
+      if (value && !/^[a-zA-Z\s]+$/.test(value)) {
         return "Only alphabets and spaces are allowed";
       }
       return "";
@@ -412,31 +430,20 @@ has_scholarship: "",
     }
   };
 
-  // Upload single file to Supabase storage bucket "student_documents"
+  // Upload single file to backend storage
   const uploadFileToStorage = async (file, folder) => {
     if (!file) return null;
-    const fileName = `${Date.now()}_${file.name}`.replace(/\s+/g, "_");
-    const filePath = `${folder}/${fileName}`;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
 
-    // Upload
-    const { error: uploadError } = await supabase.storage
-      .from("student_documents")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false
-      });
+    const { data } = await (await import("axios")).default.post(
+      "/api/upload",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
 
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
-      throw uploadError;
-    }
-
-    // Get public URL (if your bucket is public). If private bucket, you'll need signed URLs.
-    const { data: publicData } = supabase.storage
-      .from("student_documents")
-      .getPublicUrl(filePath);
-
-    return publicData?.publicUrl ?? null;
+    return data?.publicUrl ?? null;
   };
 
   // Full form validation (runs on submit)
@@ -458,8 +465,11 @@ has_scholarship: "",
       { key: 'last_name', label: 'Last Name' },
       { key: 'email', label: 'Email' },
       { key: 'contact', label: 'Parent Number' },
-      { key: 'volunteer_name', label: 'Volunteer Name' },
-      { key: 'volunteer_contact', label: 'Volunteer Contact Number' },
+      // Volunteer fields only mandatory for volunteer submissions
+      ...(userRole !== "student" ? [
+        { key: 'volunteer_name', label: 'Volunteer Name' },
+        { key: 'volunteer_contact', label: 'Volunteer Contact Number' },
+      ] : []),
       { key: 'camp_date', label: 'Date of Camp' }
     ];
 
@@ -644,10 +654,9 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
       return;
     }
 
-    // Ensure volunteer is logged in (we attach email)
-    if (!volunteerEmail) {
-      alert("⚠️ Volunteer not logged in — student will still be saved locally if needed. Please sign in.");
-      // but proceed to save? We'll stop to avoid orphan records.
+    // Ensure user is logged in
+    if (!volunteerEmail && userRole !== "student") {
+      alert("Please sign in before submitting.");
       return;
     }
 
@@ -665,9 +674,10 @@ const hasScholarship = yesNoToBool(formData.has_scholarship);
 const isSingleParent = yesNoToBool(formData.is_single_parent);
       // Prepare payload for Supabase. Map form fields to table columns.
      const payload = {
-  volunteer_email: volunteerEmail,
-  volunteer_name: formData.volunteer_name,
-  volunteer_contact: formData.volunteer_contact,
+  volunteer_email: volunteerEmail || null,
+  volunteer_name: formData.volunteer_name || null,
+  volunteer_contact: formData.volunteer_contact || null,
+  submitted_by: userRole || "volunteer",
 
   first_name: formData.first_name,
   middle_name: formData.middle_name || null,
@@ -730,6 +740,15 @@ has_scholarship: hasScholarship,
 scholarship: hasScholarship ? formData.scholarship : null,
 
 
+  father_name: formData.father_name || null,
+  mother_name: formData.mother_name || null,
+  guardian_name: formData.guardian_name || null,
+  head_of_family: formData.head_of_family || null,
+  income_source: formData.income_source || null,
+  monthly_income: parseFloat(formData.monthly_income) || null,
+  num_dependents: parseInt(formData.num_dependents) || null,
+  school_address: formData.school_address || null,
+
   aspiration: formData.aspiration || null,
   academic_achievements: formData.academic_achievements || null,
   non_academic_achievements: formData.non_academic_achievements || null,
@@ -778,8 +797,8 @@ scholarship: hasScholarship ? formData.scholarship : null,
       // Success
       alert("🎉 Form submitted successfully!");
       setSuccessMessage("Form submitted successfully!");
-      // Navigate back to dashboard and force refresh to show new form
-      navigate('/volunteer-dashboard');
+      // Navigate back to appropriate dashboard
+      navigate(userRole === "student" ? "/student-dashboard" : "/volunteer-dashboard");
 
       // optionally reset form
       setFormData({
@@ -937,8 +956,10 @@ has_scholarship: "",
 
   return (
     <div>
-      <button className="back-btn" onClick={() => navigate('/volunteer-dashboard')}>Back to Volunteer Dashboard</button>
-       
+      <button className="back-btn" onClick={() => navigate(userRole === "student" ? "/student-dashboard" : "/volunteer-dashboard")}>
+        {userRole === "student" ? "Back to Dashboard" : "Back to Volunteer Dashboard"}
+      </button>
+
       <div className="form-container">
         <h1 className="form-title">STUDENT APPLICATION FORM</h1>
 
@@ -948,12 +969,12 @@ has_scholarship: "",
         </div>
       )}
 
-        {/* Volunteer Details */}
+        {/* Volunteer Details — shown for volunteers, optional section for students */}
         <div className="section">
-          <h2>1. Volunteer Details</h2>
+          <h2>1. Volunteer Details {userRole === "student" && <span style={{ fontSize: "0.8em", color: "#888" }}>(Optional)</span>}</h2>
           <div className="form-group">
             <label>
-              <span className="field-label">Name<span className="required">*</span></span>
+              <span className="field-label">Name{userRole !== "student" && <span className="required">*</span>}</span>
               <input
                 type="text"
                 name="volunteer_name"
@@ -961,12 +982,12 @@ has_scholarship: "",
                 onChange={handleInputChange}
                 className={errors.volunteer_name ? "input-error" : ""}
                 placeholder="Enter Name"
-                required
+                required={userRole !== "student"}
               />
               {errors.volunteer_name && <p className="error-text">{errors.volunteer_name}</p>}
             </label>
             <label>
-              <span className="field-label">Contact Number<span className="required">*</span></span>
+              <span className="field-label">Contact Number{userRole !== "student" && <span className="required">*</span>}</span>
               <input
                 type="text"
                 name="volunteer_contact"
@@ -975,7 +996,7 @@ has_scholarship: "",
                 placeholder="Enter Contact Number"
                 maxLength={10}
                 className={errors.volunteer_contact ? "input-error" : ""}
-                required
+                required={userRole !== "student"}
               />
               {errors.volunteer_contact && <p className="error-text">{errors.volunteer_contact}</p>}
             </label>
@@ -1056,6 +1077,45 @@ has_scholarship: "",
             <label>
               <span className="field-label">Student's Address<span className="required">*</span></span>
               <input type="text" name="address" value={formData.address} onChange={handleInputChange} required />
+            </label>
+          </div>
+
+          {/* Family & Income Details */}
+          <div className="form-group">
+            <label>
+              Father's Name
+              <input type="text" name="father_name" value={formData.father_name} onChange={handleInputChange} />
+            </label>
+            <label>
+              Mother's Name
+              <input type="text" name="mother_name" value={formData.mother_name} onChange={handleInputChange} />
+            </label>
+            <label>
+              Guardian's Name
+              <input type="text" name="guardian_name" value={formData.guardian_name} onChange={handleInputChange} />
+            </label>
+            <label>
+              Head of Family
+              <input type="text" name="head_of_family" value={formData.head_of_family} onChange={handleInputChange} />
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label>
+              Income Source
+              <input type="text" name="income_source" value={formData.income_source} onChange={handleInputChange} placeholder="e.g. Agriculture, Daily wages" />
+            </label>
+            <label>
+              Monthly Income (₹)
+              <input type="number" name="monthly_income" value={formData.monthly_income} onChange={handleInputChange} min="0" placeholder="e.g. 10000" />
+            </label>
+            <label>
+              No. of Dependents
+              <input type="number" name="num_dependents" value={formData.num_dependents} onChange={handleInputChange} min="0" max="20" />
+            </label>
+            <label>
+              School/College Address
+              <input type="text" name="school_address" value={formData.school_address} onChange={handleInputChange} placeholder="Separate from home address" />
             </label>
           </div>
 
