@@ -22,17 +22,24 @@ let PutObjectCommand = null;
 const S3_BUCKET = process.env.AWS_S3_BUCKET;
 const AWS_REGION = process.env.AWS_REGION || "us-east-1";
 
+const S3_ENDPOINT = process.env.AWS_S3_ENDPOINT; // e.g. https://del1.vultrobjects.com
+
 if (S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
   const s3 = require("@aws-sdk/client-s3");
   PutObjectCommand = s3.PutObjectCommand;
-  s3Client = new s3.S3Client({
+  const clientOpts = {
     region: AWS_REGION,
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
-  });
-  console.log("S3 configured for file uploads");
+  };
+  if (S3_ENDPOINT) {
+    clientOpts.endpoint = S3_ENDPOINT;
+    clientOpts.forcePathStyle = true; // required for S3-compatible services
+  }
+  s3Client = new s3.S3Client(clientOpts);
+  console.log("S3 configured for file uploads" + (S3_ENDPOINT ? ` (endpoint: ${S3_ENDPOINT})` : ""));
 }
 
 // ---------- UPLOADS / MULTER ----------
@@ -71,8 +78,12 @@ async function getFileUrl(file, folder) {
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
+        ACL: "public-read",
       })
     );
+    if (S3_ENDPOINT) {
+      return `${S3_ENDPOINT}/${S3_BUCKET}/${key}`;
+    }
     return `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
   }
   // Local fallback: file already saved by diskStorage
