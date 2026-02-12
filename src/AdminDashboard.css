@@ -815,7 +815,7 @@
 /* responsive */
 @media(max-width:900px){
   .admin-sidebar{position:relative;width:100%;display:flex;flex-direction:row;overflow:auto}
-  .admin-main{margin-left:0}
+  .admin-main{margin-left:0;width:100%}
   .header-actions input{min-width:120px}
 }
 .forgot-password {

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import supabase from "./supabaseClient";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -13,20 +14,18 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const role = searchParams.get("role");
+  const resetToken = searchParams.get("token");
 
   useEffect(() => {
     const init = async () => {
       try {
-        if (
-          window.location.href.includes("access_token") ||
-          window.location.href.includes("refresh_token") ||
-          window.location.href.includes("type=recovery")
-        ) {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
+        if (resetToken) {
+          // Token-based reset: we have a valid reset token from URL
+          setHasSession(true);
+        } else {
+          // No token present
+          setHasSession(false);
         }
-
-        const { data } = await supabase.auth.getSession();
-        setHasSession(!!data.session);
       } catch (err) {
         console.error(err);
         toast.error("Failed to verify reset link");
@@ -36,7 +35,7 @@ export default function ResetPassword() {
     };
 
     init();
-  }, []);
+  }, [resetToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,8 +46,12 @@ export default function ResetPassword() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      const { data: resp } = await axios.post(
+        "/api/auth/reset-password/confirm",
+        { token: resetToken, password }
+      );
+
+      if (resp.error) throw new Error(resp.error.message);
 
       toast.success("Password updated successfully!");
 
@@ -78,7 +81,7 @@ export default function ResetPassword() {
   return (
     <div style={{ color: "Black", textAlign: "center", marginTop: "100px" }}>
       <h1>Reset Password</h1>
-      
+
 
       {!hasSession && (
         <p style={{ color: "Red" }}>
