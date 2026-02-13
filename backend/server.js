@@ -9,11 +9,31 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
 const app = express();
 const PORT = process.env.PORT || 4000;
-const JWT_SECRET = process.env.JWT_SECRET || "tal-portal-secret-key-change-in-production";
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "change-me-to-a-random-string") {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET must be set to a secure random string in production");
+  }
+  console.warn("WARNING: Using default JWT_SECRET — set a secure value for production");
+}
+const JWT_SECRET = process.env.JWT_SECRET || "dev-only-insecure-key";
 const JWT_EXPIRY = "7d";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
+/** Allowed MIME types for file uploads */
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg", "image/png", "image/gif", "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+/** Maximum upload size in bytes (10 MB) */
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // ---------- S3 SETUP (optional — falls back to local disk) ----------
 
@@ -65,7 +85,16 @@ const storage = s3Client
       });
     })();
 
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+/** Multer file filter — reject disallowed MIME types */
+const fileFilter = (req, file, cb) => {
+  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`File type ${file.mimetype} is not allowed. Accepted: JPEG, PNG, GIF, WebP, PDF, DOC, DOCX`));
+  }
+};
+
+const upload = multer({ storage, limits: { fileSize: MAX_FILE_SIZE }, fileFilter });
 
 // Helper: upload to S3 or return local path
 async function getFileUrl(file, folder) {
@@ -92,12 +121,69 @@ async function getFileUrl(file, folder) {
 
 // ---------- EXPRESS MIDDLEWARE ----------
 
-app.use(cors());
-app.use(express.json({ limit: "50mb" }));
+app.use(helmet({ contentSecurityPolicy: false }));
+
+const allowedOrigins = [FRONTEND_URL];
+if (process.env.VERCEL_URL) allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+app.use(cors({
+  origin: process.env.NODE_ENV === "production"
+    ? (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+        else cb(new Error("CORS: origin not allowed"));
+      }
+    : true, // allow all in dev
+  credentials: true,
+}));
+
+app.use(express.json({ limit: "10mb" }));
+
+/** Rate limiter for auth endpoints — 15 requests per 15-minute window */
+const authLimiter = process.env.TEST_DB
+  ? (req, res, next) => next() // no-op in test mode
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 15,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: { message: "Too many requests, please try again later" } },
+    });
 
 // Serve local uploads only when S3 is not configured
 if (!s3Client) {
   app.use("/uploads", express.static(uploadsDir));
+}
+
+// ---------- AUTH MIDDLEWARE ----------
+
+/**
+ * Express middleware that verifies the JWT Bearer token.
+ * Attaches decoded user payload to `req.user` on success.
+ * Returns 401 JSON error on missing/invalid token.
+ */
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ data: null, error: { message: "Authentication required" } });
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ data: null, error: { message: "Invalid or expired token" } });
+  }
+}
+
+/**
+ * Express middleware that restricts access to specific roles.
+ * Must be used AFTER authenticateToken.
+ * @param  {...string} roles - Allowed roles (e.g. "admin", "volunteer")
+ */
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ data: null, error: { message: "Insufficient permissions" } });
+    }
+    next();
+  };
 }
 
 // ---------- DATABASE ----------
@@ -334,6 +420,20 @@ async function initDb() {
     }
   }
 
+  // ---------- INDEXES for query performance ----------
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_submissions_volunteer ON student_form_submissions(volunteer_email)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_submissions_email ON student_form_submissions(email)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_submissions_status ON student_form_submissions(status)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_fee_payments_student ON fee_payments(student_id)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_donor_mapping_student ON donor_mapping(student_id)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_donor_mapping_email ON donor_mapping(donor_email)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_email)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_donations_donor ON donations(donor_email)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_documents_student ON documents(student_id)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_academic_records_student ON academic_records(student_id)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_camp_part_student ON camp_participation(student_id)");
+
   console.log("Database initialised");
 }
 
@@ -390,8 +490,15 @@ const prepareStudentPayload = (payload) => {
 
 // ---------- AUTH ENDPOINTS ----------
 
-// POST /api/auth/signup
-app.post("/api/auth/signup", async (req, res) => {
+/**
+ * POST /api/auth/signup
+ * Register a new user account.
+ * @body {string} email - User email (required, unique)
+ * @body {string} password - Password (required, min 8 chars)
+ * @body {object} options - Optional metadata: { data: { name, user_type } }
+ * @returns {{ data: { user, session }, error }} User object + JWT session on success
+ */
+app.post("/api/auth/signup", authLimiter, async (req, res) => {
   const { email, password, options } = req.body;
   const name = options?.data?.name || req.body.name || "";
   const user_type = options?.data?.user_type || req.body.user_type || "volunteer";
@@ -420,8 +527,14 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
-// POST /api/auth/login
-app.post("/api/auth/login", async (req, res) => {
+/**
+ * POST /api/auth/login
+ * Authenticate user and return a JWT session token.
+ * @body {string} email - User email (required)
+ * @body {string} password - User password (required)
+ * @returns {{ data: { user, session: { access_token } }, error }}
+ */
+app.post("/api/auth/login", authLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.json({ data: { user: null, session: null }, error: { message: "Email and password required" } });
@@ -459,12 +572,12 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// POST /api/auth/logout
+/** POST /api/auth/logout — Stateless logout (clears client-side session). */
 app.post("/api/auth/logout", (req, res) => {
   res.json({ error: null });
 });
 
-// GET /api/auth/session
+/** GET /api/auth/session — Verify Bearer token and return current session (or null). */
 app.get("/api/auth/session", async (req, res) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -486,7 +599,7 @@ app.get("/api/auth/session", async (req, res) => {
   }
 });
 
-// GET /api/auth/user
+/** GET /api/auth/user — Return the currently authenticated user profile. */
 app.get("/api/auth/user", async (req, res) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -503,7 +616,11 @@ app.get("/api/auth/user", async (req, res) => {
   }
 });
 
-// PUT /api/auth/user — update password and/or metadata
+/**
+ * PUT /api/auth/user — Update password and/or user metadata.
+ * @body {string} [password] - New password
+ * @body {object} [data] - Metadata: { name, preferences, contact_number }
+ */
 app.put("/api/auth/user", async (req, res) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -549,7 +666,7 @@ app.put("/api/auth/user", async (req, res) => {
   }
 });
 
-// POST /api/auth/reset-password
+/** POST /api/auth/reset-password — Generate a password reset token (logged to console). */
 app.post("/api/auth/reset-password", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.json({ data: {}, error: { message: "Email required" } });
@@ -570,7 +687,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
   return res.json({ data: {}, error: null });
 });
 
-// POST /api/auth/reset-password/confirm
+/** POST /api/auth/reset-password/confirm — Verify reset token and set new password. */
 app.post("/api/auth/reset-password/confirm", async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.json({ data: {}, error: { message: "Token and password required" } });
@@ -596,8 +713,16 @@ app.post("/api/auth/reset-password/confirm", async (req, res) => {
 
 // ---------- STUDENT FORM ENDPOINTS ----------
 
-// GET /api/student-forms
-app.get("/api/student-forms", async (req, res) => {
+/**
+ * GET /api/student-forms
+ * List student form submissions. Supports filtering, ordering, and single-record lookup.
+ * @query {string} [volunteer_email] - Filter by volunteer
+ * @query {string} [email] - Filter by student email
+ * @query {string} [id] - Specific record ID (use with single=true)
+ * @query {string} [order_field=created_at] - Column to sort by
+ * @query {string} [order_ascending=false] - Sort direction
+ */
+app.get("/api/student-forms", authenticateToken, async (req, res) => {
   try {
     const { volunteer_email, email, id, single, select: selectFields, eq_field, eq_value, order_field, order_ascending, status } = req.query;
 
@@ -631,8 +756,8 @@ app.get("/api/student-forms", async (req, res) => {
   }
 });
 
-// POST /api/student-forms
-app.post("/api/student-forms", async (req, res) => {
+/** POST /api/student-forms — Create one or more student form submissions. */
+app.post("/api/student-forms", authenticateToken, async (req, res) => {
   try {
     const payloadArray = Array.isArray(req.body) ? req.body : [req.body];
     const results = [];
@@ -659,8 +784,8 @@ app.post("/api/student-forms", async (req, res) => {
   }
 });
 
-// PUT /api/student-forms/:id
-app.put("/api/student-forms/:id", async (req, res) => {
+/** PUT /api/student-forms/:id — Update a student form submission by ID. */
+app.put("/api/student-forms/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const payload = prepareStudentPayload(req.body);
@@ -680,8 +805,8 @@ app.put("/api/student-forms/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/student-forms/:id
-app.delete("/api/student-forms/:id", async (req, res) => {
+/** DELETE /api/student-forms/:id — Delete a student form submission by ID. */
+app.delete("/api/student-forms/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     await db.prepare("DELETE FROM student_form_submissions WHERE id = ?").run(id);
@@ -693,9 +818,10 @@ app.delete("/api/student-forms/:id", async (req, res) => {
   }
 });
 
-// ---------- ADMIN ENDPOINTS ----------
+// ---------- ADMIN ENDPOINTS (require admin role) ----------
 
-app.get("/api/admin/students", async (req, res) => {
+/** GET /api/admin/students — List all student submissions (admin only). */
+app.get("/api/admin/students", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { select: selectFields, order_field, order_ascending } = req.query;
     let sql = "SELECT";
@@ -714,7 +840,8 @@ app.get("/api/admin/students", async (req, res) => {
   }
 });
 
-app.put("/api/admin/students/:id", async (req, res) => {
+/** PUT /api/admin/students/:id — Update student status (approve/reject) or data (admin only). */
+app.put("/api/admin/students/:id", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { id } = req.params;
     const payload = prepareStudentPayload(req.body);
@@ -733,7 +860,7 @@ app.put("/api/admin/students/:id", async (req, res) => {
   }
 });
 
-app.get("/api/admin/eligible", async (req, res) => {
+app.get("/api/admin/eligible", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { count_only, order_field, order_ascending } = req.query;
 
@@ -755,7 +882,7 @@ app.get("/api/admin/eligible", async (req, res) => {
   }
 });
 
-app.get("/api/admin/non-eligible", async (req, res) => {
+app.get("/api/admin/non-eligible", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { count_only, order_field, order_ascending } = req.query;
 
@@ -777,8 +904,8 @@ app.get("/api/admin/non-eligible", async (req, res) => {
   }
 });
 
-// GET /api/students/available-for-adoption
-app.get("/api/students/available-for-adoption", async (req, res) => {
+/** GET /api/students/available-for-adoption — List students without a current sponsor. */
+app.get("/api/students/available-for-adoption", authenticateToken, async (req, res) => {
   try {
     const rows = await db.prepare(`
       SELECT s.id, s.first_name, s.last_name, s.educationcategory, s.educationyear, s.school, s.fee_structure
@@ -798,7 +925,8 @@ app.get("/api/students/available-for-adoption", async (req, res) => {
 
 // ---------- FEE PAYMENTS ENDPOINTS ----------
 
-app.get("/api/fee-payments", async (req, res) => {
+/** GET /api/fee-payments — List fee payments, optionally filtered by student_id. */
+app.get("/api/fee-payments", authenticateToken, async (req, res) => {
   try {
     const { student_id } = req.query;
     let sql = "SELECT * FROM fee_payments";
@@ -816,7 +944,7 @@ app.get("/api/fee-payments", async (req, res) => {
   }
 });
 
-app.post("/api/fee-payments", async (req, res) => {
+app.post("/api/fee-payments", authenticateToken, async (req, res) => {
   try {
     const { student_id, amount, payment_date, payment_method, paid_by, receipt_url, term_number, notes } = req.body;
     if (!student_id || !amount || !payment_date) {
@@ -834,7 +962,7 @@ app.post("/api/fee-payments", async (req, res) => {
   }
 });
 
-app.put("/api/fee-payments/:id", async (req, res) => {
+app.put("/api/fee-payments/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const fields = { ...req.body };
@@ -853,7 +981,7 @@ app.put("/api/fee-payments/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/fee-payments/:id", async (req, res) => {
+app.delete("/api/fee-payments/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM fee_payments WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -863,8 +991,8 @@ app.delete("/api/fee-payments/:id", async (req, res) => {
   }
 });
 
-// GET /api/fee-payments/summary
-app.get("/api/fee-payments/summary", async (req, res) => {
+/** GET /api/fee-payments/summary — Aggregated fee summary with optional date range filtering. */
+app.get("/api/fee-payments/summary", authenticateToken, async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     let dateFilter = "";
@@ -909,7 +1037,7 @@ const transformFeeStructure = (row) => {
   return r;
 };
 
-app.get("/api/fee-structures", async (req, res) => {
+app.get("/api/fee-structures", authenticateToken, async (req, res) => {
   try {
     const { student_id } = req.query;
     if (student_id) {
@@ -926,7 +1054,7 @@ app.get("/api/fee-structures", async (req, res) => {
   }
 });
 
-app.post("/api/fee-structures", async (req, res) => {
+app.post("/api/fee-structures", authenticateToken, async (req, res) => {
   try {
     const { student_id, total_fee, num_terms, term_fees, academic_year, notes } = req.body;
     if (!student_id || total_fee === undefined) {
@@ -952,7 +1080,7 @@ app.post("/api/fee-structures", async (req, res) => {
   }
 });
 
-app.put("/api/fee-structures/:id", async (req, res) => {
+app.put("/api/fee-structures/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const fields = { ...req.body };
@@ -974,7 +1102,7 @@ app.put("/api/fee-structures/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/fee-structures/:id", async (req, res) => {
+app.delete("/api/fee-structures/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM fee_structures WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -986,7 +1114,7 @@ app.delete("/api/fee-structures/:id", async (req, res) => {
 
 // ---------- DONOR MAPPING ENDPOINTS ----------
 
-app.get("/api/donor-mappings", async (req, res) => {
+app.get("/api/donor-mappings", authenticateToken, async (req, res) => {
   try {
     const { student_id, donor_email } = req.query;
     let sql = "SELECT dm.*, s.first_name || ' ' || COALESCE(s.last_name, '') as student_name FROM donor_mapping dm LEFT JOIN student_form_submissions s ON s.id = dm.student_id";
@@ -1004,7 +1132,7 @@ app.get("/api/donor-mappings", async (req, res) => {
   }
 });
 
-app.post("/api/donor-mappings", async (req, res) => {
+app.post("/api/donor-mappings", authenticateToken, async (req, res) => {
   try {
     const { student_id, donor_name, donor_email, year_of_support, amount, is_current_sponsor, notes } = req.body;
     if (!student_id || !donor_name) {
@@ -1022,7 +1150,7 @@ app.post("/api/donor-mappings", async (req, res) => {
   }
 });
 
-app.put("/api/donor-mappings/:id", async (req, res) => {
+app.put("/api/donor-mappings/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const fields = { ...req.body };
@@ -1042,7 +1170,7 @@ app.put("/api/donor-mappings/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/donor-mappings/:id", async (req, res) => {
+app.delete("/api/donor-mappings/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM donor_mapping WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1054,7 +1182,7 @@ app.delete("/api/donor-mappings/:id", async (req, res) => {
 
 // ---------- NOTIFICATION ENDPOINTS ----------
 
-app.get("/api/notifications", async (req, res) => {
+app.get("/api/notifications", authenticateToken, async (req, res) => {
   try {
     const { recipient_email, recipient_role, unread_only } = req.query;
     let sql = "SELECT * FROM notifications";
@@ -1073,7 +1201,7 @@ app.get("/api/notifications", async (req, res) => {
   }
 });
 
-app.post("/api/notifications", async (req, res) => {
+app.post("/api/notifications", authenticateToken, async (req, res) => {
   try {
     const { recipient_email, recipient_role, title, message, type, priority, created_by } = req.body;
     if (!title) return res.json({ data: null, error: { message: "title is required" } });
@@ -1089,7 +1217,7 @@ app.post("/api/notifications", async (req, res) => {
   }
 });
 
-app.post("/api/notifications/broadcast", async (req, res) => {
+app.post("/api/notifications/broadcast", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { recipient_role, recipient_emails, title, message, type, priority, created_by } = req.body;
     if (!title) return res.json({ data: null, error: { message: "title is required" } });
@@ -1129,7 +1257,7 @@ app.post("/api/notifications/broadcast", async (req, res) => {
   }
 });
 
-app.put("/api/notifications/:id/read", async (req, res) => {
+app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
   try {
     await db.prepare("UPDATE notifications SET is_read = 1 WHERE id = ?").run(req.params.id);
     const updated = await db.prepare("SELECT * FROM notifications WHERE id = ?").get(req.params.id);
@@ -1140,7 +1268,7 @@ app.put("/api/notifications/:id/read", async (req, res) => {
   }
 });
 
-app.delete("/api/notifications/:id", async (req, res) => {
+app.delete("/api/notifications/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM notifications WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1152,7 +1280,7 @@ app.delete("/api/notifications/:id", async (req, res) => {
 
 // ---------- DONATION ENDPOINTS ----------
 
-app.get("/api/donations", async (req, res) => {
+app.get("/api/donations", authenticateToken, async (req, res) => {
   try {
     const { donor_email, student_id } = req.query;
     let sql = "SELECT d.*, s.first_name || ' ' || COALESCE(s.last_name, '') as student_name FROM donations d LEFT JOIN student_form_submissions s ON s.id = d.student_id";
@@ -1170,7 +1298,7 @@ app.get("/api/donations", async (req, res) => {
   }
 });
 
-app.post("/api/donations", async (req, res) => {
+app.post("/api/donations", authenticateToken, async (req, res) => {
   try {
     const { donor_id, donor_name, donor_email, student_id, amount, payment_date, payment_method, receipt_number, notes } = req.body;
     if (!amount || !payment_date) {
@@ -1189,7 +1317,7 @@ app.post("/api/donations", async (req, res) => {
   }
 });
 
-app.get("/api/donations/summary", async (req, res) => {
+app.get("/api/donations/summary", authenticateToken, async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     let dateCondition = "";
@@ -1211,7 +1339,7 @@ app.get("/api/donations/summary", async (req, res) => {
   }
 });
 
-app.delete("/api/donations/:id", async (req, res) => {
+app.delete("/api/donations/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM donations WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1223,7 +1351,8 @@ app.delete("/api/donations/:id", async (req, res) => {
 
 // ---------- FILE UPLOAD ----------
 
-app.post("/api/upload", upload.single("file"), async (req, res) => {
+/** POST /api/upload — Upload a file (S3 or local disk). Returns { url } on success. */
+app.post("/api/upload", authenticateToken, upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
   const folder = req.body.folder || "general";
@@ -1233,7 +1362,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
 // ---------- DOCUMENT ENDPOINTS ----------
 
-app.post("/api/documents", upload.single("file"), async (req, res) => {
+app.post("/api/documents", authenticateToken, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.json({ data: null, error: { message: "No file uploaded" } });
     const { student_id, uploaded_by, category } = req.body;
@@ -1269,7 +1398,7 @@ app.post("/api/documents", upload.single("file"), async (req, res) => {
   }
 });
 
-app.get("/api/documents", async (req, res) => {
+app.get("/api/documents", authenticateToken, async (req, res) => {
   try {
     const { student_id } = req.query;
     if (student_id) {
@@ -1288,7 +1417,7 @@ app.get("/api/documents", async (req, res) => {
   }
 });
 
-app.delete("/api/documents/:id", async (req, res) => {
+app.delete("/api/documents/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM documents WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1300,7 +1429,7 @@ app.delete("/api/documents/:id", async (req, res) => {
 
 // ---------- ACADEMIC RECORDS ENDPOINTS ----------
 
-app.get("/api/academic-records", async (req, res) => {
+app.get("/api/academic-records", authenticateToken, async (req, res) => {
   try {
     const { student_id } = req.query;
     if (student_id) {
@@ -1319,7 +1448,7 @@ app.get("/api/academic-records", async (req, res) => {
   }
 });
 
-app.post("/api/academic-records", async (req, res) => {
+app.post("/api/academic-records", authenticateToken, async (req, res) => {
   try {
     const { student_id, academic_year, semester, subject_name, marks_obtained, max_marks, grade, certificate_url } = req.body;
     if (!student_id || !subject_name) return res.json({ data: null, error: { message: "student_id and subject_name are required" } });
@@ -1335,7 +1464,7 @@ app.post("/api/academic-records", async (req, res) => {
   }
 });
 
-app.put("/api/academic-records/:id", async (req, res) => {
+app.put("/api/academic-records/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const fields = { ...req.body };
@@ -1355,7 +1484,7 @@ app.put("/api/academic-records/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/academic-records/:id", async (req, res) => {
+app.delete("/api/academic-records/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM academic_records WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1367,7 +1496,7 @@ app.delete("/api/academic-records/:id", async (req, res) => {
 
 // ---------- CAMP ENDPOINTS ----------
 
-app.get("/api/camps", async (req, res) => {
+app.get("/api/camps", authenticateToken, async (req, res) => {
   try {
     const rows = await db.prepare("SELECT * FROM camps ORDER BY date DESC").all();
     return res.json({ data: rows, error: null });
@@ -1377,7 +1506,7 @@ app.get("/api/camps", async (req, res) => {
   }
 });
 
-app.post("/api/camps", async (req, res) => {
+app.post("/api/camps", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { name, date, location, description } = req.body;
     if (!name) return res.json({ data: null, error: { message: "name is required" } });
@@ -1392,7 +1521,7 @@ app.post("/api/camps", async (req, res) => {
   }
 });
 
-app.put("/api/camps/:id", async (req, res) => {
+app.put("/api/camps/:id", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { id } = req.params;
     const fields = { ...req.body };
@@ -1411,7 +1540,7 @@ app.put("/api/camps/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/camps/:id", async (req, res) => {
+app.delete("/api/camps/:id", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     await db.prepare("DELETE FROM camps WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1423,7 +1552,7 @@ app.delete("/api/camps/:id", async (req, res) => {
 
 // ---------- CAMP PARTICIPATION ENDPOINTS ----------
 
-app.get("/api/camp-participation", async (req, res) => {
+app.get("/api/camp-participation", authenticateToken, async (req, res) => {
   try {
     const { student_id, camp_id } = req.query;
     let sql = `SELECT cp.*, c.name as camp_name, c.date as camp_date, c.location as camp_location,
@@ -1445,7 +1574,7 @@ app.get("/api/camp-participation", async (req, res) => {
   }
 });
 
-app.post("/api/camp-participation", async (req, res) => {
+app.post("/api/camp-participation", authenticateToken, async (req, res) => {
   try {
     const { student_id, camp_id, status, notes } = req.body;
     if (!student_id || !camp_id) return res.json({ data: null, error: { message: "student_id and camp_id are required" } });
@@ -1463,7 +1592,7 @@ app.post("/api/camp-participation", async (req, res) => {
   }
 });
 
-app.put("/api/camp-participation/:id", async (req, res) => {
+app.put("/api/camp-participation/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes } = req.body;
@@ -1481,7 +1610,7 @@ app.put("/api/camp-participation/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/camp-participation/:id", async (req, res) => {
+app.delete("/api/camp-participation/:id", authenticateToken, async (req, res) => {
   try {
     await db.prepare("DELETE FROM camp_participation WHERE id = ?").run(req.params.id);
     return res.json({ data: null, error: null });
@@ -1523,4 +1652,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, db, initDb };
+module.exports = { app, db, initDb, authenticateToken, JWT_SECRET };

@@ -1,4 +1,47 @@
 /**
+ * Validate password strength.
+ * @param {string} value - Password to validate
+ * @returns {string[]} Array of error messages (empty if valid)
+ */
+export function validatePassword(value) {
+  const errors = [];
+  if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
+  if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
+  if (!/[0-9]/.test(value)) errors.push("Must include a number");
+  if (!/[@$!%*?&]/.test(value))
+    errors.push("Must include a special character (@$!%*?&)");
+  if (value.length < 8)
+    errors.push("Must be at least 8 characters long");
+  return errors;
+}
+
+/**
+ * Validate a person's name.
+ * @param {string} value - Name to validate
+ * @returns {string} Error message or empty string if valid
+ */
+export function validateName(value) {
+  if (!value.trim()) return "Full name is required";
+  if (!/^[A-Za-z\s]+$/.test(value))
+    return "Name must contain only letters and spaces";
+  if (value.trim().length < 2)
+    return "Name must be at least 2 characters";
+  return "";
+}
+
+/**
+ * Validate email format.
+ * @param {string} value - Email to validate
+ * @returns {string} Error message or empty string if valid
+ */
+export function validateEmail(value) {
+  if (!value) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value))
+    return "Please enter a valid email address";
+  return "";
+}
+
+/**
  * Validation utilities extracted from studentform.js
  * Pure functions for field validation and type conversion.
  */

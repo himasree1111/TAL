@@ -27,7 +27,6 @@ export default function ResetPassword() {
           setHasSession(false);
         }
       } catch (err) {
-        console.error(err);
         toast.error("Failed to verify reset link");
       } finally {
         setLoading(false);

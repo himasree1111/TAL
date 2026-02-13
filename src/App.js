@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import ErrorBoundary from "./ErrorBoundary";
 
 import CoverPage from "./CoverPage";
 import StudentLogin from "./studentlogin";
@@ -20,6 +21,7 @@ import ResetPassword from "./ResetPassword";
 
 function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <Routes>
         {/* Cover page shows first */}
@@ -51,6 +53,7 @@ function App() {
 
       </Routes>
     </Router>
+    </ErrorBoundary>
   );
 }
 

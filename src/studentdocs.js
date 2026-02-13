@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 // import { FaCheckCircle, FaPlus } from "react-icons/fa";
 import "./StudentDocs.css";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function StudentDocsUpload() {
   const [files, setFiles] = useState({
@@ -30,10 +32,10 @@ export default function StudentDocsUpload() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!allUploaded) {
-      alert("⚠️ Please upload all required documents before submitting.");
+      toast.warn("Please upload all required documents before submitting.");
       return;
     }
-    alert("✅ Student details submitted successfully!");
+    toast.success("Student details submitted successfully!");
   };
 
   const renderUploadField = (label, field) => (
@@ -59,6 +61,7 @@ export default function StudentDocsUpload() {
 
   return (
     <form className="upload-form" onSubmit={handleSubmit}>
+      <ToastContainer position="top-right" autoClose={3000} />
       <h2>📑 Upload Student Documents</h2>
 
       {renderUploadField("School / College ID", "school_id")}

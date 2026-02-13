@@ -1,8 +1,12 @@
 const request = require("supertest");
-const { app, db, createTestStudent, cleanupTables } = require("./helpers");
+const { app, db, createTestStudent, createAuthenticatedUser, cleanupTables } = require("./helpers");
+
+let token;
 
 beforeEach(async () => {
   await cleanupTables();
+  const user = await createAuthenticatedUser({ user_type: "admin" });
+  token = user.token;
 });
 
 describe("POST /api/camps", () => {
@@ -12,65 +16,65 @@ describe("POST /api/camps", () => {
       date: "2025-06-15",
       location: "Hyderabad",
       description: "Annual summer camp",
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
     expect(res.body.data.name).toBe("Summer Camp 2025");
     expect(res.body.data.location).toBe("Hyderabad");
   });
 
   test("should fail without name", async () => {
-    const res = await request(app).post("/api/camps").send({ date: "2025-06-15" });
+    const res = await request(app).post("/api/camps").send({ date: "2025-06-15" }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeTruthy();
   });
 });
 
 describe("GET /api/camps", () => {
   test("should list all camps", async () => {
-    await request(app).post("/api/camps").send({ name: "Camp A", date: "2025-01-01" });
-    await request(app).post("/api/camps").send({ name: "Camp B", date: "2025-06-01" });
-    const res = await request(app).get("/api/camps");
+    await request(app).post("/api/camps").send({ name: "Camp A", date: "2025-01-01" }).set("Authorization", `Bearer ${token}`);
+    await request(app).post("/api/camps").send({ name: "Camp B", date: "2025-06-01" }).set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/camps").set("Authorization", `Bearer ${token}`);
     expect(res.body.data.length).toBe(2);
   });
 });
 
 describe("PUT /api/camps/:id", () => {
   test("should update a camp", async () => {
-    const create = await request(app).post("/api/camps").send({ name: "Old Name" });
+    const create = await request(app).post("/api/camps").send({ name: "Old Name" }).set("Authorization", `Bearer ${token}`);
     const id = create.body.data.id;
-    const res = await request(app).put(`/api/camps/${id}`).send({ name: "New Name" });
+    const res = await request(app).put(`/api/camps/${id}`).send({ name: "New Name" }).set("Authorization", `Bearer ${token}`);
     expect(res.body.data.name).toBe("New Name");
   });
 });
 
 describe("DELETE /api/camps/:id", () => {
   test("should delete a camp", async () => {
-    const create = await request(app).post("/api/camps").send({ name: "Temp Camp" });
+    const create = await request(app).post("/api/camps").send({ name: "Temp Camp" }).set("Authorization", `Bearer ${token}`);
     const id = create.body.data.id;
-    await request(app).delete(`/api/camps/${id}`);
-    const list = await request(app).get("/api/camps");
+    await request(app).delete(`/api/camps/${id}`).set("Authorization", `Bearer ${token}`);
+    const list = await request(app).get("/api/camps").set("Authorization", `Bearer ${token}`);
     expect(list.body.data.length).toBe(0);
   });
 });
 
 describe("POST /api/camp-participation", () => {
   test("should register student for a camp", async () => {
-    const student = await createTestStudent();
-    const camp = (await request(app).post("/api/camps").send({ name: "Test Camp" })).body.data;
+    const student = await createTestStudent({}, token);
+    const camp = (await request(app).post("/api/camps").send({ name: "Test Camp" }).set("Authorization", `Bearer ${token}`)).body.data;
     const res = await request(app).post("/api/camp-participation").send({
       student_id: student.id,
       camp_id: camp.id,
       status: "registered",
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
     expect(res.body.data.student_id).toBe(student.id);
     expect(res.body.data.camp_id).toBe(camp.id);
   });
 
   test("should prevent duplicate registration", async () => {
-    const student = await createTestStudent();
-    const camp = (await request(app).post("/api/camps").send({ name: "Camp X" })).body.data;
-    await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id });
-    const res = await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id });
+    const student = await createTestStudent({}, token);
+    const camp = (await request(app).post("/api/camps").send({ name: "Camp X" }).set("Authorization", `Bearer ${token}`)).body.data;
+    await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id }).set("Authorization", `Bearer ${token}`);
+    const res = await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeTruthy();
     expect(res.body.error.message).toContain("already registered");
   });
@@ -78,10 +82,10 @@ describe("POST /api/camp-participation", () => {
 
 describe("GET /api/camp-participation", () => {
   test("should list with camp and student details", async () => {
-    const student = await createTestStudent();
-    const camp = (await request(app).post("/api/camps").send({ name: "Detail Camp", location: "City" })).body.data;
-    await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id });
-    const res = await request(app).get(`/api/camp-participation?student_id=${student.id}`);
+    const student = await createTestStudent({}, token);
+    const camp = (await request(app).post("/api/camps").send({ name: "Detail Camp", location: "City" }).set("Authorization", `Bearer ${token}`)).body.data;
+    await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id }).set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get(`/api/camp-participation?student_id=${student.id}`).set("Authorization", `Bearer ${token}`);
     expect(res.body.data.length).toBe(1);
     expect(res.body.data[0].camp_name).toBe("Detail Camp");
     expect(res.body.data[0].student_name).toBeTruthy();
@@ -90,11 +94,11 @@ describe("GET /api/camp-participation", () => {
 
 describe("PUT /api/camp-participation/:id", () => {
   test("should update participation status", async () => {
-    const student = await createTestStudent();
-    const camp = (await request(app).post("/api/camps").send({ name: "Update Camp" })).body.data;
-    const create = await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id });
+    const student = await createTestStudent({}, token);
+    const camp = (await request(app).post("/api/camps").send({ name: "Update Camp" }).set("Authorization", `Bearer ${token}`)).body.data;
+    const create = await request(app).post("/api/camp-participation").send({ student_id: student.id, camp_id: camp.id }).set("Authorization", `Bearer ${token}`);
     const id = create.body.data.id;
-    const res = await request(app).put(`/api/camp-participation/${id}`).send({ status: "attended" });
+    const res = await request(app).put(`/api/camp-participation/${id}`).send({ status: "attended" }).set("Authorization", `Bearer ${token}`);
     expect(res.body.data.status).toBe("attended");
   });
 });

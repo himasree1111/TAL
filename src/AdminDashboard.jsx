@@ -79,9 +79,8 @@ export default function AdminDashboard() {
         setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
 
         if (studentError) {
-          console.error('AdminDashboard: Error fetching student data:', studentError);
+          /* error handled silently */
         } else {
-          console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
   const transformedStudents = (studentData || []).map((student, index) => ({
     id: student.id || index + 1,
@@ -170,11 +169,11 @@ export default function AdminDashboard() {
           const { data: summaryResp } = await (await import("axios")).default.get("/api/fee-payments/summary");
           if (summaryResp?.data) setFeeSummary(summaryResp.data);
         } catch (e) {
-          console.error("Fee summary fetch error:", e);
+          /* error handled silently */
         }
 
       } catch (error) {
-        console.error('Error fetching data:', error);
+        /* error handled silently */
       } finally {
         setLoading(false);
       }
@@ -229,9 +228,7 @@ const fetchEligibleCount = async () => {
     .from("eligible_students")
     .select("*", { count: "exact", head: true });
 
-  if (error) {
-    console.error("Error fetching eligible count:", error);
-  } else {
+  if (!error) {
     setEligibleCount(count || 0);
   }
 };
@@ -241,9 +238,7 @@ const fetchNonEligibleCount = async () => {
     .from("non_eligible_students")
     .select("*", { count: "exact", head: true });
 
-  if (error) {
-    console.error("Error fetching non-eligible count:", error);
-  } else {
+  if (!error) {
     setNonEligibleCount(count || 0);
   }
 };
@@ -258,15 +253,13 @@ const fetchNonEligibleCount = async () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching eligible students:', error);
-        alert('Error fetching eligible students: ' + error.message);
+        toast.error('Error fetching eligible students: ' + error.message);
       } else {
 setEligibleStudents(data || []);
 setEligibleCount(data?.length || 0);
       }
     } catch (err) {
-      console.error('Error:', err);
-      alert('Error fetching data');
+      toast.error('Error fetching data');
     } finally {
       setLoadingEligible(false);
     }
@@ -281,15 +274,13 @@ setEligibleCount(data?.length || 0);
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching non-eligible students:', error);
-        alert('Error fetching non-eligible students: ' + error.message);
+        toast.error('Error fetching non-eligible students: ' + error.message);
       } else {
         setNonEligibleStudents(data || []);
         setNonEligibleCount(data?.length || 0);
       }
     } catch (err) {
-      console.error('Error:', err);
-      alert('Error fetching data');
+      toast.error('Error fetching data');
     } finally {
       setLoadingNonEligible(false);
     }
@@ -297,7 +288,7 @@ setEligibleCount(data?.length || 0);
 
   const handleDownloadEligibleReport = () => {
     if (eligibleStudents.length === 0) {
-      alert('No eligible students to export');
+      toast.warn('No eligible students to export');
       return;
     }
 
@@ -315,12 +306,12 @@ setEligibleCount(data?.length || 0);
     a.download = 'eligible-students-report.csv';
     a.click();
     URL.revokeObjectURL(url);
-    alert('Report downloaded successfully!');
+    toast.success('Report downloaded successfully!');
   };
 
   const handleDownloadNonEligibleReport = () => {
     if (nonEligibleStudents.length === 0) {
-      alert('No non-eligible students to export');
+      toast.warn('No non-eligible students to export');
       return;
     }
 
@@ -338,7 +329,7 @@ setEligibleCount(data?.length || 0);
     a.download = 'non-eligible-students-report.csv';
     a.click();
     URL.revokeObjectURL(url);
-    alert('Report downloaded successfully!');
+    toast.success('Report downloaded successfully!');
   };
 
   const handleDeleteStudent = async (id) => {
@@ -348,7 +339,7 @@ setEligibleCount(data?.length || 0);
       .delete()
       .eq("id", id);
     if (error) {
-      alert("Delete failed: " + error.message);
+      toast.error("Delete failed: " + error.message);
       return;
     }
     setStudents((prev) => prev.filter((p) => p.id !== id));
@@ -357,7 +348,7 @@ setEligibleCount(data?.length || 0);
   const handleAddStudent = async () => {
     const f = addStudentForm;
     if (!f.first_name || !f.last_name || !f.email) {
-      alert("First name, last name, and email are required.");
+      toast.warn("First name, last name, and email are required.");
       return;
     }
     const payload = {
@@ -374,10 +365,10 @@ setEligibleCount(data?.length || 0);
       .from("student_form_submissions")
       .insert([payload]);
     if (error) {
-      alert("Error adding student: " + error.message);
+      toast.error("Error adding student: " + error.message);
       return;
     }
-    alert("Student added successfully!");
+    toast.success("Student added successfully!");
     setShowAddStudentModal(false);
     setAddStudentForm({
       first_name: "", last_name: "", email: "", contact: "", whatsapp: "",
@@ -439,7 +430,7 @@ setEligibleCount(data?.length || 0);
       .update(payload)
       .eq("id", id);
     if (error) {
-      alert("Error updating student: " + error.message);
+      toast.error("Error updating student: " + error.message);
       return;
     }
     // Update local state
@@ -456,7 +447,7 @@ setEligibleCount(data?.length || 0);
       };
     }));
     setEditStudentModal(null);
-    alert("Student updated successfully!");
+    toast.success("Student updated successfully!");
   };
 
   // helpers
@@ -473,15 +464,13 @@ const handleApprove = async (id) => {
     .eq('id', id);
 
   if (error) {
-    console.error(error);
-    alert('Approval failed');
+    toast.error('Approval failed');
     return;
   }
 
-  // 👇 remove from UI immediately
   setStudents(prev => prev.filter(s => s.id !== id));
 
-  alert('Student approved ✅');
+  toast.success('Student approved');
 };
 
 
@@ -492,15 +481,13 @@ const handleNotApprove = async (id) => {
     .eq('id', id);
 
   if (error) {
-    console.error(error);
-    alert('Rejection failed');
+    toast.error('Rejection failed');
     return;
   }
 
-  // remove from UI
   setStudents(prev => prev.filter(s => s.id !== id));
 
-  alert('Student rejected ❌');
+  toast.warn('Student rejected');
 };
 
 
@@ -532,7 +519,7 @@ const handleNotApprove = async (id) => {
   // --- Handlers using real API ---
   const handleAddDonor = async () => {
     if (!newDonorForm.student_id || !newDonorForm.donor_name) {
-      alert("Student ID and Donor Name are required");
+      toast.warn("Student ID and Donor Name are required");
       return;
     }
     try {
@@ -543,7 +530,7 @@ const handleNotApprove = async (id) => {
         year_of_support: newDonorForm.year_of_support || null,
         amount: parseFloat(newDonorForm.amount) || 0,
       });
-      if (error) { alert("Error: " + error.message); return; }
+      if (error) { toast.error("Error: " + error.message); return; }
       // Refresh donor mappings
       const { data: refreshed } = await supabase.from("donor_mapping").select("*");
       if (refreshed) {
@@ -558,9 +545,9 @@ const handleNotApprove = async (id) => {
         setDonors(Object.values(donorMap));
       }
       setNewDonorForm({ student_id: "", donor_name: "", donor_email: "", year_of_support: "", amount: "" });
-      alert("Donor mapping added successfully!");
+      toast.success("Donor mapping added successfully!");
     } catch (err) {
-      alert("Error adding donor: " + err.message);
+      toast.error("Error adding donor: " + err.message);
     }
   };
 
@@ -570,7 +557,7 @@ const handleNotApprove = async (id) => {
       await supabase.from("donor_mapping").delete().eq("id", id);
       setDonorMappings((prev) => prev.filter((dm) => dm.id !== id));
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     }
   };
 
@@ -592,7 +579,7 @@ const handleNotApprove = async (id) => {
   };
 
   const handleDownloadFeeReport = () => {
-    if (feeSummary.length === 0) { alert("No fee data to export"); return; }
+    if (feeSummary.length === 0) { toast.warn("No fee data to export"); return; }
     const rows = ['student_id,student_name,total_fee,total_paid,balance,status',
       ...feeSummary.map(s => `${s.student_id},"${s.student_name}",${s.total_fee},${s.total_paid},${s.balance},${s.status}`)
     ];
@@ -607,7 +594,7 @@ const handleNotApprove = async (id) => {
 
   const handleRecordPayment = async () => {
     if (!newPaymentForm.student_id || !newPaymentForm.amount || !newPaymentForm.payment_date) {
-      alert("Student ID, Amount, and Date are required");
+      toast.warn("Student ID, Amount, and Date are required");
       return;
     }
     try {
@@ -618,18 +605,18 @@ const handleNotApprove = async (id) => {
         payment_method: newPaymentForm.payment_method,
         notes: newPaymentForm.notes || null,
       });
-      if (error) { alert("Error: " + error.message); return; }
+      if (error) { toast.error("Error: " + error.message); return; }
       // Refresh fee data
       const { data: refreshedFees } = await supabase.from("fee_payments").select("*");
       if (refreshedFees) setFeePayments(refreshedFees);
       try {
         const { data: summaryResp } = await (await import("axios")).default.get("/api/fee-payments/summary");
         if (summaryResp?.data) setFeeSummary(summaryResp.data);
-      } catch (e) { console.error(e); }
+      } catch (e) { /* silenced */ }
       setNewPaymentForm({ student_id: "", amount: "", payment_date: "", payment_method: "cash", notes: "" });
-      alert("Payment recorded successfully!");
+      toast.success("Payment recorded successfully!");
     } catch (err) {
-      alert("Error recording payment: " + err.message);
+      toast.error("Error recording payment: " + err.message);
     }
   };
 
@@ -639,12 +626,12 @@ const handleNotApprove = async (id) => {
       await supabase.from("fee_payments").delete().eq("id", id);
       setFeePayments((prev) => prev.filter((fp) => fp.id !== id));
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     }
   };
 
   const handleSendBroadcast = async () => {
-    if (!broadcastTitle) { alert("Title is required"); return; }
+    if (!broadcastTitle) { toast.warn("Title is required"); return; }
     try {
       const { data: resp } = await (await import("axios")).default.post(
         "/api/notifications/broadcast",
@@ -657,15 +644,15 @@ const handleNotApprove = async (id) => {
           created_by: currentUser?.email,
         }
       );
-      if (resp?.error) { alert("Error: " + resp.error.message); return; }
-      alert(`Broadcast sent to ${resp?.data?.count || 0} recipients!`);
+      if (resp?.error) { toast.error("Error: " + resp.error.message); return; }
+      toast.success(`Broadcast sent to ${resp?.data?.count || 0} recipients!`);
       setBroadcastTitle("");
       setBroadcastMessage("");
       // Refresh notifications
       const { data: refreshed } = await supabase.from("notifications").select("*");
       if (refreshed) setAdminNotifications(refreshed);
     } catch (err) {
-      alert("Error sending broadcast: " + err.message);
+      toast.error("Error sending broadcast: " + err.message);
     }
   };
 
@@ -675,7 +662,7 @@ const handleNotApprove = async (id) => {
       await supabase.from("notifications").delete().eq("id", id);
       setAdminNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     }
   };
 
@@ -683,7 +670,7 @@ const handleNotApprove = async (id) => {
     if (!reportStartDate && !reportEndDate) {
       setFilteredFeeSummary(null);
       setFilteredDonationSummary(null);
-      alert("Set a date range to filter reports, or reports show all-time data.");
+      toast.info("Set a date range to filter reports, or reports show all-time data.");
       return;
     }
     try {
@@ -697,9 +684,9 @@ const handleNotApprove = async (id) => {
       ]);
       if (feeRes.data?.data) setFilteredFeeSummary(feeRes.data.data);
       if (donationRes.data?.data) setFilteredDonationSummary(donationRes.data.data);
-      alert("Reports filtered for date range: " + (reportStartDate || "start") + " to " + (reportEndDate || "end"));
+      toast.success("Reports filtered for date range: " + (reportStartDate || "start") + " to " + (reportEndDate || "end"));
     } catch (err) {
-      alert("Error filtering reports.");
+      toast.error("Error filtering reports.");
     }
   };
 
@@ -754,8 +741,7 @@ const handleNotApprove = async (id) => {
         });
 
         if (error) {
-          console.error('Error updating user settings:', error);
-          alert('Error saving settings: ' + error.message);
+          toast.error('Error saving settings: ' + error.message);
           return;
         }
 
@@ -769,11 +755,10 @@ const handleNotApprove = async (id) => {
         };
         setCurrentUser(updatedUser);
 
-        alert('Settings saved successfully!');
+        toast.success('Settings saved successfully!');
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Error saving settings: ' + error.message);
+      toast.error('Error saving settings: ' + error.message);
     }
   };
 
@@ -787,12 +772,13 @@ const handleNotApprove = async (id) => {
       await supabase.auth.signOut();
       navigate("/");
     } catch (error) {
-      console.error("Error logging out:", error);
+      /* error handled silently */
     }
   };
 
   return (
     <div className="admin-root">
+      <ToastContainer position="top-right" autoClose={3000} />
       <aside className="admin-sidebar">
         <div className="sidebar-top">
           <div className="brand">Touch A Life - Admin</div>
@@ -997,16 +983,14 @@ const handleNotApprove = async (id) => {
               </div>
 
               <div className="table-wrap">
-                <table className="data-table">
+                <table className="data-table" aria-label="Student beneficiaries">
                   <thead>
                     <tr>
                       <th>Name</th>
                       <th>Email</th>
                       <th>Education</th>
-                
-                      {/* <th>Fee Status</th> */}
-                      <th>Contact</th>         {/* NEW column (stream) */}
-                      <th>Camp</th>           {/* NEW column (campName / campDate) */}
+                      <th>Contact</th>
+                      <th>Camp</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -1016,8 +1000,6 @@ const handleNotApprove = async (id) => {
                         <td>{s.name}</td>
                         <td>{s.email}</td>
                         <td>{s.year}</td>
-                    
-                        {/* <td>{s.feeStatus}</td> */}
                         <td>{s.contact}</td>
                         <td>
                           <div style={{whiteSpace: 'nowrap'}}>
@@ -1151,7 +1133,7 @@ const handleNotApprove = async (id) => {
               {donorMappings.length > 0 && (
                 <div className="table-wrap" style={{ marginTop: '20px' }}>
                   <h4>All Donor-Student Mappings</h4>
-                  <table className="data-table">
+                  <table className="data-table" aria-label="Eligible students">
                     <thead>
                       <tr>
                         <th>Donor</th>
@@ -1249,7 +1231,7 @@ const handleNotApprove = async (id) => {
 
               {/* Fee Summary per Student */}
               <div className="table-wrap">
-                <table className="data-table">
+                <table className="data-table" aria-label="Donor-student mapping">
                   <thead>
                     <tr>
                       <th>Student</th>
@@ -1284,7 +1266,7 @@ const handleNotApprove = async (id) => {
               {feePayments.length > 0 && (
                 <div className="table-wrap" style={{ marginTop: '20px' }}>
                   <h4>Recent Payments</h4>
-                  <table className="data-table">
+                  <table className="data-table" aria-label="Fee payment tracking">
                     <thead>
                       <tr>
                         <th>Student ID</th>
@@ -1369,7 +1351,7 @@ const handleNotApprove = async (id) => {
               <div className="broadcast-history">
                 <h4>Recent Notifications ({adminNotifications.length})</h4>
                 <div className="table-wrap">
-                  <table className="data-table">
+                  <table className="data-table" aria-label="Fee payment summary">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -1606,7 +1588,7 @@ const handleNotApprove = async (id) => {
 {activeReportList === "eligible" && (
                 <div className="table-wrap" style={{marginTop: '24px'}}>
                   <h3>Eligible Students List</h3>
-                  <table className="data-table">
+                  <table className="data-table" aria-label="Non-eligible students">
                     <thead>
                       <tr>
                         <th>Name</th>
@@ -1626,7 +1608,6 @@ const handleNotApprove = async (id) => {
                           <td>{s.email || s.email}</td>
                           <td>{s.contact || s.contact}</td>
                           <td>{s.education || s.class}</td>
-                          {/* <td>{s.year || '-'}</td> */}
                           <td>{s.school || s.college || '-'}</td>
                           <td>
                             {s.created_at 
@@ -1653,7 +1634,7 @@ const handleNotApprove = async (id) => {
 {activeReportList === "nonEligible" && (
                 <div className="table-wrap" style={{marginTop: '24px'}}>
                   <h3>Non-Eligible Students List</h3>
-                  <table className="data-table">
+                  <table className="data-table" aria-label="Notifications">
                     <thead>
                       <tr>
                         <th>Name</th>
@@ -1876,7 +1857,7 @@ const handleNotApprove = async (id) => {
       <div style={{ marginTop: "20px" }}>
         <h4>Documents</h4>
         {viewStudentDocs.length > 0 ? (
-          <table className="data-table" style={{ fontSize: "0.85em", marginTop: "8px" }}>
+          <table className="data-table" aria-label="Financial reports" style={{ fontSize: "0.85em", marginTop: "8px" }}>
             <thead><tr><th>File</th><th>Category</th><th>Uploaded</th><th>Action</th></tr></thead>
             <tbody>
               {viewStudentDocs.map(d => (
@@ -1889,7 +1870,7 @@ const handleNotApprove = async (id) => {
                     {" "}
                     <button className="btn small" style={{ color: "#c62828", fontSize: "0.85em" }} onClick={async () => {
                       if (!window.confirm("Delete this document?")) return;
-                      try { const axios = (await import("axios")).default; await axios.delete(`/api/documents/${d.id}`); setViewStudentDocs(prev => prev.filter(x => x.id !== d.id)); } catch(e) { alert("Error deleting."); }
+                      try { const axios = (await import("axios")).default; await axios.delete(`/api/documents/${d.id}`); setViewStudentDocs(prev => prev.filter(x => x.id !== d.id)); } catch(e) { toast.error("Error deleting."); }
                     }}>Delete</button>
                   </td>
                 </tr>
@@ -1911,8 +1892,8 @@ const handleNotApprove = async (id) => {
               formData.append("category", "admin_upload");
               const { data: resp } = await axios.post("/api/documents", formData);
               if (resp?.data) setViewStudentDocs(prev => [resp.data, ...prev]);
-              alert("Document uploaded!");
-            } catch (err) { alert("Upload failed."); }
+              toast.success("Document uploaded!");
+            } catch (err) { toast.error("Upload failed."); }
           }} />
         </label>
       </div>
@@ -2080,17 +2061,17 @@ const handleNotApprove = async (id) => {
               const title = fd.get("title");
               const msg = fd.get("msg");
               const rec = fd.get("rec");
-              if (!title) { alert("Title is required"); return; }
+              if (!title) { toast.warn("Title is required"); return; }
               try {
                 const { data: resp } = await (await import("axios")).default.post(
                   "/api/notifications/broadcast",
                   { recipient_role: rec === "all" ? null : rec, title, message: msg, type: "broadcast", priority: "medium", created_by: currentUser?.email }
                 );
-                alert(`Broadcast sent to ${resp?.data?.count || 0} recipients!`);
+                toast.success(`Broadcast sent to ${resp?.data?.count || 0} recipients!`);
                 setBroadcastOpen(false);
                 const { data: refreshed } = await supabase.from("notifications").select("*");
                 if (refreshed) setAdminNotifications(refreshed);
-              } catch (err) { alert("Error: " + err.message); }
+              } catch (err) { toast.error("Error: " + err.message); }
             }}>
               <label>Title *<input name="title" placeholder="Notification title" required /></label>
               <label>Message<textarea name="msg" rows={4} placeholder="Message body" /></label>

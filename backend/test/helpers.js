@@ -26,7 +26,17 @@ async function getAuthToken(email, password) {
   return res.body.data?.session?.access_token;
 }
 
-async function createTestStudent(overrides = {}) {
+/**
+ * Create a test user and return their auth token in one step.
+ * Defaults to volunteer role; pass user_type to override.
+ */
+async function createAuthenticatedUser(overrides = {}) {
+  const user = await createTestUser(overrides);
+  const token = await getAuthToken(user.email, user.password);
+  return { ...user, token };
+}
+
+async function createTestStudent(overrides = {}, token) {
   await ensureInit();
   const payload = {
     first_name: overrides.first_name || "Test",
@@ -44,7 +54,9 @@ async function createTestStudent(overrides = {}) {
     ...overrides,
   };
 
-  const res = await request(app).post("/api/student-forms").send(payload);
+  let req = request(app).post("/api/student-forms").send(payload);
+  if (token) req = req.set("Authorization", `Bearer ${token}`);
+  const res = await req;
   return res.body.data?.[0] || res.body.data;
 }
 
@@ -63,4 +75,4 @@ async function cleanupTables() {
   await db.exec("DELETE FROM users");
 }
 
-module.exports = { app, db, createTestUser, getAuthToken, createTestStudent, cleanupTables };
+module.exports = { app, db, createTestUser, getAuthToken, createAuthenticatedUser, createTestStudent, cleanupTables };

@@ -1,8 +1,12 @@
 const request = require("supertest");
-const { app, db, createTestStudent, cleanupTables } = require("./helpers");
+const { app, db, createTestStudent, createAuthenticatedUser, cleanupTables } = require("./helpers");
+
+let token;
 
 beforeEach(async () => {
   await cleanupTables();
+  const user = await createAuthenticatedUser();
+  token = user.token;
 });
 
 describe("POST /api/student-forms", () => {
@@ -15,7 +19,7 @@ describe("POST /api/student-forms", () => {
       school: "Test School",
       class: "12th",
       fee_structure: "50000",
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].first_name).toBe("Alice");
@@ -29,7 +33,7 @@ describe("POST /api/student-forms", () => {
       is_single_parent: true,
       does_work: false,
       has_scholarship: true,
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.data[0].is_single_parent).toBe(true);
     expect(res.body.data[0].does_work).toBe(false);
     expect(res.body.data[0].has_scholarship).toBe(true);
@@ -41,7 +45,7 @@ describe("POST /api/student-forms", () => {
       first_name: "JSON",
       last_name: "Test",
       family_members_details: family,
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.data[0].family_members_details).toEqual(family);
   });
 
@@ -57,7 +61,7 @@ describe("POST /api/student-forms", () => {
       monthly_income: 15000,
       num_dependents: 4,
       school_address: "123 School St",
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
     const s = res.body.data[0];
     expect(s.father_name).toBe("Dad");
@@ -73,50 +77,51 @@ describe("POST /api/student-forms", () => {
 
 describe("GET /api/student-forms", () => {
   test("should list all forms", async () => {
-    await createTestStudent({ first_name: "A" });
-    await createTestStudent({ first_name: "B" });
-    const res = await request(app).get("/api/student-forms");
+    await createTestStudent({ first_name: "A" }, token);
+    await createTestStudent({ first_name: "B" }, token);
+    const res = await request(app).get("/api/student-forms").set("Authorization", `Bearer ${token}`);
     expect(res.body.data.length).toBe(2);
   });
 
   test("should filter by volunteer_email", async () => {
-    await createTestStudent({ volunteer_email: "vol1@test.com" });
-    await createTestStudent({ volunteer_email: "vol2@test.com" });
-    const res = await request(app).get("/api/student-forms?volunteer_email=vol1@test.com");
+    await createTestStudent({ volunteer_email: "vol1@test.com" }, token);
+    await createTestStudent({ volunteer_email: "vol2@test.com" }, token);
+    const res = await request(app).get("/api/student-forms?volunteer_email=vol1@test.com").set("Authorization", `Bearer ${token}`);
     expect(res.body.data.length).toBe(1);
     expect(res.body.data[0].volunteer_email).toBe("vol1@test.com");
   });
 
   test("should return single form by id", async () => {
-    const student = await createTestStudent();
-    const res = await request(app).get(`/api/student-forms?id=${student.id}&single=true`);
+    const student = await createTestStudent({}, token);
+    const res = await request(app).get(`/api/student-forms?id=${student.id}&single=true`).set("Authorization", `Bearer ${token}`);
     expect(res.body.data.id).toBe(student.id);
   });
 
   test("should order by field", async () => {
-    await createTestStudent({ first_name: "Zebra" });
-    await createTestStudent({ first_name: "Alpha" });
-    const res = await request(app).get("/api/student-forms?order_field=first_name&order_ascending=true");
+    await createTestStudent({ first_name: "Zebra" }, token);
+    await createTestStudent({ first_name: "Alpha" }, token);
+    const res = await request(app).get("/api/student-forms?order_field=first_name&order_ascending=true").set("Authorization", `Bearer ${token}`);
     expect(res.body.data[0].first_name).toBe("Alpha");
   });
 });
 
 describe("PUT /api/student-forms/:id", () => {
   test("should update a form", async () => {
-    const student = await createTestStudent({ first_name: "Old" });
+    const student = await createTestStudent({ first_name: "Old" }, token);
     const res = await request(app)
       .put(`/api/student-forms/${student.id}`)
-      .send({ first_name: "New" });
+      .send({ first_name: "New" })
+      .set("Authorization", `Bearer ${token}`);
     expect(res.body.data.first_name).toBe("New");
   });
 });
 
 describe("DELETE /api/student-forms/:id", () => {
   test("should delete a form", async () => {
-    const student = await createTestStudent();
-    const res = await request(app).delete(`/api/student-forms/${student.id}`);
+    const student = await createTestStudent({}, token);
+    const res = await request(app).delete(`/api/student-forms/${student.id}`).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
-    const check = await request(app).get(`/api/student-forms?id=${student.id}&single=true`);
+    const check = await request(app).get(`/api/student-forms?id=${student.id}&single=true`).set("Authorization", `Bearer ${token}`);
     expect(check.body.data).toBeFalsy();
   });
 });

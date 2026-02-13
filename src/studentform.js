@@ -5,6 +5,8 @@ import "./StudentForm.css";
 import supabase from "./supabaseClient";
 import EducationDropdown from "./EducationDropdown";
 import { useParams } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 /*
   NOTE: This file preserves your UI exactly and only adds Supabase integration:
@@ -12,6 +14,13 @@ import { useParams } from "react-router-dom";
   - Inserts a record into table: "student_details"
   - Attaches volunteer's logged-in email as volunteer_email
 */
+
+// Named constants for form validation limits
+const MAX_FAMILY_MEMBERS = 15;
+const MAX_EARNING_MEMBERS = 10;
+const PHONE_NUMBER_LENGTH = 10;
+const IFSC_CODE_LENGTH = 11;
+const MAX_ACCOUNT_NUMBER_LENGTH = 18;
 
 export default function StudentForm() {
   const navigate = useNavigate();
@@ -29,7 +38,6 @@ export default function StudentForm() {
       try {
         const { data, error } = await supabase.auth.getUser();
         if (error) {
-          console.warn("supabase.auth.getUser error:", error);
           return;
         }
         if (data?.user) {
@@ -44,7 +52,7 @@ export default function StudentForm() {
           }
         }
       } catch (err) {
-        console.error("getUser error:", err);
+        // getUser error silenced for production
       }
     };
     getUser();
@@ -226,19 +234,19 @@ has_scholarship: "",
       // remove non-digits
       value = value.replace(/\D/g, "");
       // limit length to 10 digits
-      if (value.length > 10) value = value.slice(0, 10);
+      if (value.length > PHONE_NUMBER_LENGTH) value = value.slice(0, PHONE_NUMBER_LENGTH);
     }
 
     // ACCOUNT NUMBER: digits only, limit to 18
     if (name === "account_no") {
       value = value.replace(/\D/g, "");
-      if (value.length > 18) value = value.slice(0, 18);
+      if (value.length > MAX_ACCOUNT_NUMBER_LENGTH) value = value.slice(0, MAX_ACCOUNT_NUMBER_LENGTH);
     }
 
     // IFSC: auto uppercase, allow letters/digits, limit to 11 (standard length)
     if (name === "ifsc_code") {
       value = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (value.length > 11) value = value.slice(0, 11);
+      if (value.length > IFSC_CODE_LENGTH) value = value.slice(0, IFSC_CODE_LENGTH);
     }
 
     // Percentage fields: only allow numbers and decimal points
@@ -259,7 +267,7 @@ has_scholarship: "",
     // Handle number of family members
     if (name === "num_family_members") {
       value = value.replace(/\D/g, ""); // Only allow digits
-      if (value > 15) value = "15"; // Limit to 15 family members max
+      if (value > MAX_FAMILY_MEMBERS) value = String(MAX_FAMILY_MEMBERS);
       
       // Initialize family_members_details array based on the number
       const num = parseInt(value) || 0;
@@ -296,7 +304,7 @@ has_scholarship: "",
     // Handle number of earning members
     if (name === "num_earning_members") {
       value = value.replace(/\D/g, ""); // Only allow digits
-      if (value > 10) value = "10"; // Limit to 10 earning members max
+      if (value > MAX_EARNING_MEMBERS) value = String(MAX_EARNING_MEMBERS);
       
       // Initialize earning_members_details array based on the number
       const num = parseInt(value) || 0;
@@ -572,7 +580,7 @@ has_scholarship: "",
         .single();
 
       if (error) {
-        alert("Error loading student data");
+        toast.error("Error loading student data");
         return;
       }
 
@@ -587,7 +595,6 @@ updatedData.earning_members_details = data.earning_members_details || [];
 updatedData.num_earning_members = (data.earning_members_details || []).length.toString();
           updatedData.num_family_members = updatedData.family_members_details.length.toString();
         } catch (e) {
-          console.error("Error parsing family members details:", e);
           updatedData.family_members_details = [];
           updatedData.num_family_members = "0";
         }
@@ -605,7 +612,6 @@ updatedData.num_earning_members =
 
           updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
         } catch (e) {
-          console.error("Error parsing earning members details:", e);
           updatedData.earning_members_details = [];
           updatedData.num_earning_members = "0";
         }
@@ -644,7 +650,7 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
     if (Object.keys(newErrors).length > 0) {
       // popup alert summarizing
       const inlineMsg = newErrors._missing ? newErrors._missing : "Please correct the highlighted fields.";
-      alert("Please correct the errors before submitting.\n\n" + inlineMsg);
+      toast.warn("Please correct the errors before submitting. " + inlineMsg);
       // scroll to first error field if possible
       const firstField = Object.keys(newErrors).find(k => k !== "_missing");
       if (firstField) {
@@ -656,7 +662,7 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
 
     // Ensure user is logged in
     if (!volunteerEmail && userRole !== "student") {
-      alert("Please sign in before submitting.");
+      toast.warn("Please sign in before submitting.");
       return;
     }
 
@@ -789,13 +795,12 @@ scholarship: hasScholarship ? formData.scholarship : null,
       }
 
       if (result.error) {
-        console.error("Supabase save error:", result.error);
-        alert("❌ Error saving student: " + result.error.message);
+        toast.error("Error saving student: " + result.error.message);
         return;
       }
 
       // Success
-      alert("🎉 Form submitted successfully!");
+      toast.success("Form submitted successfully!");
       setSuccessMessage("Form submitted successfully!");
       // Navigate back to appropriate dashboard
       navigate(userRole === "student" ? "/student-dashboard" : "/volunteer-dashboard");
@@ -856,8 +861,7 @@ has_scholarship: "",
       });
       setErrors({});
     } catch (err) {
-      console.error("Unexpected error on submit:", err);
-      alert("❌ Unexpected error occurred. Check console.");
+      toast.error("Unexpected error occurred");
     }
   };
 
@@ -956,6 +960,7 @@ has_scholarship: "",
 
   return (
     <div>
+      <ToastContainer position="top-right" autoClose={3000} />
       <button className="back-btn" onClick={() => navigate(userRole === "student" ? "/student-dashboard" : "/volunteer-dashboard")}>
         {userRole === "student" ? "Back to Dashboard" : "Back to Volunteer Dashboard"}
       </button>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import "./studentdashboard.css";
 import { useNavigate } from "react-router-dom";
 import supabase from "./supabaseClient";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -74,7 +76,7 @@ const StudentDashboard = () => {
                 docs.push({ id: d.id, name: d.file_name, type: d.category || "document", url: d.file_url, dbRecord: true });
               });
             }
-          } catch (e) { console.error("Documents fetch error:", e); }
+          } catch (e) { /* documents fetch failed */ }
           setDocuments(docs);
         }
 
@@ -85,7 +87,7 @@ const StudentDashboard = () => {
           .eq("recipient_email", user.email);
         if (notifs) setAlerts(notifs);
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
+        /* error handled silently */
       } finally {
         setLoading(false);
       }
@@ -108,7 +110,7 @@ const StudentDashboard = () => {
         setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, is_read: 1 } : a)));
       }
     } catch (err) {
-      console.error("Error marking notification read:", err);
+      /* error handled silently */
     }
   };
 
@@ -124,15 +126,14 @@ const StudentDashboard = () => {
       formData.append("category", "student_upload");
       const { data: resp } = await axios.post("/api/documents", formData);
       if (resp?.error) {
-        alert("Upload error: " + resp.error.message);
+        toast.error("Upload error: " + resp.error.message);
         return;
       }
       const d = resp.data;
       setDocuments((prev) => [...prev, { id: d.id, name: d.file_name, type: d.category || "document", url: d.file_url, dbRecord: true }]);
-      alert("Document uploaded successfully!");
+      toast.success("Document uploaded!");
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("Upload failed.");
+      toast.error("Upload failed");
     }
   };
 
@@ -143,7 +144,7 @@ const StudentDashboard = () => {
       await axios.delete(`/api/documents/${docId}`);
       setDocuments((prev) => prev.filter((d) => d.id !== docId));
     } catch (err) {
-      alert("Error deleting document.");
+      toast.error("Error deleting document");
     }
   };
 
@@ -159,10 +160,9 @@ const StudentDashboard = () => {
         priority: "high",
         recipient_email: student.volunteer_email,
       });
-      alert("Fee alert sent to your volunteer successfully!");
+      toast.success("Fee alert sent!");
     } catch (err) {
-      console.error("Error sending fee alert:", err);
-      alert("Failed to send fee alert.");
+      toast.error("Failed to send fee alert");
     }
   };
 
@@ -213,6 +213,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="student-container">
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* Header */}
       <header className="student-header">
         <div className="header-content">
@@ -380,7 +381,7 @@ const StudentDashboard = () => {
             {documents.length === 0 ? (
               <p style={{ color: "#888", padding: "1rem" }}>No documents uploaded yet.</p>
             ) : (
-              <table>
+              <table aria-label="Fee payments history">
                 <thead>
                   <tr>
                     <th>Document Name</th>

@@ -1,5 +1,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function RoleLogin() {
   const { role } = useParams();
@@ -7,12 +9,13 @@ export default function RoleLogin() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert(`Logging in as ${role}`);
+    toast.success(`Logging in as ${role}`);
     navigate("/studentform"); // After login, redirect to homepage or dashboard
   };
 
   return (
     <div className="flex h-screen justify-center items-center bg-gray-100">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="p-8 bg-white shadow-lg rounded-xl w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center capitalize">
           {role} Login

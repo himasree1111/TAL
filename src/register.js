@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { validatePassword, validateName, validateEmail } from "./utils/validation";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Register() {
   const [name, setName] = useState("");
@@ -11,42 +14,6 @@ function Register() {
   const [passwordErrors, setPasswordErrors] = useState([]);
   const [touched, setTouched] = useState({ name: false, email: false, password: false });
 
-  // ✅ Name validation
-  const validateName = (value) => {
-    if (!value.trim()) {
-      return "❌ Full name is required";
-    }
-    const regex = /^[a-zA-Z\s]+$/;
-    if (!regex.test(value)) {
-      return "❌ Full name must contain only letters and spaces";
-    }
-    if (value.trim().length < 2) {
-      return "❌ Full name must be at least 2 characters long";
-    }
-    return "";
-  };
-
-  // ✅ Email validation
-  const validateEmail = (value) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
-    if (!regex.test(value)) {
-      return "❌ Wrong email format (example: name@example.com)";
-    }
-    return "";
-  };
-
-  // ✅ Password validation (return list of missing rules)
-  const validatePassword = (value) => {
-    const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("❌ Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("❌ Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("❌ Must include a number");
-    if (!/[@$!%*?&]/.test(value))
-      errors.push("❌ Must include a special character (@$!%*?&)");
-    if (value.length < 8) errors.push("❌ Must be at least 8 characters long");
-    return errors;
-  };
-
   const handleRegister = async (e) => {
     e.preventDefault();
 
@@ -57,7 +24,7 @@ function Register() {
     setPasswordErrors(passErrs);
 
     if (emailErr || passErrs.length > 0) {
-      alert("Please fix errors before registering");
+      toast.warn("Please fix errors before registering");
       return;
     }
 
@@ -69,19 +36,19 @@ function Register() {
       });
 
       if (response.data.success) {
-        alert("Volunteer registered successfully! Please login now.");
+        toast.success("Registered successfully! Please login now.");
         window.location.href = "/volunteerlogin";
       } else {
-        alert(response.data.error || "Registration failed");
+        toast.error(response.data.error || "Registration failed");
       }
     } catch (error) {
-      console.error("❌ Registration error:", error);
-      alert("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
   return (
     <div style={{ maxWidth: "400px", margin: "50px auto" }}>
+      <ToastContainer position="top-right" autoClose={3000} />
       <h2>Volunteer Registration</h2>
       <form onSubmit={handleRegister}>
         {/* Name */}

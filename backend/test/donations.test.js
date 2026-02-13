@@ -1,8 +1,12 @@
 const request = require("supertest");
-const { app, createTestStudent, cleanupTables } = require("./helpers");
+const { app, createTestStudent, createAuthenticatedUser, cleanupTables } = require("./helpers");
+
+let token;
 
 beforeEach(async () => {
   await cleanupTables();
+  const user = await createAuthenticatedUser();
+  token = user.token;
 });
 
 describe("POST /api/donations", () => {
@@ -12,62 +16,62 @@ describe("POST /api/donations", () => {
       donor_email: "john@test.com",
       amount: 10000,
       payment_date: "2024-06-15",
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
     expect(res.body.data.amount).toBe(10000);
     expect(res.body.data.receipt_number).toBeTruthy();
   });
 
   test("should fail without required fields", async () => {
-    const res = await request(app).post("/api/donations").send({ donor_name: "NoAmount" });
+    const res = await request(app).post("/api/donations").send({ donor_name: "NoAmount" }).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeTruthy();
     expect(res.body.error.message).toMatch(/required/i);
   });
 
   test("should link donation to student", async () => {
-    const student = await createTestStudent();
+    const student = await createTestStudent({}, token);
     const res = await request(app).post("/api/donations").send({
       donor_name: "Jane",
       student_id: student.id,
       amount: 5000,
       payment_date: "2024-06-15",
-    });
+    }).set("Authorization", `Bearer ${token}`);
     expect(res.body.data.student_id).toBe(student.id);
   });
 });
 
 describe("GET /api/donations", () => {
   test("should list all donations with student_name", async () => {
-    const student = await createTestStudent({ first_name: "Bob", last_name: "Lee" });
-    await request(app).post("/api/donations").send({ donor_name: "D1", student_id: student.id, amount: 100, payment_date: "2024-01-01" });
-    const res = await request(app).get("/api/donations");
+    const student = await createTestStudent({ first_name: "Bob", last_name: "Lee" }, token);
+    await request(app).post("/api/donations").send({ donor_name: "D1", student_id: student.id, amount: 100, payment_date: "2024-01-01" }).set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/donations").set("Authorization", `Bearer ${token}`);
     expect(res.body.data.length).toBe(1);
     expect(res.body.data[0].student_name).toContain("Bob");
   });
 
   test("should filter by donor_email", async () => {
-    await request(app).post("/api/donations").send({ donor_email: "a@test.com", amount: 100, payment_date: "2024-01-01" });
-    await request(app).post("/api/donations").send({ donor_email: "b@test.com", amount: 200, payment_date: "2024-01-01" });
-    const res = await request(app).get("/api/donations?donor_email=a@test.com");
+    await request(app).post("/api/donations").send({ donor_email: "a@test.com", amount: 100, payment_date: "2024-01-01" }).set("Authorization", `Bearer ${token}`);
+    await request(app).post("/api/donations").send({ donor_email: "b@test.com", amount: 200, payment_date: "2024-01-01" }).set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/donations?donor_email=a@test.com").set("Authorization", `Bearer ${token}`);
     expect(res.body.data.length).toBe(1);
   });
 });
 
 describe("DELETE /api/donations/:id", () => {
   test("should delete a donation", async () => {
-    const createRes = await request(app).post("/api/donations").send({ amount: 100, payment_date: "2024-01-01" });
-    const res = await request(app).delete(`/api/donations/${createRes.body.data.id}`);
+    const createRes = await request(app).post("/api/donations").send({ amount: 100, payment_date: "2024-01-01" }).set("Authorization", `Bearer ${token}`);
+    const res = await request(app).delete(`/api/donations/${createRes.body.data.id}`).set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
   });
 });
 
 describe("GET /api/donations/summary", () => {
   test("should return donation summary", async () => {
-    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 5000, payment_date: "2024-01-15" });
-    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 3000, payment_date: "2024-02-15" });
-    await request(app).post("/api/donations").send({ donor_name: "D2", donor_email: "d2@t.com", amount: 2000, payment_date: "2024-01-20" });
+    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 5000, payment_date: "2024-01-15" }).set("Authorization", `Bearer ${token}`);
+    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 3000, payment_date: "2024-02-15" }).set("Authorization", `Bearer ${token}`);
+    await request(app).post("/api/donations").send({ donor_name: "D2", donor_email: "d2@t.com", amount: 2000, payment_date: "2024-01-20" }).set("Authorization", `Bearer ${token}`);
 
-    const res = await request(app).get("/api/donations/summary");
+    const res = await request(app).get("/api/donations/summary").set("Authorization", `Bearer ${token}`);
     expect(res.body.error).toBeNull();
     expect(res.body.data.total).toBe(10000);
     expect(res.body.data.byDonor.length).toBe(2);
@@ -75,16 +79,16 @@ describe("GET /api/donations/summary", () => {
   });
 
   test("should filter by date range", async () => {
-    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 5000, payment_date: "2024-01-15" });
-    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 3000, payment_date: "2024-03-15" });
+    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 5000, payment_date: "2024-01-15" }).set("Authorization", `Bearer ${token}`);
+    await request(app).post("/api/donations").send({ donor_name: "D1", donor_email: "d1@t.com", amount: 3000, payment_date: "2024-03-15" }).set("Authorization", `Bearer ${token}`);
 
     // Only Jan
-    const res = await request(app).get("/api/donations/summary?start_date=2024-01-01&end_date=2024-01-31");
+    const res = await request(app).get("/api/donations/summary?start_date=2024-01-01&end_date=2024-01-31").set("Authorization", `Bearer ${token}`);
     expect(res.body.data.total).toBe(5000);
     expect(res.body.data.byDonor.length).toBe(1);
 
     // Only March
-    const res2 = await request(app).get("/api/donations/summary?start_date=2024-03-01&end_date=2024-03-31");
+    const res2 = await request(app).get("/api/donations/summary?start_date=2024-03-01&end_date=2024-03-31").set("Authorization", `Bearer ${token}`);
     expect(res2.body.data.total).toBe(3000);
   });
 });

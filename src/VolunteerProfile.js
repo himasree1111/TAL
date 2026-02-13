@@ -10,14 +10,11 @@ export default function VolunteerProfile() {
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
-      console.log("Supabase user session:", user); // Debug: see user session
-      console.log("Error (if any):", error);
 
       if (user) {
         setName(user.user_metadata?.full_name || "Volunteer");
         setEmail(user.email || "");
       } else {
-        console.log("No logged-in user detected. Redirecting to /cover");
         navigate("/"); // redirect if no user
       }
     };
@@ -25,9 +22,7 @@ export default function VolunteerProfile() {
   }, [navigate]);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.log("Logout error:", error);
-    else console.log("Logged out successfully");
+    await supabase.auth.signOut();
 
     navigate("/"); // redirect to cover page after logout
   };

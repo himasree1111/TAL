@@ -104,6 +104,14 @@ The app uses a single Express backend (`backend/server.js`) with JWT auth. Datab
 - **DB calls:** All `db.prepare().get/all/run()` and `db.exec()` are **async** — always `await` them
 - **UI libraries:** Lucide React (icons), Framer Motion (animations), React Toastify (notifications)
 
+## Testing Strategy
+
+- **Regression tests must run in background subagents.** When running the full test suite (backend `npm test` or frontend `npx react-scripts test`), always spawn a background Task agent to run the tests independently. Do not block the main coding agent waiting for test results.
+- **Small/targeted tests can run inline.** If testing a single file or a quick verification (e.g., `grep` to confirm a change), run it directly without a subagent.
+- **Backend tests:** `cd backend && npm test` (95 tests, ~18s, Jest with maxWorkers=1)
+- **Frontend tests:** `cd /Users/vishalkumar/Downloads/TAL && npx react-scripts test --watchAll=false` (84 tests, ~2s)
+- **Run both suites in parallel** as separate background agents when doing a full regression check.
+
 ## Known Issues
 - Password reset uses console-logged URLs (no email service)
 - Production build fails on CSS minimization (Tailwind v4 + CRA compat issue, pre-existing)

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import supabase from "./supabaseClient";
+import { validatePassword, validateName, validateEmail } from "./utils/validation";
 import "./studentlogin.css";
 
 export default function DonorLogin() {
@@ -19,33 +20,6 @@ export default function DonorLogin() {
 
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  // ---------------- VALIDATIONS ----------------
-
-  const validateName = (value) => {
-    if (!value.trim()) return "Full name is required";
-    if (!/^[A-Za-z\s]+$/.test(value))
-      return "Only letters and spaces are allowed";
-    return "";
-  };
-
-  const validateEmail = (value) => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-      return "Please enter a valid email address";
-    return "";
-  };
-
-  const validatePassword = (value) => {
-    const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("Must include a number");
-    if (!/[@$!%*?&]/.test(value))
-      errors.push("Must include a special character (@$!%*?&)");
-    if (value.length < 8)
-      errors.push("Must be at least 8 characters long");
-    return errors;
-  };
 
   // ---------------- RESET SESSION ----------------
 

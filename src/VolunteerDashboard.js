@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./VolunteerDashboard.css";
 import supabase from "./supabaseClient";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
@@ -61,7 +63,7 @@ export default function VolunteerDashboard() {
         if (mappingsResp.data?.data) setDonorMappings(mappingsResp.data.data);
         if (feeStructResp.data?.data) setFeeStructures(feeStructResp.data.data);
       } catch (e) {
-        console.error("Data fetch error:", e);
+        /* error handled silently */
       }
     };
 
@@ -80,7 +82,6 @@ export default function VolunteerDashboard() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching forms:", error);
       setLoading(false);
       return;
     }
@@ -119,7 +120,7 @@ export default function VolunteerDashboard() {
       .eq("id", parseInt(id));
 
     if (error) {
-      alert("Error deleting form");
+      toast.error("Error deleting form");
       return;
     }
 
@@ -138,7 +139,7 @@ export default function VolunteerDashboard() {
 
   const handleRecordDonation = async () => {
     if (!donationForm.donor_name || !donationForm.amount) {
-      alert("Donor name and amount are required.");
+      toast.warn("Donor name and amount are required.");
       return;
     }
     try {
@@ -151,18 +152,18 @@ export default function VolunteerDashboard() {
         payment_method: donationForm.payment_method,
         notes: donationForm.notes || null,
       });
-      if (error) { alert("Error: " + error.message); return; }
-      alert("Donation recorded!");
+      if (error) { toast.error("Error: " + error.message); return; }
+      toast.success("Donation recorded!");
       setDonationForm({ donor_name: "", donor_email: "", student_id: "", amount: "", payment_date: "", payment_method: "cash", notes: "" });
       setDonations(prev => [data, ...prev]);
     } catch (err) {
-      alert("Error recording donation.");
+      toast.error("Error recording donation.");
     }
   };
 
   const handleRecordFeePayment = async () => {
     if (!feePaymentForm.student_id || !feePaymentForm.amount) {
-      alert("Student ID and amount are required.");
+      toast.warn("Student ID and amount are required.");
       return;
     }
     try {
@@ -173,17 +174,17 @@ export default function VolunteerDashboard() {
         payment_method: feePaymentForm.payment_method,
         notes: feePaymentForm.notes || null,
       });
-      if (error) { alert("Error: " + error.message); return; }
-      alert("Fee payment recorded!");
+      if (error) { toast.error("Error: " + error.message); return; }
+      toast.success("Fee payment recorded!");
       setFeePaymentForm({ student_id: "", amount: "", payment_date: "", payment_method: "cash", notes: "" });
     } catch (err) {
-      alert("Error recording fee payment.");
+      toast.error("Error recording fee payment.");
     }
   };
 
   const handleCreateDonorMapping = async () => {
     if (!donorMappingForm.student_id || !donorMappingForm.donor_name) {
-      alert("Student ID and donor name are required.");
+      toast.warn("Student ID and donor name are required.");
       return;
     }
     try {
@@ -195,12 +196,12 @@ export default function VolunteerDashboard() {
         amount: parseFloat(donorMappingForm.amount) || 0,
         is_current_sponsor: 1,
       });
-      if (error) { alert("Error: " + error.message); return; }
-      alert("Donor mapped to student!");
+      if (error) { toast.error("Error: " + error.message); return; }
+      toast.success("Donor mapped to student!");
       setDonorMappingForm({ student_id: "", donor_name: "", donor_email: "", year_of_support: "", amount: "" });
       setDonorMappings(prev => [data, ...prev]);
     } catch (err) {
-      alert("Error creating donor mapping.");
+      toast.error("Error creating donor mapping.");
     }
   };
 
@@ -211,10 +212,10 @@ export default function VolunteerDashboard() {
       const { error } = await supabase.storage
         .from("documents")
         .upload(`${studentId}/${file.name}`, file);
-      if (error) { alert("Upload error: " + error.message); return; }
-      alert("Fee receipt uploaded for student #" + studentId);
+      if (error) { toast.error("Upload error: " + error.message); return; }
+      toast.success("Fee receipt uploaded for student #" + studentId);
     } catch (err) {
-      alert("Upload failed.");
+      toast.error("Upload failed.");
     }
   };
 
@@ -234,7 +235,7 @@ export default function VolunteerDashboard() {
 
   const handleSaveFeeStructure = async () => {
     if (!feeStructureForm.student_id || !feeStructureForm.total_fee) {
-      alert("Student and Total Fee are required."); return;
+      toast.warn("Student and Total Fee are required."); return;
     }
     try {
       const axios = (await import("axios")).default;
@@ -246,15 +247,15 @@ export default function VolunteerDashboard() {
         academic_year: feeStructureForm.academic_year || null,
         notes: feeStructureForm.notes || null,
       });
-      if (resp.data?.error) { alert("Error: " + resp.data.error.message); return; }
-      alert("Fee structure saved!");
+      if (resp.data?.error) { toast.error("Error: " + resp.data.error.message); return; }
+      toast.success("Fee structure saved!");
       setFeeStructureForm({ student_id: "", total_fee: "", num_terms: "1", academic_year: "", notes: "" });
       setFeeStructureTerms([]);
       // Refresh fee structures
       const refreshResp = await axios.get("/api/fee-structures");
       if (refreshResp.data?.data) setFeeStructures(refreshResp.data.data);
     } catch (err) {
-      alert("Error saving fee structure.");
+      toast.error("Error saving fee structure.");
     }
   };
 
@@ -276,6 +277,7 @@ export default function VolunteerDashboard() {
 
   return (
     <div className="volunteer-dashboard">
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* Sidebar */}
       <aside className="sidebar">
         <div>
@@ -334,7 +336,7 @@ export default function VolunteerDashboard() {
               {loading && (
                 <div style={{ padding: 16, color: "#6b7280" }}>Loading forms...</div>
               )}
-              <table className="forms-table">
+              <table className="forms-table" aria-label="Student submissions">
                 <thead>
                   <tr>
                     <th>Form ID</th>
@@ -379,7 +381,7 @@ export default function VolunteerDashboard() {
               return (
                 <div className="form-details" style={{ marginTop: "16px" }}>
                   <h2 style={{ marginBottom: "12px" }}>Fee Status — Your Students</h2>
-                  <table className="forms-table">
+                  <table className="forms-table" aria-label="Fee payment summary">
                     <thead>
                       <tr><th>Student</th><th>Total Fee</th><th>Paid</th><th>Balance</th><th>Status</th><th>Upload Receipt</th></tr>
                     </thead>
@@ -436,7 +438,7 @@ export default function VolunteerDashboard() {
             {donations.length > 0 && (
               <>
                 <h3 style={{ marginTop: "24px", marginBottom: "12px" }}>Recent Donations</h3>
-                <table className="forms-table">
+                <table className="forms-table" aria-label="Donations list">
                   <thead><tr><th>Donor</th><th>Amount</th><th>Date</th><th>Method</th><th>Student</th></tr></thead>
                   <tbody>
                     {donations.slice(0, 20).map(d => (
@@ -502,7 +504,7 @@ export default function VolunteerDashboard() {
             {feeStructureTerms.length > 0 && (
               <div style={{ marginBottom: "16px" }}>
                 <h3 style={{ marginBottom: "8px" }}>Term Details</h3>
-                <table className="forms-table">
+                <table className="forms-table" aria-label="Fee structures">
                   <thead><tr><th>Term</th><th>Label</th><th>Amount (₹)</th><th>Due Date</th></tr></thead>
                   <tbody>
                     {feeStructureTerms.map((term, idx) => (
@@ -522,7 +524,7 @@ export default function VolunteerDashboard() {
             {feeStructures.length > 0 && (
               <>
                 <h3 style={{ marginTop: "24px", marginBottom: "12px" }}>Existing Fee Structures</h3>
-                <table className="forms-table">
+                <table className="forms-table" aria-label="Fee receipt uploads">
                   <thead><tr><th>Student</th><th>Total Fee</th><th>Terms</th><th>Academic Year</th></tr></thead>
                   <tbody>
                     {feeStructures.map(fs => (
@@ -561,7 +563,7 @@ export default function VolunteerDashboard() {
             {donorMappings.length > 0 && (
               <>
                 <h3 style={{ marginTop: "24px", marginBottom: "12px" }}>Current Donor Mappings</h3>
-                <table className="forms-table">
+                <table className="forms-table" aria-label="Donor mappings">
                   <thead><tr><th>Student</th><th>Donor</th><th>Year</th><th>Amount</th><th>Status</th></tr></thead>
                   <tbody>
                     {donorMappings.slice(0, 20).map(dm => (

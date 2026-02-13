@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import "./DonorDashboard.css";
 import supabase from "./supabaseClient";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // --- Navigation Items ---
 const NAV_ITEMS = [
@@ -139,10 +141,10 @@ const DonorDashboard = () => {
           if (summaryResp?.data?.data) setFeeSummary(summaryResp.data.data);
           if (availableResp?.data?.data) setAvailableStudents(availableResp.data.data);
         } catch (e) {
-          console.error("Fee summary / available students error:", e);
+          /* error handled silently */
         }
       } catch (err) {
-        console.error("Error loading donor dashboard:", err);
+        /* error handled silently */
       } finally {
         setLoading(false);
       }
@@ -156,7 +158,7 @@ const DonorDashboard = () => {
   };
 
   const handlePayDonation = async () => {
-    if (!payForm.amount) { alert("Amount is required."); return; }
+    if (!payForm.amount) { toast.warn("Amount is required."); return; }
     try {
       const { error } = await supabase.from("donations").insert({
         donor_name: donorName,
@@ -167,15 +169,15 @@ const DonorDashboard = () => {
         payment_method: payForm.payment_method,
         notes: payForm.notes || null,
       });
-      if (error) { alert("Error: " + error.message); return; }
-      alert("Donation recorded successfully!");
+      if (error) { toast.error("Error: " + error.message); return; }
+      toast.success("Donation recorded!");
       setShowPayForm(false);
       setPayForm({ student_id: "", amount: "", payment_date: "", payment_method: "online", notes: "" });
       // Refresh donations
       const { data: refreshed } = await supabase.from("donations").select("*").eq("donor_email", donorEmail);
       if (refreshed) setDonations(refreshed);
     } catch (err) {
-      alert("Error recording donation.");
+      toast.error("Error recording donation.");
     }
   };
 
@@ -190,8 +192,8 @@ const DonorDashboard = () => {
         amount: 0,
         is_current_sponsor: 1,
       });
-      if (error) { alert("Error: " + error.message); return; }
-      alert(`You are now sponsoring ${studentName}!`);
+      if (error) { toast.error("Error: " + error.message); return; }
+      toast.success(`You are now sponsoring ${studentName}!`);
       // Refresh mappings and available students
       const [mappingsRes] = await Promise.all([
         supabase.from("donor_mapping").select("*").eq("donor_email", donorEmail),
@@ -199,7 +201,7 @@ const DonorDashboard = () => {
       if (mappingsRes.data) setSponsoredStudents(mappingsRes.data);
       setAvailableStudents(prev => prev.filter(s => s.id !== studentId));
     } catch (err) {
-      alert("Error adopting student.");
+      toast.error("Error adopting student.");
     }
   };
 
@@ -243,6 +245,7 @@ const DonorDashboard = () => {
 
   return (
     <div className="app-container">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="dashboard-layout">
         <Sidebar onLogout={handleLogout} />
         <main className="main-content">
@@ -329,7 +332,7 @@ const DonorDashboard = () => {
               {sponsoredStudents.length === 0 ? (
                 <p style={{ color: "#888", padding: "1rem" }}>No student sponsorships yet.</p>
               ) : (
-                <table>
+                <table aria-label="Donation history">
                   <thead>
                     <tr>
                       <th>Student Name</th>
@@ -414,7 +417,7 @@ const DonorDashboard = () => {
                 <div className="card-header-flex">
                   <h2 className="card-header-title">Child Progress & Fee Status</h2>
                 </div>
-                <table>
+                <table aria-label="Sponsored students">
                   <thead>
                     <tr>
                       <th>Student</th>
@@ -458,7 +461,7 @@ const DonorDashboard = () => {
                 availableStudents.length === 0 ? (
                   <p style={{ color: "#888", padding: "1rem" }}>All students are currently sponsored.</p>
                 ) : (
-                  <table>
+                  <table aria-label="Student fee details">
                     <thead>
                       <tr>
                         <th>Name</th>

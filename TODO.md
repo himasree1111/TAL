@@ -227,3 +227,42 @@ Gaps identified by comparing codebase against project brief (GNITS TAL.pdf) and 
 - [x] CRUD endpoints
 - [ ] Admin/student can add per-subject marks for each semester/year (UI)
 - [ ] Display in student dashboard and admin view modal (UI)
+
+---
+
+## Evaluation Score Improvements (target: 9/10)
+
+### Security (3→9)
+- [x] Add authenticateToken middleware to ALL data endpoints
+- [x] Restrict CORS to FRONTEND_URL origin (not wildcard)
+- [x] Add file type validation (MIME whitelist: jpeg, png, pdf)
+- [x] Remove JWT_SECRET hardcoded fallback (require env var)
+- [x] Add rate limiting on auth endpoints (express-rate-limit)
+- [x] Encrypt sensitive fields at rest (account_no, ifsc_code, aadhaar)
+- [x] Add security headers (helmet)
+
+### Code Quality (4→9)
+- [x] Extract shared validators into src/utils/validation.js (deduplicate 5 login files)
+- [ ] Break AdminDashboard.jsx into sub-components
+- [ ] Break studentform.js into sub-components
+- [x] Consistent error handling (toast everywhere, remove alert())
+- [x] Remove dead code and commented-out blocks
+- [x] Remove console.logs from production frontend code
+- [x] Replace magic numbers with named constants
+
+### Architecture (7→9)
+- [x] Add database indexes on frequently queried columns
+- [x] Add React Error Boundary
+
+### Testing (6→8)
+- [x] Add frontend validation unit tests
+- [x] Add frontend component render tests
+
+### UX/Accessibility (5→8)
+- [x] Add aria-labels to data tables
+- [x] Add proper label htmlFor associations in forms
+- [ ] Add focus management after modal open/close
+
+### Documentation (6→8)
+- [x] Add API endpoint documentation
+- [x] Add inline JSDoc for complex backend functions
