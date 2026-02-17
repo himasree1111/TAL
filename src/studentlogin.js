@@ -1,5 +1,5 @@
 // src/StudentLogin.js
-{/*}
+/*
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -255,4 +255,4 @@ export default function StudentLogin() {
     </div>
   );
 }
-*/}
+*/
