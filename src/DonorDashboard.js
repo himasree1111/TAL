@@ -38,24 +38,24 @@ const Sidebar = ({ onLogout }) => (
       <h1 className="logo-text">Touch A Life</h1>
       <nav className="nav-menu">
         {NAV_ITEMS.map((item) => (
-          <a key={item.name} href="#" className={`nav-item ${item.active ? "active" : ""}`}>
+          <button key={item.name} type="button" className={`nav-item ${item.active ? "active" : ""}`}>
             <item.icon size={18} className="nav-icon" />
             {item.name}
-          </a>
+          </button>
         ))}
       </nav>
       <hr className="divider" />
       <nav className="nav-menu">
         {DONOR_ITEMS.map((item) => (
-          <a key={item.name} href="#" className="nav-item">
+          <button key={item.name} type="button" className="nav-item">
             <item.icon size={18} className="nav-icon" />
             {item.name}
-          </a>
+          </button>
         ))}
-        <a onClick={onLogout} className="nav-item" style={{ cursor: "pointer" }}>
+        <button type="button" onClick={onLogout} className="nav-item" style={{ cursor: "pointer" }}>
           <LogOut size={18} className="nav-icon" />
           Logout
-        </a>
+        </button>
       </nav>
     </div>
     <div className="support-box">
@@ -274,9 +274,9 @@ const DonorDashboard = () => {
             <div className="dashboard-card overview-list">
               <div className="card-header-flex">
                 <h2 className="card-header-title">Donation Overview</h2>
-                <a href="#" className="view-link">
+                <button type="button" className="view-link">
                   All Time <ChevronDown size={14} style={{ marginLeft: "4px" }} />
-                </a>
+                </button>
               </div>
               <div className="overview-items">
                 {overviewItems.map((item, index) => (
@@ -296,7 +296,7 @@ const DonorDashboard = () => {
             <div className="dashboard-card total-sale-chart">
               <div className="card-header-flex">
                 <h2 className="card-header-title">Annual Donation Progress</h2>
-                <a href="#" className="view-link-green">View Progress</a>
+                <button type="button" className="view-link-green">View Progress</button>
               </div>
               <div className="chart-container">
                 <svg viewBox="0 0 140 140" className="chart-svg">

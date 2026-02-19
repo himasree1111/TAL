@@ -97,7 +97,7 @@ export default function CoverPage() {
 
         {/* Secondary Low-Friction CTA */}
         <p className="secondary-cta">
-          Need details first? <a href="#" className="explore-link">Explore Our Impact Stories</a>
+          Need details first? <button type="button" className="explore-link">Explore Our Impact Stories</button>
         </p>
 
       </main>

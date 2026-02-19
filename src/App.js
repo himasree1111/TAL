@@ -8,10 +8,10 @@ import LoginProfiles from "./loginProfiles";
 import VolunteerLogin from "./volunteerlogin";
 import DonorLogin from "./donorlogin";
 import Register from "./register";
-import StudentForm from "./studentform";
+import StudentForm from "./studentform/StudentForm";
 import StudentDashboard from "./studentdashboard";
 import DonorDashboard from "./DonorDashboard"; // <-- 1. IMPORT DonorDashboard
-import AdminDashboard from "./AdminDashboard"; // admin dashboard
+import AdminDashboard from "./admin/AdminDashboard"; // admin dashboard
 import Adminlogin from "./adminlogin";
 import VolunteerDashboard from "./VolunteerDashboard";
 import ResetPassword from "./ResetPassword";

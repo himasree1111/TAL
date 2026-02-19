@@ -282,7 +282,7 @@ const storageAdapter = {
         const folder = filePath.split("/")[0] || bucket;
         formData.append("folder", folder);
         try {
-          const { data } = await axios.post(`${API_BASE}/api/upload`, formData, {
+          await axios.post(`${API_BASE}/api/upload`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
           return { data: { path: filePath }, error: null };

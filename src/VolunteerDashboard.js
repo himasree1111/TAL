@@ -167,7 +167,7 @@ export default function VolunteerDashboard() {
       return;
     }
     try {
-      const { data, error } = await supabase.from("fee_payments").insert({
+      const { error } = await supabase.from("fee_payments").insert({
         student_id: parseInt(feePaymentForm.student_id),
         amount: parseFloat(feePaymentForm.amount),
         payment_date: feePaymentForm.payment_date || new Date().toISOString().split("T")[0],

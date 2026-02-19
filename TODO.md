@@ -85,6 +85,7 @@ Gaps identified by comparing codebase against project brief (GNITS TAL.pdf) and 
 - [x] Income Source (form UI field + payload)
 - [x] Monthly Income (form UI field + payload)
 - [x] No. of dependents (form UI field + payload)
+- [x] Members in Family (form UI field + payload)
 - [x] School/College Address (form UI field + payload)
 - [x] Update admin view modal to display new fields
 - [x] Update admin add/edit modal with all new fields
@@ -266,3 +267,73 @@ Gaps identified by comparing codebase against project brief (GNITS TAL.pdf) and 
 ### Documentation (6→8)
 - [x] Add API endpoint documentation
 - [x] Add inline JSDoc for complex backend functions
+
+---
+
+## GNITS TAL Brief — Additional Requirements
+
+### 20. Share student profile with donor (privacy-controlled)
+- [ ] Admin can generate a shareable profile view for a specific donor
+- [ ] Privacy controls: admin selects which fields to include/redact before sharing
+- [ ] Shareable as PDF or secure link
+> Note: GNITS PDF says "Donors will not have direct access to the platform" but Presentation gives donors full dashboard access. Current implementation follows Presentation spec (donor login exists). This feature bridges the gap — admin can share curated profiles even if donors have no login.
+
+### 21. Scheduled/automatic reminders
+- [ ] Automatic fee reminders to students when payment is due (based on fee_structures due dates)
+- [ ] Document submission deadline reminders
+- [ ] Event/workshop reminders tied to camps or scheduled events
+- [ ] Cron-based or scheduled job to send reminders (not just admin-initiated broadcasts)
+
+### 22. Email delivery for notifications
+- [ ] Email service integration (e.g., Nodemailer, SendGrid, or SES)
+- [ ] Send notification emails for: fee reminders, document upload alerts, broadcast messages
+- [ ] Configurable per-user email preference (opt-in/opt-out)
+
+### 23. Summary dashboards
+- [ ] Total funds utilized overview (admin/trustee)
+- [ ] Girl-wise report: total fees paid, balance, donor, academic status — all in one view
+- [ ] High-level KPI cards: total beneficiaries, total funds collected, total funds pending
+
+---
+
+## Optional / Future Phase (from GNITS TAL Brief)
+
+### 24. Mobile App (iOS/Android)
+- [ ] React Native or PWA version of the portal
+
+### 25. WhatsApp integration for alerts
+- [ ] WhatsApp Business API integration for sending reminders/alerts
+
+### 26. Mentorship / skill workshop tracking
+- [ ] Track mentoring sessions and skill workshops per student
+- [ ] Link to camp participation or create separate workshop tracking
+
+### 27. Career progress / alumni tracking
+- [ ] Alumni profiles with career progress updates
+- [ ] Post-scholarship outcome tracking
+
+---
+
+## Audit Summary
+
+### Presentation (Touch A Life Presentation (2).pdf)
+All requirements accounted for. Open items by stakeholder:
+- **Students:** Fee alert to trustees pending (#11 — requires #6)
+- **Volunteers:** Configure Fee Alerts (#12), Track Your Target (#12), Print Donation Receipts (#4/#12)
+- **Trustees:** Entire role not yet built — #6 (9 sub-items)
+- **Donors:** Online donation recording flow — #4
+- **Auditors:** Entire role not yet built — #7 (2 reports + filtering/export)
+- **Reports:** Monthly/Quarterly/Yearly Financial Need Report — #16
+- **Form Fields:** All confirmed present including Members in Family
+
+### GNITS TAL Brief (GNITS TAL (1).pdf)
+Most requirements already covered. New gaps added:
+- Share student profile with donor (privacy-controlled) — #20
+- Scheduled/automatic reminders — #21
+- Email delivery for notifications — #22
+- Summary dashboards (total funds, girl-wise, KPI cards) — #23
+- Optional/future: Mobile app (#24), WhatsApp (#25), Workshop tracking (#26), Alumni tracking (#27)
+
+**Profile fields:** All covered — photo (passport_photo), Aadhaar (aadhaar_url), academic year/stream (education dropdowns), all family/income fields.
+**Admin filters:** Donor filter already implemented in admin dashboard.
+**Payment history export:** Covered by existing fee reports with CSV/PDF export.

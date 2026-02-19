@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import supabase from "./supabaseClient";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AcademicRecordsPanel from "./AcademicRecordsPanel";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -423,6 +424,12 @@ const StudentDashboard = () => {
               </table>
             )}
           </section>
+
+          {student && (
+            <section className="academic-section">
+              <AcademicRecordsPanel studentId={student.id} readOnly={true} />
+            </section>
+          )}
         </main>
       </div>
     </div>

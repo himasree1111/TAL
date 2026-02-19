@@ -1,0 +1,1519 @@
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186111122@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186111122@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186111380@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186111380@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186111597@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186111597@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186111828@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186111828@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186112044@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186112044@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186112283@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186112283@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186112486@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186112486@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186112677@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186112677@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186112887@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186112887@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+PASS test/camps.test.js
+  POST /api/camps
+    ✓ should create a camp (300 ms)
+    ✓ should fail without name (217 ms)
+  GET /api/camps
+    ✓ should list all camps (232 ms)
+  PUT /api/camps/:id
+    ✓ should update a camp (215 ms)
+  DELETE /api/camps/:id
+    ✓ should delete a camp (239 ms)
+  POST /api/camp-participation
+    ✓ should register student for a camp (203 ms)
+    ✓ should prevent duplicate registration (191 ms)
+  GET /api/camp-participation
+    ✓ should list with camp and student details (210 ms)
+  PUT /api/camp-participation/:id
+    ✓ should update participation status (213 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186113193@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186113193@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186113461@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186113461@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186113671@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186113671@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186113866@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186113866@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186114054@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186114054@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 6
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186114258@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186114258@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 7
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 8
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186114454@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186114454@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 9
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186114634@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186114634@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 10
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 11
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186114815@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186114815@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 12
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form updated: 12
+
+      at log (server.js:800:13)
+
+  console.log
+    User registered: test_1771186115009@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186115009@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 13
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form deleted: 13
+
+      at log (server.js:813:13)
+
+PASS test/student-forms.test.js
+  POST /api/student-forms
+    ✓ should create a student form (273 ms)
+    ✓ should handle boolean fields (is_single_parent, does_work, has_scholarship) (209 ms)
+    ✓ should handle JSON array fields (196 ms)
+    ✓ should store and return family/income fields (188 ms)
+  GET /api/student-forms
+    ✓ should list all forms (203 ms)
+    ✓ should filter by volunteer_email (197 ms)
+    ✓ should return single form by id (179 ms)
+    ✓ should order by field (181 ms)
+  PUT /api/student-forms/:id
+    ✓ should update a form (195 ms)
+  DELETE /api/student-forms/:id
+    ✓ should delete a form (213 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: new@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    User registered: dup@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    User registered: login@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: login@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: wrong@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    User registered: sess@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: sess@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: user@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: user@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: upd@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: upd@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Login: upd@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: meta@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: meta@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: reset@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    
+    === PASSWORD RESET ===
+
+      at log (server.js:682:11)
+
+  console.log
+    Email: reset@example.com
+
+      at log (server.js:683:11)
+
+  console.log
+    Reset URL: http://localhost:3000/reset-password?token=a50239df92712c54e0cc377e7eeeaedfc00643be3a62314f796124862552fea1&role=volunteer
+
+      at log (server.js:684:11)
+
+  console.log
+    ======================
+
+      at log (server.js:685:11)
+
+PASS test/auth.test.js
+  POST /api/auth/signup
+    ✓ should register a new user successfully (110 ms)
+    ✓ should fail with missing fields (3 ms)
+    ✓ should fail with duplicate email (95 ms)
+  POST /api/auth/login
+    ✓ should login successfully (197 ms)
+    ✓ should fail with wrong password (196 ms)
+    ✓ should fail with non-existent user (3 ms)
+  GET /api/auth/session
+    ✓ should return session for valid token (186 ms)
+    ✓ should return null session with no token (1 ms)
+    ✓ should return null session for invalid token (2 ms)
+  GET /api/auth/user
+    ✓ should return user when authenticated (177 ms)
+    ✓ should fail when unauthenticated (1 ms)
+  PUT /api/auth/user
+    ✓ should update password (385 ms)
+    ✓ should update metadata (247 ms)
+  POST /api/auth/reset-password
+    ✓ should generate reset token (128 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186117112@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186117112@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186117305@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186117305@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186117473@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186117473@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186117673@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186117673@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186117884@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186117884@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186118122@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186118122@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 6
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186118373@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186118373@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 7
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186118602@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186118602@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 8
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186118828@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186118828@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 9
+
+      at log (server.js:779:13)
+
+PASS test/fee-payments.test.js
+  POST /api/fee-payments
+    ✓ should create a fee payment (200 ms)
+    ✓ should fail with missing required fields (168 ms)
+  GET /api/fee-payments
+    ✓ should list all payments (201 ms)
+    ✓ should filter by student_id (211 ms)
+  PUT /api/fee-payments/:id
+    ✓ should update a payment (237 ms)
+  DELETE /api/fee-payments/:id
+    ✓ should delete a payment (251 ms)
+  GET /api/fee-payments/summary
+    ✓ should calculate fee summary correctly (229 ms)
+    ✓ should filter by date range (227 ms)
+    ✓ should include study_category in summary (201 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186119115@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186119115@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186119328@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186119328@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186119665@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186119665@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186119924@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186119924@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186120131@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186120131@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186120334@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186120334@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186120551@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186120551@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186120748@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186120748@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+PASS test/donations.test.js
+  POST /api/donations
+    ✓ should create a donation (218 ms)
+    ✓ should fail without required fields (336 ms)
+    ✓ should link donation to student (259 ms)
+  GET /api/donations
+    ✓ should list all donations with student_name (207 ms)
+    ✓ should filter by donor_email (202 ms)
+  DELETE /api/donations/:id
+    ✓ should delete a donation (218 ms)
+  GET /api/donations/summary
+    ✓ should return donation summary (196 ms)
+    ✓ should filter by date range (215 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186121115@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186121115@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186121395@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186121395@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186121623@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186121623@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186121819@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186121819@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186122003@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186122003@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186122177@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186122177@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186122397@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186122397@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186122606@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186122606@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: v1@test.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    User registered: v2@test.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    User registered: d1@test.com (donor)
+
+      at log (server.js:522:13)
+
+PASS test/notifications.test.js
+  POST /api/notifications
+    ✓ should create a notification (337 ms)
+    ✓ should fail without title (230 ms)
+  GET /api/notifications
+    ✓ should list notifications for recipient (196 ms)
+    ✓ should filter unread only (184 ms)
+  PUT /api/notifications/:id/read
+    ✓ should mark notification as read (175 ms)
+  DELETE /api/notifications/:id
+    ✓ should delete a notification (219 ms)
+  POST /api/notifications/broadcast
+    ✓ should broadcast to specific emails (209 ms)
+    ✓ should broadcast to a role (624 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186123324@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186123324@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186123537@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186123537@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186123730@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186123730@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186123962@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186123962@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 6
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 7
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186124218@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186124218@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 8
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 9
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186124461@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186124461@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 10
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 11
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186124676@example.com (admin)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186124676@example.com (admin)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 12
+
+      at log (server.js:779:13)
+
+PASS test/admin.test.js
+  GET /api/admin/students
+    ✓ should list all students (219 ms)
+    ✓ should support ordering (193 ms)
+  PUT /api/admin/students/:id
+    ✓ should update student status (232 ms)
+  GET /api/admin/eligible
+    ✓ should return only eligible students (256 ms)
+    ✓ should support count_only mode (242 ms)
+  GET /api/admin/non-eligible
+    ✓ should return only non-eligible students (216 ms)
+    ✓ should support count_only mode (252 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186125037@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186125037@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186125314@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186125314@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186125629@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186125629@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186125911@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186125911@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186126232@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186126232@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186126495@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186126495@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186126767@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186126767@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 6
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186126992@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186126992@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 7
+
+      at log (server.js:779:13)
+
+PASS test/fee-structures.test.js
+  POST /api/fee-structures
+    ✓ should create a fee structure for a student (282 ms)
+    ✓ should fail without required fields (316 ms)
+    ✓ should upsert on conflict (same student_id) (282 ms)
+  GET /api/fee-structures
+    ✓ should list all fee structures with student_name (320 ms)
+    ✓ should filter by student_id (262 ms)
+    ✓ should return null for non-existent student (273 ms)
+  PUT /api/fee-structures/:id
+    ✓ should update a fee structure (225 ms)
+  DELETE /api/fee-structures/:id
+    ✓ should delete a fee structure (202 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186127291@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186127291@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186127519@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186127519@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186127734@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186127734@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186127952@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186127952@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186128144@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186128144@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186128326@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186128326@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+PASS test/donor-mappings.test.js
+  POST /api/donor-mappings
+    ✓ should create a donor mapping (234 ms)
+    ✓ should fail without required fields (215 ms)
+  GET /api/donor-mappings
+    ✓ should list all mappings with student_name join (217 ms)
+    ✓ should filter by donor_email (192 ms)
+  PUT /api/donor-mappings/:id
+    ✓ should update a mapping (181 ms)
+  DELETE /api/donor-mappings/:id
+    ✓ should delete a mapping (182 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186128585@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186128585@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186128808@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186128808@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186129057@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186129057@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186129309@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186129309@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186129505@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186129505@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+PASS test/documents.test.js
+  POST /api/documents
+    ✓ should upload a document and store metadata (229 ms)
+    ✓ should fail without a file (249 ms)
+  GET /api/documents
+    ✓ should list all documents (251 ms)
+    ✓ should filter by student_id (196 ms)
+  DELETE /api/documents/:id
+    ✓ should delete a document (204 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186129784@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186129784@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186129990@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186129990@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    User registered: test_1771186130189@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186130189@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186130385@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186130385@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186130584@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186130584@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 5
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186130789@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186130789@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 6
+
+      at log (server.js:779:13)
+
+PASS test/academic-records.test.js
+  POST /api/academic-records
+    ✓ should create an academic record (210 ms)
+    ✓ should fail without student_id or subject_name (199 ms)
+  GET /api/academic-records
+    ✓ should list all records with student name (196 ms)
+    ✓ should filter by student_id (199 ms)
+  PUT /api/academic-records/:id
+    ✓ should update marks and grade (204 ms)
+  DELETE /api/academic-records/:id
+    ✓ should delete a record (242 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186131172@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186131172@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186131469@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186131469@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 3
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186131775@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186131775@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 4
+
+      at log (server.js:779:13)
+
+PASS test/adoption.test.js
+  GET /api/students/available-for-adoption
+    ✓ should return students without a current sponsor (304 ms)
+    ✓ should return empty list when all are sponsored (306 ms)
+    ✓ should include students with past (non-current) sponsors (313 ms)
+
+  console.log
+    Database initialised
+
+      at log (server.js:437:11)
+
+  console.log
+    User registered: test_1771186132277@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186132277@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 1
+
+      at log (server.js:779:13)
+
+  console.log
+    User registered: test_1771186132575@example.com (volunteer)
+
+      at log (server.js:522:13)
+
+  console.log
+    Login: test_1771186132575@example.com (volunteer)
+
+      at log (server.js:561:13)
+
+  console.log
+    Student form(s) inserted: 2
+
+      at log (server.js:779:13)
+
+PASS test/upload-notifications.test.js
+  Document upload notifications
+    ✓ student upload should create notification for admin role (311 ms)
+    ✓ admin upload should create notification for student email (229 ms)
+
+Test Suites: 13 passed, 13 total
+Tests:       95 passed, 95 total
+Snapshots:   0 total
+Time:        22.245 s, estimated 26 s
+Ran all test suites.
