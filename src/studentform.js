@@ -615,7 +615,7 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
     };
 
     fetchStudent();
-  }, [id]);
+  }, [id, isEditMode]);
   const yesNoToBool = (val) => {
   if (typeof val === "boolean") return val;
   if (typeof val === "string") return val.toUpperCase() === "YES";

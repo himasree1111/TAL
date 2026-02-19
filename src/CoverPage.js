@@ -138,12 +138,12 @@ export default function CoverPage() {
       navigate('/adminlogin');
     }
   };
-
+/*
   const handleDonate = () => {
     // Navigate to a donation link or section
     console.log("Navigating to Donation Page...");
   };
-
+*/
   return (
     <div className="cover-container-minimal">
       {/* Header with Logo and Navigation */}
@@ -199,10 +199,11 @@ export default function CoverPage() {
         </p>
 
         {/* Secondary Low-Friction CTA */}
+        {/*
         <p className="secondary-cta">
           Need details first? <a href="#" className="explore-link">Explore Our Impact Stories</a>
         </p>
-
+*/}
       </main>
 
       {/* Contact Info Section */}

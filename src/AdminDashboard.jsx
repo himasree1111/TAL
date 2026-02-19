@@ -131,7 +131,8 @@ export default function AdminDashboard() {
    fetchUserData();
 fetchEligibleCount();
 fetchNonEligibleCount();
-}, []);
+}, [navigate]);
+
 
 
   // filters now include stream (course)
@@ -287,12 +288,12 @@ setEligibleCount(data?.length || 0);
     URL.revokeObjectURL(url);
     alert('Report downloaded successfully!');
   };
-
+/*
   const handleDelete = (id) => {
     if (!window.confirm("Delete this student record?")) return;
     setStudents((prev) => prev.filter((p) => p.id !== id));
   };
-
+*/
   // helpers
   const uniqueCourses = useMemo(() => {
     const set = new Set();
@@ -364,7 +365,7 @@ const handleNotApprove = async (id) => {
   };
 
   // --- New handlers for interactive buttons ---
-  const handleAddDonor = () => {
+  /*const handleAddDonor = () => {
     const name = window.prompt('Donor name');
     if (!name) return;
     const amount = window.prompt('Amount (number)');
@@ -373,7 +374,8 @@ const handleNotApprove = async (id) => {
     setDonors((d) => [...d, newDonor]);
     alert('Donor added (demo)');
   };
-
+  */
+/*
   const handleExportDonorReport = () => {
     const rows = ['id,name,amount,years', ...donors.map(d => `${d.id},${d.name},${d.amount},${d.years}`)];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
@@ -384,17 +386,19 @@ const handleNotApprove = async (id) => {
     a.click();
     URL.revokeObjectURL(url);
   };
+*/
 
   const handleContactDonor = (donor) => {
     const email = window.prompt('Enter email to contact ' + donor.name, 'donor@example.org');
     if (!email) return;
     window.location.href = `mailto:${email}?subject=Regarding%20support`;
   };
-
+/*
   const handleSendReminders = () => {
     alert('Reminders sent (demo)');
   };
-
+*/
+/*
   const handleDownloadFeeReport = () => {
     const rows = ['id,name,total,paid,balance,paidDate', ...students.map(s => {
       const total = 5000;
@@ -410,7 +414,8 @@ const handleNotApprove = async (id) => {
     a.click();
     URL.revokeObjectURL(url);
   };
-
+*/
+/*
   const handleViewHistory = (studentId) => {
     const s = students.find(x => x.id === studentId);
     alert(`Payment history (demo) for ${s?.name || studentId}`);
@@ -426,7 +431,7 @@ const handleNotApprove = async (id) => {
   const handleCreateBroadcastType = (type) => {
     alert(type + ' template opened (demo)');
   };
-
+*/
   const handleGenerateReport = () => {
     alert('Custom report generated (demo)');
   };
@@ -482,12 +487,12 @@ const handleNotApprove = async (id) => {
       alert('Error saving settings: ' + error.message);
     }
   };
-
+/*
   // When opening edit modal, create a shallow copy so editing doesn't mutate state directly
   const openEditModal = (s) => {
     setEditStudent({ ...s });
   };
-
+*/
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();

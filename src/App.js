@@ -1,8 +1,10 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import supabase from "./supabaseClient";
+/*import supabase from "./supabaseClient";
 import {testConnection } from "./testSupabase";
+*/
 import CoverPage from "./CoverPage";
+
 import StudentLogin from "./studentlogin";
 import LoginProfiles from "./loginProfiles";
 import VolunteerLogin from "./volunteerlogin";
@@ -24,7 +26,9 @@ function App() {
     <Router>
       <Routes>
         {/* Cover page shows first */}
+        
         <Route path="/" element={<CoverPage />} />
+        
 
         {/* Login profiles page */}
         <Route path="/login" element={<LoginProfiles />} />
