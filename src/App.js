@@ -1,5 +1,6 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 /*import supabase from "./supabaseClient";
 import {testConnection } from "./testSupabase";
 */
@@ -54,7 +55,8 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/adminlogin" element={<Adminlogin />} />
  {/* ⭐ THIS LINE IS THE MAIN FIX */}
-    <Route path="*" element={<CoverPage />} />
+ <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </Router>
   );
