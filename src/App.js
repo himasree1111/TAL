@@ -53,7 +53,8 @@ function App() {
         <Route path="/donor-dashboard" element={<DonorDashboard />} /> {/* <-- 2. ADD NEW ROUTE */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/adminlogin" element={<Adminlogin />} />
-
+ {/* ⭐ THIS LINE IS THE MAIN FIX */}
+    <Route path="*" element={<CoverPage />} />
       </Routes>
     </Router>
   );
