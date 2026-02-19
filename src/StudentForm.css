@@ -4,6 +4,10 @@
   padding: 0;
   box-sizing: border-box;
 }
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+}
 
 /* --- BACK BUTTON --- */
 .back-btn {
@@ -28,13 +32,15 @@
 /* --- MAIN CONTAINER --- */
 .form-container {
   width: 100%;
-  max-width: 1000px;
-  margin: 0 0 20px 0;
-  padding: 25px;
+  max-width: 1400px;   /* wider but still centered */
+  margin: 20px auto;
+  padding: 25px 40px;
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 0 15px rgba(0,0,0,0.15);
 }
+
+
 
 .form-title {
   text-align: center;
