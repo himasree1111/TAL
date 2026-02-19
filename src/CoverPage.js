@@ -100,6 +100,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CoverPage.css"; // Using the updated CSS
 
+
 export default function CoverPage() {
   const navigate = useNavigate();
   const [isRolesDropdownOpen, setIsRolesDropdownOpen] = useState(false);
@@ -125,19 +126,24 @@ export default function CoverPage() {
     setIsRolesDropdownOpen(!isRolesDropdownOpen);
   };
 
-  const handleRoleSelect = (role) => {
-    setIsRolesDropdownOpen(false);
-    // Navigate based on role
-    if (role === 'Volunteer') {
-      navigate('/volunteerlogin');
-    } else if (role === 'Student') {
-      navigate('/student-login');
-    } else if (role === 'Donor') {
-      navigate('/donorlogin');
-    } else if (role === 'Admin') {
-      navigate('/adminlogin');
-    }
-  };
+const handleRoleSelect = (role) => {
+  setIsRolesDropdownOpen(false);
+
+  // ⭐ ADD THIS LINE (VERY IMPORTANT)
+  sessionStorage.setItem("allowAccess", "true");
+
+  // Navigate based on role
+  if (role === 'Volunteer') {
+    navigate('/volunteerlogin');
+  } else if (role === 'Student') {
+    navigate('/student-login');
+  } else if (role === 'Donor') {
+    navigate('/donorlogin');
+  } else if (role === 'Admin') {
+    navigate('/adminlogin');
+  }
+};
+
 /*
   const handleDonate = () => {
     // Navigate to a donation link or section

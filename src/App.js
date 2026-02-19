@@ -1,11 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute"; // ⭐ ADD THIS
 
-/*import supabase from "./supabaseClient";
-import {testConnection } from "./testSupabase";
-*/
 import CoverPage from "./CoverPage";
-
 import StudentLogin from "./studentlogin";
 import LoginProfiles from "./loginProfiles";
 import VolunteerLogin from "./volunteerlogin";
@@ -13,50 +10,139 @@ import DonorLogin from "./donorlogin";
 import Register from "./register";
 import StudentForm from "./studentform";
 import StudentDashboard from "./studentdashboard";
-import DonorDashboard from "./DonorDashboard"; // <-- 1. IMPORT DonorDashboard
-import AdminDashboard from "./AdminDashboard"; // admin dashboard
+import DonorDashboard from "./DonorDashboard";
+import AdminDashboard from "./AdminDashboard";
 import Adminlogin from "./adminlogin";
 import VolunteerDashboard from "./VolunteerDashboard";
 import ResetPassword from "./ResetPassword";
-
-
-
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Cover page shows first */}
-        
+        {/* ✅ Only public page */}
         <Route path="/" element={<CoverPage />} />
-        
 
-        {/* Login profiles page */}
-        <Route path="/login" element={<LoginProfiles />} />
+        {/* 🔒 Protected Routes (cannot open by URL) */}
+        <Route
+          path="/login"
+          element={
+            <ProtectedRoute>
+              <LoginProfiles />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Volunteer auth */}
-        <Route path="/volunteerlogin" element={<VolunteerLogin />} />
-        <Route path="/volunteer-dashboard" element={<VolunteerDashboard />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/volunteerlogin"
+          element={
+            <ProtectedRoute>
+              <VolunteerLogin />
+            </ProtectedRoute>
+          }
+        />
 
+        <Route
+          path="/volunteer-dashboard"
+          element={
+            <ProtectedRoute>
+              <VolunteerDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/donorlogin" element={<DonorLogin />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/student-login"
+          element={
+            <ProtectedRoute>
+              <StudentLogin />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Student flow */}
-     <Route path="/studentform" element={<StudentForm />} />
-<Route path="/studentform/:id" element={<StudentForm />} />
+        <Route
+          path="/student-dashboard"
+          element={
+            <ProtectedRoute>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/student-login" element={<StudentLogin />} />
-        <Route path="/student-dashboard" element={<StudentDashboard />} />
-        
-        {/* Donor flow */}
-        <Route path="/donor-dashboard" element={<DonorDashboard />} /> {/* <-- 2. ADD NEW ROUTE */}
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/adminlogin" element={<Adminlogin />} />
- {/* ⭐ THIS LINE IS THE MAIN FIX */}
- <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/donorlogin"
+          element={
+            <ProtectedRoute>
+              <DonorLogin />
+            </ProtectedRoute>
+          }
+        />
 
+        <Route
+          path="/donor-dashboard"
+          element={
+            <ProtectedRoute>
+              <DonorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/adminlogin"
+          element={
+            <ProtectedRoute>
+              <Adminlogin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/studentform"
+          element={
+            <ProtectedRoute>
+              <StudentForm />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/studentform/:id"
+          element={
+            <ProtectedRoute>
+              <StudentForm />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/register"
+          element={
+            <ProtectedRoute>
+              <Register />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reset-password"
+          element={
+            <ProtectedRoute>
+              <ResetPassword />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ⭐ Catch all → always CoverPage */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
