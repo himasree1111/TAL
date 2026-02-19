@@ -1,122 +1,49 @@
-body {
+/* GLOBAL RESET – fixes screen issues on all devices */
+html, body, #root {
   margin: 0;
-  font-family: 'Poppins', 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #ffffff, #f3f0eb);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Box around your login form */
-.container {
-  background: #ffffff;
-  padding: 3rem 4rem;
-  border-radius: 20px;
-  border: 2px solid rgba(140, 198, 63, 0.4);
-  box-shadow: 0 10px 25px rgba(140, 198, 63, 0.2);
-  max-width: 420px;
-  width: 90%;
-  text-align: center;
-
-
-
-  /* ✅ More visible border and stronger shadow */
-  border: 2px solid rgba(140, 198, 63, 0.4);
-  box-shadow: 0 10px 25px rgba(140, 198, 63, 0.2);
-
-  max-width: 420px;
-  width: 90%;
-  text-align: center;
+/* Makes sizing consistent across all pages */
+* {
+  box-sizing: border-box;
 }
 
-/* ===== Header ===== */
-.header {
-  color: #1E1E1E;
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-}
-
-.header span {
-  color: #8CC63F;
-}
-
-/* ===== Form Labels & Inputs ===== */
-form label {
+/* Prevent images from breaking layout on small screens */
+img {
+  max-width: 100%;
+  height: auto;
   display: block;
-  text-align: left;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 8px;
 }
 
-form input[type="text"],
-form input[type="email"],
-form input[type="password"] {
-  width: 100%;
-  padding: 12px 14px;
-  margin-bottom: 20px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  background-color: #f9fafb;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-}
-
-form input[type="text"]:focus,
-form input[type="email"]:focus,
-form input[type="password"]:focus {
-  outline: none;
-  border-color: #8CC63F;
-  box-shadow: 0 0 0 3px rgba(140, 198, 63, 0.2);
-}
-
-/* ===== Button ===== */
+/* Buttons responsive by default */
 button {
-  width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #8CC63F, #B6E137);
-  color: #fff;
-  font-size: 1.05rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 10px;
+  max-width: 100%;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(140, 198, 63, 0.25);
+}
+/* Responsive text scaling */
+html {
+  font-size: 16px;
 }
 
-button:hover {
-  transform: scale(1.03);
-  box-shadow: 0 8px 20px rgba(140, 198, 63, 0.35);
-  background: linear-gradient(135deg, #7FBF3F, #A7D237);
-}
-
-/* ===== Link / Footer Text ===== */
-small, a {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-a {
-  text-decoration: none;
-  color: #8CC63F;
-  font-weight: 600;
-  margin-left: 5px;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 600px) {
-  .container {
-    padding: 2rem 1.5rem;
+@media (max-width: 1024px) {
+  html {
+    font-size: 15px;
   }
+}
 
-  .header {
-    font-size: 1.75rem;
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
   }
 }

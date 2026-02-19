@@ -4,31 +4,47 @@
   width: 100%;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
   background: #F6F7F6;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  box-sizing: border-box;
+
+  /* 🔥 REMOVE THESE */
+  /* position: fixed; */
+  /* top: 0; */
+  /* left: 0; */
+  /* right: 0; */
+  /* bottom: 0; */
+  /* overflow: hidden; */
+
+  /* ✅ ADD THIS */
+  position: relative;
+  overflow-x: hidden;
 }
+
 
 *, *:before, *:after {
   box-sizing: inherit;
 }
 
 .admin-sidebar{
-  width:260px;
+  width: 260px;
+  max-width: 80vw;
   background:#F6F7F6;
-  color:#fff;
   padding:24px 18px;
   box-shadow:2px 0 12px rgba(13,20,40,0.08);
-  position:fixed;
-  left:0; top:0; bottom:0;
+
+  position: sticky;
+  top: 0;
+
+  /* 🔥 CHANGE THIS */
+  min-height: 100vh;
+  height: auto;
+
   display:flex;
   flex-direction:column;
   justify-content:space-between;
 }
+
+
+
+
 .sidebar-top {
   flex-grow:1;
 }
@@ -76,11 +92,16 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: calc(100% - 260px);
+
+  /* 🔥 CHANGE THESE */
+  min-height: 100vh;  /* instead of height:100vh */
+  width: 100%;
+  max-width: 100%;
+
   position: relative;
   overflow-y: auto;
 }
+
 .admin-header{
   display: flex;
   justify-content: space-between;
@@ -813,11 +834,57 @@
 .modal input,.modal textarea,.modal select{width:100%;padding:8px;border-radius:8px;border:1px solid #e6ecec}
 
 /* responsive */
-@media(max-width:900px){
-  .admin-sidebar{position:relative;width:100%;display:flex;flex-direction:row;overflow:auto}
-  .admin-main{margin-left:0}
-  .header-actions input{min-width:120px}
+/* 📱 Tablet & Mobile Fix */
+@media (max-width: 900px) {
+  .admin-root {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 12px;
+  }
+
+  .admin-main {
+    margin-left: 0;
+    width: 100%;
+    min-height: auto;
+  }
+
+  .header-actions input {
+    min-width: 100px;
+    width: 100%;
+  }
 }
+
+/* 📱 Mobile phones */
+@media (max-width: 600px) {
+  .admin-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .admin-content {
+    padding: 16px;
+  }
+
+  .filters {
+    min-width: 100%;
+    flex-direction: column;
+  }
+
+  .manage-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .forgot-password {
   margin-top: 10px;
   text-align: center;

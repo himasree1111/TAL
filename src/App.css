@@ -1,12 +1,16 @@
 .App {
   text-align: center;
+  width: 100%;
+  min-height: 100vh;
 }
 
 .App-logo {
-  height: 40vmin;
+  height: 20vmin;
+  max-width: 100%;
   pointer-events: none;
 }
 
+/* Animation stays same */
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
@@ -20,12 +24,39 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+
+  /* Responsive font */
+  font-size: clamp(16px, 2.5vw, 24px);
   color: #333;
+
+  /* Important for small screens */
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .App-link {
   color: #61dafb;
+  word-break: break-word; /* Prevent overflow on small screens */
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 15px;
+    font-size: 18px;
+  }
+
+  .App-logo {
+    height: 25vmin;
+  }
+}
+
+/* Small mobile phones */
+@media (max-width: 480px) {
+  .App-header {
+    font-size: 16px;
+    padding: 10px;
+  }
 }
 
 @keyframes App-logo-spin {
