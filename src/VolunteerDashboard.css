@@ -129,10 +129,9 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  margin-left: 260px;
-  width: calc(100% - 260px);
   min-height: 100vh;
 }
+
 
 /* ===== HEADER ===== */
 .volunteer-dashboard .main-header {
