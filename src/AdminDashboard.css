@@ -834,11 +834,19 @@ html {
 
 /* 📱 Mobile phones */
 @media (max-width: 600px) {
+  /* Keep header professional & compact */
   .admin-header {
-    padding: 12px 16px;
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 14px 16px;
+    flex-direction: row;          /* 🔥 prevents giant stacked header */
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
+  }
+
+  /* Make search + actions go below neatly */
+  .header-actions {
+    width: 100%;
+    margin-top: 8px;
   }
 
   .admin-content {
@@ -854,47 +862,6 @@ html {
     flex-direction: column;
     align-items: stretch;
   }
-}
-
-.forgot-password {
-  margin-top: 10px;
-  text-align: center;
-  color: #6a5acd;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-.forgot-password:hover {
-  text-decoration: underline;
-}
-
-/* Custom checkbox styles */
-input[type="checkbox"] {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #6B6C69;
-  border-radius: 4px;
-  background: #FFFFFF;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-input[type="checkbox"]:checked {
-  background: rgba(127, 199, 74, 0.8);
-  border-color: rgba(127, 199, 74, 0.8);
-}
-
-input[type="checkbox"]:checked::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: bold;
 }
 /* 🔥 Fix logout button stretching on phones ONLY */
 @media (max-width: 900px) {
@@ -985,5 +952,78 @@ input[type="checkbox"]:checked::after {
 
   .admin-content {
     padding: 18px;
+  }
+}
+/* ================= MOBILE UI PROFESSIONAL FIX (NO DESIGN CHANGE) ================= */
+@media (max-width: 768px) {
+
+  /* Fix header layout */
+  .admin-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  /* Header actions (search + buttons) stack properly */
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* 🔥 FIX: Search bar becoming too big */
+  .header-actions input {
+    min-width: 0 !important;   /* removes 280px forcing */
+    width: 100%;
+    max-width: 100%;
+    font-size: 14px;
+  }
+
+  /* Align buttons like "New Broadcast" nicely */
+  .header-actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Manage section buttons (View / Approved / Not Approved) */
+  .data-table td:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+    padding-right: 12px;
+  }
+
+  .data-table td .btn {
+    flex: 1 1 auto;
+    min-width: 70px;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  /* Prevent ugly horizontal scroll everywhere */
+  .admin-root,
+  .admin-main,
+  .admin-content {
+    overflow-x: hidden !important;
+  }
+
+  /* Filters dropdown fix (very important for Manage Beneficiaries) */
+  .filters {
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filters select {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Manage controls box alignment */
+  .manage-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px;
   }
 }
