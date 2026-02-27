@@ -1001,11 +1001,21 @@ html {
     padding: 6px 8px;
   }
 
-  /* Prevent ugly horizontal scroll everywhere */
+  /* Allow horizontal scroll for tables while preventing body overflow */
   .admin-root,
   .admin-main,
   .admin-content {
     overflow-x: hidden !important;
+  }
+  
+  /* Enable horizontal scrolling for table containers */
+  .table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  .data-table {
+    min-width: 600px; /* Ensure table can overflow */
   }
 
   /* Filters dropdown fix (very important for Manage Beneficiaries) */
