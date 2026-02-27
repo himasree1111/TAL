@@ -811,6 +811,13 @@ html {
 /* Show tooltips on mobile devices where hover doesn't work */
 @media (max-width: 768px) {
   .tooltip .tooltiptext {
+    visibility: hidden;
+    opacity: 0;
+  }
+  
+  /* Show tooltip when parent is tapped/focused */
+  .tooltip:active .tooltiptext,
+  .tooltip:focus-within .tooltiptext {
     visibility: visible;
     opacity: 1;
   }
@@ -999,6 +1006,11 @@ html {
     min-width: 70px;
     font-size: 12px;
     padding: 6px 8px;
+  }
+  
+  /* Tooltip container spacing */
+  .tooltip {
+    margin: 2px 0;
   }
 
   /* Allow horizontal scroll for tables while preventing body overflow */
