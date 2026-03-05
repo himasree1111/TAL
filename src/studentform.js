@@ -59,6 +59,7 @@ export default function StudentForm() {
     educationyear_custom: "",
     email: "",
     contact: "",
+    parent_contact_2: "",
     whatsapp: "",
     student_contact: "",
     school: "",
@@ -122,7 +123,14 @@ has_scholarship: "",
     }
 
     // Phone fields (exactly 10 digits)
-    if (name === "contact" || name === "whatsapp" || name === "volunteer_contact") {
+    if (name === "contact" || name === "whatsapp" || name === "volunteer_contact" || name === "parent_contact_2") {
+      if (name === "parent_contact_2") {
+        // Second parent contact is optional
+        if (!value) return "";
+        if (!/^\d{10}$/.test(value)) return "Must be exactly 10 digits";
+        return "";
+      }
+      // For other mandatory phone fields
       if (!value || !/^\d{10}$/.test(value)) {
         return "Must be exactly 10 digits";
       }
@@ -212,7 +220,7 @@ has_scholarship: "",
     let { value } = e.target;
 
     // PHONE FIELDS: block non-digits and limit to 10
-    if (["contact", "whatsapp", "student_contact", "volunteer_contact"].includes(name)) {
+    if (["contact", "whatsapp", "student_contact", "volunteer_contact", "parent_contact_2"].includes(name)) {
       // remove non-digits
       value = value.replace(/\D/g, "");
       // limit length to 10 digits
@@ -465,10 +473,11 @@ has_scholarship: "",
       { key: 'first_name', label: 'First Name' },
       { key: 'last_name', label: 'Last Name' },
       { key: 'email', label: 'Email' },
-      { key: 'contact', label: 'Parent Number' },
+      { key: 'contact', label: 'First Parent Contact Number' },
       { key: 'volunteer_name', label: 'Volunteer Name' },
       { key: 'volunteer_contact', label: 'Volunteer Contact Number' },
-      { key: 'camp_date', label: 'Date of Camp' }
+      { key: 'camp_date', label: 'Date of Camp' },
+      { key: 'academic_achievements', label: 'Academic Achievements' }
     ];
 
     const missing = mandatoryFields.filter(f => {
@@ -716,6 +725,7 @@ const isSingleParent = yesNoToBool(formData.is_single_parent);
 
   email: formData.email,
   contact: formData.contact,
+  parent_contact_2: formData.parent_contact_2 || null,
   whatsapp: formData.whatsapp,
   student_contact: formData.student_contact || null,
 
@@ -1054,6 +1064,10 @@ has_scholarship: "",
               {errors.age && <p className="error-text">{errors.age}</p>}
             </label>
             <label>
+              <span className="field-label">Student's Address<span className="required">*</span></span>
+              <input type="text" name="address" value={formData.address} onChange={handleInputChange} required />
+            </label>
+            <label>
               <span className="field-label">Name of Camp<span className="required">*</span></span>
               <input type="text" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
             </label>
@@ -1061,15 +1075,11 @@ has_scholarship: "",
               <span className="field-label">Date of Camp<span className="required">*</span></span>
               <input type="date" name="camp_date" value={formData.camp_date} onChange={handleInputChange} required />
             </label>
-            <label>
-              <span className="field-label">Student's Address<span className="required">*</span></span>
-              <input type="text" name="address" value={formData.address} onChange={handleInputChange} required />
-            </label>
           </div>
 
           <div className="form-group">
             <label>
-              <span className="field-label">Parent's Contact Number<span className="required">*</span></span>
+              <span className="field-label">First Parent's Contact Number<span className="required">*</span></span>
               <input
                 type="text"
                 name="contact"
@@ -1080,6 +1090,18 @@ has_scholarship: "",
                 required
               />
               {errors.contact && <p className="error-text">{errors.contact}</p>}
+            </label>
+            <label>
+              <span className="field-label">Second Parent's Contact Number</span>
+              <input
+                type="text"
+                name="parent_contact_2"
+                value={formData.parent_contact_2}
+                onChange={handleInputChange}
+                maxLength={10}
+                className={errors.parent_contact_2 ? "input-error" : ""}
+              />
+              {errors.parent_contact_2 && <p className="error-text">{errors.parent_contact_2}</p>}
             </label>
             <label>
               <span className="field-label">Whatsapp Number(For Communication)<span className="required">*</span></span>
@@ -1154,7 +1176,7 @@ has_scholarship: "",
 
           <div className="form-group">
             <label className="full-width">
-              <span className="field-label">Total number of family members?<span className="required">*</span></span>
+              <span className="field-label">Total number of family members?(Excluding student)<span className="required">*</span></span>
               <input
                 type="number"
                 name="num_family_members"
@@ -1220,6 +1242,7 @@ has_scholarship: "",
                 value={formData.prev_percent} 
                 onChange={handleInputChange} 
                 className={errors.prev_percent ? "input-error" : ""}
+                placeholder="Enter with percentage symbol, e.g. 85%"
                 required 
               />
               {errors.prev_percent && <p className="error-text">{errors.prev_percent}</p>}
@@ -1232,6 +1255,7 @@ has_scholarship: "",
                 value={formData.present_percent} 
                 onChange={handleInputChange} 
                 className={errors.present_percent ? "input-error" : ""}
+                 placeholder="Enter with percentage symbol, e.g. 85%"
                 required 
               />
               {errors.present_percent && <p className="error-text">{errors.present_percent}</p>}
@@ -1366,13 +1390,15 @@ has_scholarship: "",
         {/* --- Other Questions --- */}
         <div className="form-group">
           <label className="full-width">
-            Academic Achievements
+            Academic Achievements<span className="required">*</span>
             <input
               type="text"
               name="academic_achievements"
               value={formData.academic_achievements}
               onChange={handleInputChange}
+              className={errors.academic_achievements ? "input-error" : ""}
             />
+            {errors.academic_achievements && <p className="error-text">{errors.academic_achievements}</p>}
           </label>
 
           <label className="full-width">
@@ -1405,51 +1431,49 @@ has_scholarship: "",
           {renderUploadField("Income Proof", "income_proof")}
           {renderUploadField("Marks Sheet (Last & Present Year)", "marksheet")}
           {renderUploadField("Passport Size Photo", "passport_photo")}
-
-          <div className="upload-field">
-            <span className="bank-details-title">Bank Account Details</span>
-            <div className="form-group">
-              <label>
-                <span className="field-label">Account No.<span className="form-group"></span></span>
-                <input
-                  type="text"
-                  name="account_no"
-                  value={formData.account_no || ""}
-                  onChange={handleInputChange}
-                  className={errors.account_no ? "input-error" : ""}
-                  
-                />
-                {errors.account_no && <p className="error-text">{errors.account_no}</p>}
-              </label>
-              <label>
-                <span className="field-label">Bank Name<span className="form-group"></span></span>
-                <input type="text" name="bank_name" value={formData.bank_name || ""} onChange={handleInputChange}  />
-              </label>
-              <label>
-                <span className="field-label">Branch<span className="form-group"></span></span>
-                <input type="text" name="bank_branch" value={formData.bank_branch || ""} onChange={handleInputChange}  />
-              </label>
-              <label>
-                <span className="field-label">Enter valid IFSC Code<span className="form-group"></span></span>
-                <input
-                  type="text"
-                  name="ifsc_code"
-                  value={formData.ifsc_code || ""}
-                  onChange={handleInputChange}
-                  className={errors.ifsc_code ? "input-error" : ""}
-                  
-                />
-                {errors.ifsc_code && <p className="error-text">{errors.ifsc_code}</p>}
-              </label>
-            </div>
-          </div>
-
           {renderUploadField("Fees Receipt (Upload / Text)", "fees_receipt")}
+        </div>
+
+        {/* Bank Account Details */}
+        <div className="section">
+          <h2>6. Bank Account Details</h2>
+          <div className="form-group">
+            <label>
+              <span className="field-label">Account No.</span>
+              <input
+                type="text"
+                name="account_no"
+                value={formData.account_no || ""}
+                onChange={handleInputChange}
+                className={errors.account_no ? "input-error" : ""}
+              />
+              {errors.account_no && <p className="error-text">{errors.account_no}</p>}
+            </label>
+            <label>
+              <span className="field-label">Bank Name</span>
+              <input type="text" name="bank_name" value={formData.bank_name || ""} onChange={handleInputChange} />
+            </label>
+            <label>
+              <span className="field-label">Branch</span>
+              <input type="text" name="bank_branch" value={formData.bank_branch || ""} onChange={handleInputChange} />
+            </label>
+            <label>
+              <span className="field-label">Enter valid IFSC Code</span>
+              <input
+                type="text"
+                name="ifsc_code"
+                value={formData.ifsc_code || ""}
+                onChange={handleInputChange}
+                className={errors.ifsc_code ? "input-error" : ""}
+              />
+              {errors.ifsc_code && <p className="error-text">{errors.ifsc_code}</p>}
+            </label>
+          </div>
         </div>
 
         {/* Special Remarks */}
         <div className="section">
-          <h2>6. Special Remarks</h2>
+          <h2>7. Special Remarks</h2>
           <textarea name="special_remarks" value={formData.special_remarks} onChange={handleInputChange} placeholder="Any additional notes or comments" rows={4} style={{ width: "100%" }}></textarea>
         </div>
 

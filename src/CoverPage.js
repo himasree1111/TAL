@@ -144,12 +144,11 @@ const handleRoleSelect = (role) => {
   }
 };
 
-/*
-  const handleDonate = () => {
-    // Navigate to a donation link or section
-    console.log("Navigating to Donation Page...");
-  };
-*/
+// eslint-disable-next-line no-unused-vars
+const handleDonate = () => {
+  // Navigate to a donation link or section
+  console.log("Navigating to Donation Page...");
+};
   return (
     <div className="cover-container-minimal">
       {/* Header with Logo and Navigation */}
@@ -207,7 +206,7 @@ const handleRoleSelect = (role) => {
         {/* Secondary Low-Friction CTA */}
         {/*
         <p className="secondary-cta">
-          Need details first? <a href="#" className="explore-link">Explore Our Impact Stories</a>
+          Need details first? <a href="#" role="button" className="explore-link">Explore Our Impact Stories</a>
         </p>
 */}
       </main>

@@ -180,7 +180,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
 
           {educationcategory && (!hassubcategories || educationsubcategory) && (
             <label style={{ marginTop: "12px" }}>
-              <span className="field-label">Academic Year<span className="required">*</span></span>
+              <span className="field-label">Currently Pursuing Year<span className="required">*</span></span>
               <select
                 name="educationyear"
                 value={educationyear || ""}

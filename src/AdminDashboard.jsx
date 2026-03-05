@@ -3,6 +3,23 @@ import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 import supabase from "./supabaseClient";
 
+// Utility function to convert UTC to IST (Indian Standard Time)
+const formatToIST = (dateString) => {
+  if (!dateString) return "—";
+  const utcDate = new Date(dateString);
+  const istOptions = {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  };
+  return new Intl.DateTimeFormat('en-IN', istOptions).format(utcDate);
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
@@ -1313,7 +1330,7 @@ const handleNotApprove = async (id) => {
 
         {/* CREATED AT */}
         <p><strong>Record Created:</strong> 
-          {viewStudent.created_at ? new Date(viewStudent.created_at).toLocaleString() : "—"}
+          {formatToIST(viewStudent.created_at)}
         </p>
 
       </div>
@@ -1431,11 +1448,7 @@ const handleNotApprove = async (id) => {
               {/* <p><strong>Camp name:</strong> {viewEligibleStudent.year || '-'}</p> */}
               <p><strong>School:</strong> {viewEligibleStudent.school || '-'}</p>
               {/* <p><strong>College:</strong> {viewEligibleStudent.college || '-'}</p> */}
-              <p><strong>Date Added:</strong> {
-                viewEligibleStudent.created_at 
-                  ? new Date(viewEligibleStudent.created_at).toLocaleString()
-                  : '-'
-              }</p>
+              <p><strong>Date Added:</strong> {formatToIST(viewEligibleStudent.created_at)}</p>
               {viewEligibleStudent.student_id && (
                 <p><strong>Student ID:</strong> {viewEligibleStudent.student_id}</p>
               )}
@@ -1463,11 +1476,7 @@ const handleNotApprove = async (id) => {
               <p><strong>School:</strong> {viewNonEligibleStudent.school || '-'}</p>
              
               
-              <p><strong>Date Added:</strong> {
-                viewNonEligibleStudent.created_at 
-                  ? new Date(viewNonEligibleStudent.created_at).toLocaleString()
-                  : '-'
-              }</p>
+              <p><strong>Date Added:</strong> {formatToIST(viewNonEligibleStudent.created_at)}</p>
               {viewNonEligibleStudent.student_id && (
                 <p><strong>Student ID:</strong> {viewNonEligibleStudent.student_id}</p>
               )}
