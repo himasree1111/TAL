@@ -68,6 +68,15 @@ export default function StudentForm() {
     present_percent: "",
     fee: "",
     fee_structure: "",
+    educational_expenses: {
+      tuition_fee: { checked: false, amount: "" },
+      books_study_materials: { checked: false, amount: "" },
+      uniform: { checked: false, amount: "" },
+      transport_fee: { checked: false, amount: "" },
+      examination_fee: { checked: false, amount: "" },
+      hostel_accommodation: { checked: false, amount: "" },
+      food_mess_charges: { checked: false, amount: "" }
+    },
     job: "",
     aspiration: "",
     scholarship: "",
@@ -193,11 +202,28 @@ has_scholarship: "",
       return "";
     }
 
-    // Fee structure: only numbers, decimal points, and currency symbols
+    // Fee structure validation - at least one expense should be selected with amount
     if (name === "fee_structure") {
       if (!value) return "Tuition Fee is required";
       if (!/^[\d\s.,₹$£€¥\-\s]+$/.test(value)) {
         return "Only numbers, currency symbols, and punctuation are allowed";
+      }
+      return "";
+    }
+
+    // Educational expenses validation
+    if (name === "educational_expenses") {
+      const expenses = formData.educational_expenses;
+      const hasAtLeastOneChecked = Object.values(expenses).some(exp => exp.checked);
+      if (!hasAtLeastOneChecked) {
+        return "Please select at least one educational expense category";
+      }
+      
+      // Validate that checked items have amounts
+      for (const [key, exp] of Object.entries(expenses)) {
+        if (exp.checked && (!exp.amount || exp.amount.trim() === "")) {
+          return `Please enter amount for ${key.replace(/_/g, ' ')}`;
+        }
       }
       return "";
     }
@@ -252,6 +278,30 @@ has_scholarship: "",
     // Fee structure: only allow numbers, currency symbols, and punctuation
     if (name === "fee_structure") {
       value = value.replace(/[^\d.,₹$£€¥\-\s]/g, ""); // Allow digits, currency symbols, punctuation, and spaces
+    }
+
+    // Handle educational expense checkboxes and amounts
+    if (name.startsWith("educational_expense_") || name.startsWith("expense_amount_")) {
+      const expenseKey = name.split('_')[2]; // Extract expense key like "tuition_fee"
+      const updatedExpenses = { ...formData.educational_expenses };
+      
+      if (updatedExpenses[expenseKey]) {
+        if (name.startsWith("educational_expense_")) {
+          // Checkbox toggle
+          updatedExpenses[expenseKey].checked = e.target.checked;
+          // Clear amount if unchecked
+          if (!e.target.checked) {
+            updatedExpenses[expenseKey].amount = "";
+          }
+        } else if (name.startsWith("expense_amount_")) {
+          // Amount input - only numbers allowed
+          value = value.replace(/\D/g, ""); // Remove non-digits
+          updatedExpenses[expenseKey].amount = value;
+        }
+      }
+      
+      setFormData(prev => ({ ...prev, educational_expenses: updatedExpenses }));
+      return;
     }
 
     // Handle number of family members
@@ -624,6 +674,11 @@ updatedData.is_single_parent = data.is_single_parent ? "YES" : "NO";
 updatedData.does_work = data.does_work ? "YES" : "NO";
 updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
 
+      // Load educational expenses if they exist
+      if (data.educational_expenses) {
+        updatedData.educational_expenses = data.educational_expenses;
+      }
+
       setFormData(prev => ({
         ...prev,
         ...updatedData
@@ -738,6 +793,8 @@ earning_members: parseInt(formData.num_earning_members) || 0,
 
   fee: formData.fee || null,
   fee_structure: formData.fee_structure,
+  educational_expenses: formData.educational_expenses,
+  total_educational_expenses: calculateTotalExpenses(),
 
 is_single_parent: isSingleParent,
 
@@ -824,6 +881,15 @@ scholarship: hasScholarship ? formData.scholarship : null,
         present_percent: "",
         fee: "",
         fee_structure: "",
+        educational_expenses: {
+          tuition_fee: { checked: false, amount: "" },
+          books_study_materials: { checked: false, amount: "" },
+          uniform: { checked: false, amount: "" },
+          transport_fee: { checked: false, amount: "" },
+          examination_fee: { checked: false, amount: "" },
+          hostel_accommodation: { checked: false, amount: "" },
+          food_mess_charges: { checked: false, amount: "" }
+        },
         job: "",
         aspiration: "",
         scholarship: "",
@@ -951,6 +1017,84 @@ has_scholarship: "",
         ))}
       </div>
     );
+  };
+
+  // Render educational expense checkbox with amount input
+  const renderEducationalExpenseCheckbox = (label, expenseKey) => {
+    const expense = formData.educational_expenses[expenseKey];
+    const checkboxId = `expense_${expenseKey}`;
+    
+    return (
+      <div 
+        className={`educational-expense-item ${expense?.checked ? 'checked' : ''}`}
+        onClick={() => {
+          // Toggle checkbox when clicking anywhere on the card
+          const updatedExpenses = { 
+            ...formData.educational_expenses, 
+            [expenseKey]: { 
+              ...expense, 
+              checked: !expense?.checked,
+              amount: !expense?.checked ? expense?.amount : "" // Clear amount if unchecking
+            }
+          };
+          setFormData(prev => ({ ...prev, educational_expenses: updatedExpenses }));
+        }}
+      >
+        <label htmlFor={checkboxId} className="expense-checkbox-label">
+          <input
+            type="checkbox"
+            id={checkboxId}
+            name={`educational_expense_${expenseKey}`}
+            checked={expense?.checked || false}
+            onChange={(e) => {
+              e.stopPropagation(); // Prevent double-triggering
+              const updatedExpenses = { 
+                ...formData.educational_expenses, 
+                [expenseKey]: { 
+                  ...expense, 
+                  checked: e.target.checked,
+                  amount: e.target.checked ? expense?.amount : "" // Clear amount if unchecking
+                }
+              };
+              setFormData(prev => ({ ...prev, educational_expenses: updatedExpenses }));
+            }}
+          />
+          <span className="expense-label">{label}</span>
+        </label>
+        {expense?.checked && (
+          <input
+            type="number"
+            name={`expense_amount_${expenseKey}`}
+            value={expense?.amount || ""}
+            onChange={(e) => {
+              e.stopPropagation(); // Prevent card click from interfering
+              const value = e.target.value.replace(/\D/g, ""); // Only numbers
+              const updatedExpenses = { 
+                ...formData.educational_expenses, 
+                [expenseKey]: { ...expense, amount: value }
+              };
+              setFormData(prev => ({ ...prev, educational_expenses: updatedExpenses }));
+            }}
+            onClick={(e) => e.stopPropagation()} // Prevent card click when clicking input
+            placeholder="Enter amount"
+            min="0"
+            className="expense-amount-input"
+          />
+        )}
+      </div>
+    );
+  };
+
+  // Calculate total educational expenses
+  const calculateTotalExpenses = () => {
+    const expenses = formData.educational_expenses;
+    let total = 0;
+    for (const exp of Object.values(expenses)) {
+      if (exp.checked && exp.amount) {
+        total += parseFloat(exp.amount) || 0;
+      }
+    }
+    return total;
   };
 
   return (
@@ -1264,18 +1408,21 @@ has_scholarship: "",
 
           <div className="form-group">
             <label className="full-width">
-              <span className="field-label">Tuition Fee<span className="required">*</span></span>
-              <input 
-                type="text" 
-                name="fee_structure" 
-                value={formData.fee_structure || ""} 
-                onChange={handleInputChange} 
-                className={errors.fee_structure ? 'input-error' : ''} 
-                required 
-                placeholder="Enter tuition fee amount"
-              />
-              {errors.fee_structure && <p className="error-text">{errors.fee_structure}</p>}
+              <span className="field-label">Educational Expenses<span className="required">*</span></span>
             </label>
+            <div className="educational-expenses-container">
+              {renderEducationalExpenseCheckbox("Tuition Fee", "tuition_fee")}
+              {renderEducationalExpenseCheckbox("Books & Study Materials", "books_study_materials")}
+              {renderEducationalExpenseCheckbox("Uniform", "uniform")}
+              {renderEducationalExpenseCheckbox("Transport Fee", "transport_fee")}
+              {renderEducationalExpenseCheckbox("Examination Fee", "examination_fee")}
+              {renderEducationalExpenseCheckbox("Hostel / Accommodation Fee", "hostel_accommodation")}
+              {renderEducationalExpenseCheckbox("Food / Mess Charges", "food_mess_charges")}
+            </div>
+            <div className="total-expenses-summary">
+              <span>Total Educational Expenses: ₹{calculateTotalExpenses().toLocaleString('en-IN')}</span>
+            </div>
+            {errors.educational_expenses && <p className="error-text">{errors.educational_expenses}</p>}
           </div>
         </div>
 

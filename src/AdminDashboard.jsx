@@ -74,56 +74,49 @@ export default function AdminDashboard() {
         } else {
           console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
-  const transformedStudents = (studentData || []).map((student, index) => ({
-    id: student.id || index + 1,
-    student_id: student.student_id || student.id,  // VERY IMPORTANT
+  const transformedStudents = (studentData || []).map((student, index) => {
+    console.log("Full Student Object:", student);      // check all fields
+    console.log("Camp Date Value:", student.camp_date); // check camp_date specifically
 
-    /* TABLE COLUMNS */
-    name: student.full_name,           // Name column
-    // college: student.school,           // College column
-    year: student.class,               // Year column
-   // donor: student.volunteer_email || "None",
-    fee_status: student.fee_structure || "Not Provided",
-    course: student.educationcategory || "",
-    camp: student.camp_name,
-    campDate: student.created_at
-      ? new Date(student.created_at).toISOString().split("T")[0]
-      : "",
+    return {
+        id: student.id || index + 1,
+        student_id: student.student_id || student.id,  // VERY IMPORTANT
 
-    /* VIEW MODAL FIELDS */
-    full_name: student.full_name,
-    age: student.age,
-    // address: student.address,
-    // school: student.school,
-    class: student.class,
-    // branch: student.branch,
-    // certificates: student.certificates,
-    prev_percent: student.prev_percent,
-    present_percent: student.present_percent,
+        /* TABLE COLUMNS */
+        name: student.full_name,
+        year: student.class,
+        fee_status: student.fee_structure || "Not Provided",
+        course: student.educationcategory || "",
+        camp: student.camp_name,
 
-    /* Contacts */
-    email: student.email,
-    contact: student.contact,
-    whatsapp: student.whatsapp,
-    student_contact: student.student_contact,
+        // Camp Date
+        campDate: student.camp_date
+            ? new Date(student.camp_date).toISOString().split("T")[0]
+            : "",
 
-    /* Scholarship */
-    scholarship: student.scholarship,
-    has_scholarship: student.has_scholarship,
-    does_work: student.does_work,
-    earning_members: student.earning_members,
+        /* VIEW MODAL FIELDS */
+        full_name: student.full_name,
+        age: student.age,
+        class: student.class,
+        prev_percent: student.prev_percent,
+        present_percent: student.present_percent,
 
-    /* Fees */
-    // fee: student.fee,
-    // fee_structure: student.fee_structure,
-    // paidDate: student.fee_structure
-    //   ? new Date(student.created_at).toISOString().split("T")[0]
-    //   : "",
+        /* Contacts */
+        email: student.email,
+        contact: student.contact,
+        whatsapp: student.whatsapp,
+        student_contact: student.student_contact,
 
-    /* Other */
-    created_at: student.created_at
-}));
+        /* Scholarship */
+        scholarship: student.scholarship,
+        has_scholarship: student.has_scholarship,
+        does_work: student.does_work,
+        earning_members: student.earning_members,
 
+        /* Other */
+        created_at: student.created_at
+    };
+});
 
      setStudents(transformedStudents);
         }
