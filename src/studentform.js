@@ -67,7 +67,8 @@ export default function StudentForm() {
     prev_percent: "",
     present_percent: "",
     fee: "",
-    fee_structure: "",
+  
+
     educational_expenses: {
       tuition_fee: { checked: false, amount: "" },
       books_study_materials: { checked: false, amount: "" },
@@ -203,13 +204,8 @@ has_scholarship: "",
     }
 
     // Fee structure validation - at least one expense should be selected with amount
-    if (name === "fee_structure") {
-      if (!value) return "Tuition Fee is required";
-      if (!/^[\d\s.,₹$£€¥\-\s]+$/.test(value)) {
-        return "Only numbers, currency symbols, and punctuation are allowed";
-      }
-      return "";
-    }
+   
+
 
     // Educational expenses validation
     if (name === "educational_expenses") {
@@ -276,9 +272,7 @@ has_scholarship: "",
     }
 
     // Fee structure: only allow numbers, currency symbols, and punctuation
-    if (name === "fee_structure") {
-      value = value.replace(/[^\d.,₹$£€¥\-\s]/g, ""); // Allow digits, currency symbols, punctuation, and spaces
-    }
+   
 
     // Handle educational expense checkboxes and amounts
     if (name.startsWith("educational_expense_") || name.startsWith("expense_amount_")) {
@@ -518,7 +512,7 @@ has_scholarship: "",
       { key: 'class', label: 'Class' },
       { key: 'prev_percent', label: 'Previous Year Percentage' },
       { key: 'present_percent', label: 'Present Year Percentage' },
-      { key: 'fee_structure', label: 'Fee Structure' },
+  
       { key: 'num_earning_members', label: 'Number of Earning Members' },
       { key: 'first_name', label: 'First Name' },
       { key: 'last_name', label: 'Last Name' },
@@ -530,6 +524,10 @@ has_scholarship: "",
       { key: 'academic_achievements', label: 'Academic Achievements' }
     ];
 
+    const expenseError = validateField("educational_expenses");
+if (expenseError) {
+  newErrors.educational_expenses = expenseError;
+}
     const missing = mandatoryFields.filter(f => {
       const v = (formData[f.key] || '').toString().trim();
       return v === '';
@@ -601,6 +599,16 @@ has_scholarship: "",
     if (!formData.does_work) {
       newErrors.does_work = "Please select Yes or No for work question.";
     }
+    if (formData.does_work === "YES" && !formData.job.trim()) {
+  newErrors.job = "Please describe the job.";
+}
+    if (!formData.has_scholarship) {
+  newErrors.has_scholarship = "Please select Yes or No for scholarship question.";
+}
+
+if (formData.has_scholarship === "YES" && !formData.scholarship.trim()) {
+  newErrors.scholarship = "Please enter scholarship details.";
+}
 
     // Custom education field validations
     if (formData.educationcategory === "Other" && !formData.educationcategory_custom.trim()) {
@@ -792,7 +800,7 @@ earning_members: parseInt(formData.num_earning_members) || 0,
   earning_members_details: formData.earning_members_details,
 
   fee: formData.fee || null,
-  fee_structure: formData.fee_structure,
+ 
   educational_expenses: formData.educational_expenses,
   total_educational_expenses: calculateTotalExpenses(),
 
@@ -880,7 +888,7 @@ scholarship: hasScholarship ? formData.scholarship : null,
         prev_percent: "",
         present_percent: "",
         fee: "",
-        fee_structure: "",
+       
         educational_expenses: {
           tuition_fee: { checked: false, amount: "" },
           books_study_materials: { checked: false, amount: "" },
