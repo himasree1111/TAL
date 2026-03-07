@@ -321,41 +321,39 @@ setEligibleCount(data?.length || 0);
 
 const handleApprove = async (id) => {
   const { error } = await supabase
-    .from('admin_student_info')
-    .update({ status: 'Eligible' })
-    .eq('id', id);
+    .from("admin_student_info")
+    .update({ status: "Eligible" })
+    .eq("id", id);
 
   if (error) {
     console.error(error);
-    alert('Approval failed');
+    alert("Approval failed");
     return;
   }
 
-  // 👇 remove from UI immediately
   setStudents(prev => prev.filter(s => s.id !== id));
 
-  alert('Student approved ✅');
+  alert("Student approved ✅");
 };
 
 
 const handleNotApprove = async (id) => {
+  
   const { error } = await supabase
-    .from('admin_student_info')
-    .update({ status: 'Not Eligible' })
-    .eq('id', id);
+    .from("admin_student_info")
+    .update({ status: "Not Eligible" })
+    .eq("id", id);
 
   if (error) {
     console.error(error);
-    alert('Rejection failed');
+    alert("Update failed");
     return;
   }
 
-  // remove from UI
   setStudents(prev => prev.filter(s => s.id !== id));
 
-  alert('Student rejected ❌');
+  alert("Student marked Not Eligible ❌");
 };
-
 
 
 
