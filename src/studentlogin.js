@@ -78,9 +78,11 @@ export default function StudentLogin() {
       // ✅ SUCCESS
       toast.success("Login successful 🎉");
 
-      // (optional) store session locally
+      // Store session locally
       localStorage.setItem("studentEmail", cleanEmail);
+      localStorage.setItem("isStudentLoggedIn", "true");
 
+      console.log("Navigating to student-dashboard...");
       navigate("/student-dashboard");
 
     } catch (err) {

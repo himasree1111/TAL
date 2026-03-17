@@ -74,43 +74,42 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     const init = async () => {
-      const {
-        data: { user: currentUser },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !currentUser) {
+      // Check if student is logged in via localStorage
+      const studentEmail = localStorage.getItem("studentEmail");
+      const isStudentLoggedIn = localStorage.getItem("isStudentLoggedIn");
+      
+      if (!studentEmail || !isStudentLoggedIn) {
         navigate("/student-login");
         return;
       }
 
-      setUser(currentUser);
+      // For now, use a mock user object since we're not using Supabase Auth
+      const mockUser = {
+        id: "student-" + studentEmail,
+        email: studentEmail,
+        user_metadata: {}
+      };
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name, email, student_id, phone, program, semester, enrollment_date")
-        .eq("id", currentUser.id)
-        .single();
+      setUser(mockUser);
 
-      const fullName = profileData?.full_name || currentUser.user_metadata?.full_name || "Student";
-      const email = profileData?.email || currentUser.email || "";
+      const fullName = studentEmail.split('@')[0]; // Simple name from email
 
       setProfile({
         name: fullName,
-        email,
-        studentId: profileData?.student_id || "",
-        program: profileData?.program || "",
-        semester: profileData?.semester || "",
-        enrollmentDate: profileData?.enrollment_date || "",
+        email: studentEmail,
+        studentId: "", // Can be loaded from DB later if needed
+        program: "",
+        semester: "",
+        enrollmentDate: "",
       });
 
-      setSettings({ name: fullName, email, phone: profileData?.phone || "" });
+      setSettings({ name: fullName, email: studentEmail, phone: "" });
 
-      await loadNotifications(currentUser.id);
+      await loadNotifications(mockUser.id);
 
-      const subscription = subscribeToNotifications(currentUser.id, (payload) => {
+      const subscription = subscribeToNotifications(mockUser.id, (payload) => {
         if (payload?.new?.id) {
-          loadNotifications(currentUser.id);
+          loadNotifications(mockUser.id);
         }
       });
 
@@ -141,7 +140,9 @@ const StudentDashboard = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // Clear localStorage
+    localStorage.removeItem("studentEmail");
+    localStorage.removeItem("isStudentLoggedIn");
     navigate("/");
   };
 

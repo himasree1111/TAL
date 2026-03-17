@@ -63,14 +63,8 @@ function App() {
           }
         />
 
-        <Route
-          path="/student-dashboard"
-          element={
-            <ProtectedRoute>
-              <StudentDashboard />
-            </ProtectedRoute>
-          }
-        />
+        {/* Student Dashboard - No protection needed after login */}
+        <Route path="/student-dashboard" element={<StudentDashboard />} />
 
         <Route
           path="/donorlogin"
