@@ -15,6 +15,9 @@ import AdminDashboard from "./AdminDashboard";
 import Adminlogin from "./adminlogin";
 import VolunteerDashboard from "./VolunteerDashboard";
 import ResetPassword from "./ResetPassword";
+import SetPassword from "./SetPassword";
+
+
 
 function App() {
   return (
@@ -32,7 +35,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+<Route path="/set-password" element={<SetPassword />} />
         <Route
           path="/volunteerlogin"
           element={
