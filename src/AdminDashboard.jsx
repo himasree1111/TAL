@@ -313,22 +313,34 @@ setEligibleCount(data?.length || 0);
   }, [students]);
 
 const handleApprove = async (id) => {
-  const { error } = await supabase
-    .from("admin_student_info")
-    .update({ status: "Eligible" })
-    .eq("id", id);
+  const { data, error } = await supabase
+    .from('admin_student_info')
+    .update({ status: 'Eligible' })
+    .eq('id', id)
+    .select(); // 👈 IMPORTANT
 
   if (error) {
-    console.error(error);
-    alert("Approval failed");
+    console.error("FULL ERROR:", error);
+    alert(error.message); // 👈 show actual error
     return;
   }
 
   setStudents(prev => prev.filter(s => s.id !== id));
-
-  alert("Student approved ✅");
+  alert('Student approved ✅');
 };
+const fetchStudents = async () => {
+  const { data, error } = await supabase
+    .from('admin_student_info')
+    .select('*')
+    .eq('status', 'Pending'); // ✅ ADD THIS LINE
 
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setStudents(data);
+};
 
 const handleNotApprove = async (id) => {
   
