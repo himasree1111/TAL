@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 import supabase from "./supabaseClient";
+import { createNotification } from "./notificationService";
 
 // Utility function to convert UTC to IST (Indian Standard Time)
 const formatToIST = (dateString) => {
@@ -44,6 +45,13 @@ export default function AdminDashboard() {
   // const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [activeReportList, setActiveReportList] = useState(null);
 
+  // Notification state
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationAudience, setNotificationAudience] = useState("all");
+  const [notificationExpiresAt, setNotificationExpiresAt] = useState("");
+  const [creatingNotification, setCreatingNotification] = useState(false);
+
 
   // Fetch user and real data from Supabase
   useEffect(() => {
@@ -62,7 +70,7 @@ export default function AdminDashboard() {
 
         // Fetch student form submissions
        const { data: studentData, error: studentError } = await supabase
-  .from('admin_student_info')
+  .from('student_form_submissions')
   .select('*')
   .order('created_at', { ascending: false });
 
@@ -80,12 +88,12 @@ export default function AdminDashboard() {
 
     return {
         id: student.id || index + 1,
-        student_id: student.student_id || student.id,  // VERY IMPORTANT
+        student_id: student.id,  // Use the actual ID from student_form_submissions
 
         /* TABLE COLUMNS */
-        name: student.full_name,
+        name: `${student.first_name} ${student.last_name}`.trim(),
         year: student.class,
-        fee_status: student.fee_structure || "Not Provided",
+        fee_status: student.fee || "Not Provided",
         course: student.educationcategory || "",
         camp: student.camp_name,
 
@@ -95,7 +103,7 @@ export default function AdminDashboard() {
             : "",
 
         /* VIEW MODAL FIELDS */
-        full_name: student.full_name,
+        full_name: `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.trim(),
         age: student.age,
         class: student.class,
         prev_percent: student.prev_percent,
@@ -313,11 +321,18 @@ setEligibleCount(data?.length || 0);
   }, [students]);
 
 const handleApprove = async (id) => {
+<<<<<<< HEAD
   const { data, error } = await supabase
     .from('admin_student_info')
     .update({ status: 'Eligible' })
     .eq('id', id)
     .select(); // 👈 IMPORTANT
+=======
+  const { error } = await supabase
+    .from("student_form_submissions")
+    .update({ status: "Eligible" })
+    .eq("id", id);
+>>>>>>> bd32cbe331c0f40d34e64e46ee3982f4cdb5aa8d
 
   if (error) {
     console.error("FULL ERROR:", error);
@@ -345,7 +360,7 @@ const fetchStudents = async () => {
 const handleNotApprove = async (id) => {
   
   const { error } = await supabase
-    .from("admin_student_info")
+    .from("student_form_submissions")
     .update({ status: "Not Eligible" })
     .eq("id", id);
 
@@ -436,23 +451,6 @@ const handleNotApprove = async (id) => {
     URL.revokeObjectURL(url);
   };
 */
-/*
-  const handleViewHistory = (studentId) => {
-    const s = students.find(x => x.id === studentId);
-    alert(`Payment history (demo) for ${s?.name || studentId}`);
-  };
-
-  const handleRecordPayment = (studentId) => {
-    const today = new Date();
-    const iso = today.toISOString().split('T')[0]; // YYYY-MM-DD
-    setStudents(prev => prev.map(p => p.id === studentId ? { ...p, feeStatus: 'Paid', paidDate: iso } : p));
-    alert('Marked as Paid (demo)');
-  };
-
-  const handleCreateBroadcastType = (type) => {
-    alert(type + ' template opened (demo)');
-  };
-*/
   const handleGenerateReport = () => {
     alert('Custom report generated (demo)');
   };
@@ -523,6 +521,31 @@ const handleNotApprove = async (id) => {
     }
   };
 
+  // Handle creating notifications
+  const handleCreateNotification = async (e) => {
+    e.preventDefault();
+    setCreatingNotification(true);
+
+    const result = await createNotification(
+      notificationTitle,
+      notificationMessage,
+      notificationAudience,
+      notificationExpiresAt || null
+    );
+
+    if (result.success) {
+      alert("Notification created successfully!");
+      setNotificationTitle("");
+      setNotificationMessage("");
+      setNotificationAudience("all");
+      setNotificationExpiresAt("");
+    } else {
+      alert("Error creating notification: " + result.error);
+    }
+
+    setCreatingNotification(false);
+  };
+
   return (
     <div className="admin-root">
      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
@@ -569,7 +592,7 @@ const handleNotApprove = async (id) => {
         : activeSection === "fees" 
         ? "Fee Tracking (Under Construction)" 
         : activeSection === "broadcast" 
-        ? "Alerts & Broadcast (Under Construction)" 
+        ? "Alerts & Broadcast" 
         : activeSection === "reports" 
         ? "Reports & Exports" 
         : "Settings"}
@@ -937,69 +960,72 @@ const handleNotApprove = async (id) => {
             </section>
           )}
 */}
-          {/* Broadcast 
+          {/* Broadcast */} 
           {activeSection === "broadcast" && (
             <section className="broadcast-section">
               <div className="section-header">
-                <h3>Alerts & Broadcasts</h3>
-                <div className="section-actions">
-                  <button className="btn primary" onClick={() => setBroadcastOpen(true)}>New Broadcast</button>
-                </div>
+                <h3>Create Notification</h3>
               </div>
 
-              <div className="broadcast-types">
-                <div className="broadcast-card">
-                  <h4>Fee Reminders</h4>
-                  <p>Send automated reminders for fee payments</p>
-                  <button className="btn" onClick={() => handleCreateBroadcastType('Fee Reminder')}>Create Reminder</button>
+              <form onSubmit={handleCreateNotification} className="notification-form">
+                <div className="form-group">
+                  <label>
+                    <span className="field-label">Notification Title</span>
+                    <input
+                      type="text"
+                      value={notificationTitle}
+                      onChange={(e) => setNotificationTitle(e.target.value)}
+                      required
+                      placeholder="Enter notification title"
+                    />
+                  </label>
+                  <label>
+                    <span className="field-label">Target Audience</span>
+                    <select
+                      value={notificationAudience}
+                      onChange={(e) => setNotificationAudience(e.target.value)}
+                    >
+                      <option value="all">All Students</option>
+                      <option value="eligible">Eligible Students Only</option>
+                      <option value="non-eligible">Non-Eligible Students Only</option>
+                    </select>
+                  </label>
                 </div>
-                <div className="broadcast-card">
-                  <h4>Event Announcements</h4>
-                  <p>Broadcast upcoming events and activities</p>
-                  <button className="btn" onClick={() => handleCreateBroadcastType('Announcement')}>Create Announcement</button>
-                </div>
-                <div className="broadcast-card">
-                  <h4>Document Requests</h4>
-                  <p>Request necessary documents from students</p>
-                  <button className="btn" onClick={() => handleCreateBroadcastType('Document Request')}>Create Request</button>
-                </div>
-              </div>
 
-              <div className="broadcast-history">
-                <h4>Recent Broadcasts</h4>
-                <div className="table-wrap">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Message</th>
-                        <th>Recipients</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Nov 1, 2025</td>
-                        <td>Fee Reminder</td>
-                        <td>November fee payment reminder</td>
-                        <td>15 students</td>
-                        <td>Sent</td>
-                      </tr>
-                      <tr>
-                        <td>Oct 28, 2025</td>
-                        <td>Announcement</td>
-                        <td>Quarterly progress review meeting</td>
-                        <td>All students</td>
-                        <td>Sent</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="form-group">
+                  <label className="full-width">
+                    <span className="field-label">Message</span>
+                    <textarea
+                      value={notificationMessage}
+                      onChange={(e) => setNotificationMessage(e.target.value)}
+                      required
+                      rows={4}
+                      placeholder="Enter notification message"
+                    />
+                  </label>
                 </div>
-              </div>
+
+                <div className="form-group">
+                  <label>
+                    <span className="field-label">Expires At (Optional)</span>
+                    <input
+                      type="datetime-local"
+                      value={notificationExpiresAt}
+                      onChange={(e) => setNotificationExpiresAt(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={creatingNotification}
+                >
+                  {creatingNotification ? "Creating..." : "Create Notification"}
+                </button>
+              </form>
             </section>
           )}
-            */}
 
           {/* Reports */}
           {activeSection === "reports" && (
