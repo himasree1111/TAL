@@ -66,7 +66,7 @@ export default function StudentForm() {
     branch: "",
     prev_percent: "",
     present_percent: "",
-    fee: "",
+  
   
 
     educational_expenses: {
