@@ -11,92 +11,92 @@ export default function StudentLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [emailError, setEmailError] = useState("");
-  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const navigate = useNavigate();
 
-  // ---------------- VALIDATIONS ---------------- 
-
+  // ---------------- VALIDATION ----------------
   const validateEmail = (value) => {
+    if (!value.trim()) return "Email is required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       return "Please enter a valid email address";
     }
     return "";
   };
 
-  const validatePassword = (value) => {
-    const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("Must include a number");
-    if (!/[@$!%*?&]/.test(value))
-      errors.push("Must include a special character (@$!%*?&)");
-    if (value.length < 8)
-      errors.push("Must be at least 8 characters long");
-    return errors;
-  };
-
-  // ---------------- SUBMIT ---------------- 
-
+  // ---------------- SUBMIT ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const eError = validateEmail(email);
-    const pErrors = validatePassword(password);
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
 
+    const eError = validateEmail(cleanEmail);
     setEmailError(eError);
-    setPasswordErrors(pErrors);
 
-    if (eError || pErrors.length > 0) {
-      toast.error("Please fix the highlighted errors");
+    if (eError) {
+      toast.error(eError);
       return;
     }
 
     try {
-      // 🔍 Check in eligible_students table
+      // 🔍 Fetch user from DB
       const { data, error } = await supabase
         .from("eligible_students")
         .select("*")
-        .eq("email", email)
-        .single();
+        .ilike("email", cleanEmail)
+        .maybeSingle();
 
-      if (error || !data) {
+      console.log("DATA:", data);
+      console.log("ERROR:", error);
+
+      // ❌ Not found
+      if (!data) {
         toast.error("You are not eligible");
         return;
       }
 
-      // 🔐 FIRST TIME LOGIN
+      // 🔐 First-time login
       if (!data.password) {
-        toast.info("First time login - set password");
-        navigate("/set-password", { state: { email } });
+        toast.info("First time login - please set password");
+        navigate("/set-password", { state: { email: cleanEmail } });
         return;
       }
 
-      // 🔑 PASSWORD CHECK
-      if (data.password !== password) {
+      // ❌ Password not entered
+      if (!cleanPassword) {
+        toast.error("Please enter password");
+        return;
+      }
+
+      // 🔑 Password check
+      if ((data.password || "").trim() !== cleanPassword) {
         toast.error("Invalid credentials");
         return;
       }
 
       // ✅ SUCCESS
       toast.success("Login successful 🎉");
+
+      // (optional) store session locally
+      localStorage.setItem("studentEmail", cleanEmail);
+
       navigate("/student-dashboard");
 
     } catch (err) {
-      toast.error(err.message);
+      console.error(err);
+      toast.error("Something went wrong");
     }
   };
 
-  // ---------------- UI ---------------- 
-
+  // ---------------- UI ----------------
   return (
     <div className="auth-container">
       <div className="auth-box">
         <h1>Student Login</h1>
 
         <form onSubmit={handleSubmit}>
+          {/* EMAIL */}
           <input
             type="email"
             placeholder="Email Address"
@@ -109,17 +109,14 @@ export default function StudentLogin() {
           />
           {emailError && <p className="error-text">{emailError}</p>}
 
+          {/* PASSWORD */}
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="Password (leave empty if first time)"
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordErrors(validatePassword(e.target.value));
-              }}
+              onChange={(e) => setPassword(e.target.value)}
               style={{ paddingRight: "42px" }}
-              required
             />
 
             <span
@@ -138,21 +135,6 @@ export default function StudentLogin() {
             </span>
           </div>
 
-          {passwordErrors.length > 0 && (
-            <ul
-              style={{
-                color: "red",
-                fontSize: "0.9rem",
-                marginTop: "6px",
-                paddingLeft: "18px",
-              }}
-            >
-              {passwordErrors.map((err, index) => (
-                <li key={index}>{err}</li>
-              ))}
-            </ul>
-          )}
-
           <button type="submit">Login</button>
         </form>
 
@@ -163,9 +145,11 @@ export default function StudentLogin() {
             color: "#2563eb",
             cursor: "pointer",
           }}
-          onClick={() => toast.info("Use first-time login if no password")}
+          onClick={() =>
+            toast.info("If first time, just enter email and click login")
+          }
         >
-          Forgot password?
+          First time user?
         </p>
       </div>
 
