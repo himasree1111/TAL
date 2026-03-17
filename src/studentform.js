@@ -65,9 +65,11 @@ export default function StudentForm() {
     school: "",
     branch: "",
     prev_percent: "",
-    present_percent: "",  
-    
-      educational_expenses: {
+    present_percent: "",
+    fee: "",
+  
+
+    educational_expenses: {
       tuition_fee: { checked: false, amount: "" },
       books_study_materials: { checked: false, amount: "" },
       uniform: { checked: false, amount: "" },
@@ -201,7 +203,7 @@ has_scholarship: "",
       return "";
     }
 
-    // Fee structure validation - at least one expense should be selected with amount
+   
    
 
 
@@ -269,7 +271,7 @@ has_scholarship: "",
       }
     }
 
-    // Fee structure: only allow numbers, currency symbols, and punctuation
+    
    
 
     // Handle educational expense checkboxes and amounts
@@ -742,7 +744,8 @@ const doesWork = yesNoToBool(formData.does_work);
 const hasScholarship = yesNoToBool(formData.has_scholarship);
 const isSingleParent = yesNoToBool(formData.is_single_parent);
       // Prepare payload for Supabase. Map form fields to table columns.
-     const payload = {
+      console.log("Saving student form with volunteer_email:", volunteerEmail);
+      const payload = {
   volunteer_email: volunteerEmail,
   volunteer_name: formData.volunteer_name,
   volunteer_contact: formData.volunteer_contact,
@@ -797,8 +800,7 @@ earning_members: parseInt(formData.num_earning_members) || 0,
 
   earning_members_details: formData.earning_members_details,
 
- 
-
+  fee: formData.fee || null,
  
   educational_expenses: formData.educational_expenses,
   total_educational_expenses: calculateTotalExpenses(),
@@ -859,6 +861,7 @@ scholarship: hasScholarship ? formData.scholarship : null,
 
       // Success
       alert("🎉 Form submitted successfully!");
+      console.log("Form saved successfully, result:", result);
       setSuccessMessage("Form submitted successfully!");
       // Navigate back to dashboard and force refresh to show new form
       navigate('/volunteer-dashboard');
@@ -886,7 +889,7 @@ scholarship: hasScholarship ? formData.scholarship : null,
         branch: "",
         prev_percent: "",
         present_percent: "",
-       
+        fee: "",
        
         educational_expenses: {
           tuition_fee: { checked: false, amount: "" },
