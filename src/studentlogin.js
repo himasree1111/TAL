@@ -1,6 +1,6 @@
 // src/StudentLogin.js
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,29 +8,16 @@ import supabase from "./supabaseClient";
 import "./studentlogin.css";
 
 export default function StudentLogin() {
-  const [isSignIn, setIsSignIn] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordErrors, setPasswordErrors] = useState([]);
 
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   // ---------------- VALIDATIONS ---------------- 
-
-  const validateName = (value) => {
-    if (!value.trim()) return "Full name is required";
-    if (!/^[A-Za-z\s]+$/.test(value))
-      return "Name can contain only letters and spaces";
-    if (value.trim().length < 2)
-      return "Name must be at least 2 characters";
-    return "";
-  };
 
   const validateEmail = (value) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
@@ -51,117 +38,65 @@ export default function StudentLogin() {
     return errors;
   };
 
-  // ---------------- SESSION CHECK ---------------- 
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user?.user_metadata?.user_type === "student") {
-        navigate("/student-dashboard");
-      }
-      setLoading(false);
-    };
-    checkSession();
-  }, [navigate]);
-
   // ---------------- SUBMIT ---------------- 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const nError = !isSignIn ? validateName(name) : "";
     const eError = validateEmail(email);
     const pErrors = validatePassword(password);
 
-    setNameError(nError);
     setEmailError(eError);
     setPasswordErrors(pErrors);
 
-    if (nError || eError || pErrors.length > 0) {
+    if (eError || pErrors.length > 0) {
       toast.error("Please fix the highlighted errors");
       return;
     }
 
     try {
-      if (isSignIn) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+      // 🔍 Check in eligible_students table
+      const { data, error } = await supabase
+        .from("eligible_students")
+        .select("*")
+        .eq("email", email)
+        .single();
 
-        if (data.user.user_metadata.user_type !== "student") {
-          await supabase.auth.signOut();
-          toast.error("Access denied");
-          return;
-        }
-
-        toast.success("Login successful 🎉");
-        navigate("/student-dashboard");
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name,
-              user_type: "student",
-            },
-          },
-        });
-        if (error) throw error;
-
-        toast.success("Account created successfully 🎉");
-        setIsSignIn(true);
+      if (error || !data) {
+        toast.error("You are not eligible");
+        return;
       }
+
+      // 🔐 FIRST TIME LOGIN
+      if (!data.password) {
+        toast.info("First time login - set password");
+        navigate("/set-password", { state: { email } });
+        return;
+      }
+
+      // 🔑 PASSWORD CHECK
+      if (data.password !== password) {
+        toast.error("Invalid credentials");
+        return;
+      }
+
+      // ✅ SUCCESS
+      toast.success("Login successful 🎉");
+      navigate("/student-dashboard");
+
     } catch (err) {
       toast.error(err.message);
     }
   };
-
-  // ---------------- FORGOT PASSWORD ---------------- 
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      toast.error("Please enter your email first");
-      return;
-    }
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/reset-password",
-    });
-
-    if (error) toast.error(error.message);
-    else toast.success("Password reset email sent 📧");
-  };
-
-  if (loading) return <div>Loading...</div>;
 
   // ---------------- UI ---------------- 
 
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <h1>{isSignIn ? "Student Sign In" : "Student Sign Up"}</h1>
+        <h1>Student Login</h1>
 
         <form onSubmit={handleSubmit}>
-        
-          {!isSignIn && (
-            <>
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setNameError(validateName(e.target.value));
-                }}
-                required
-              />
-              {nameError && <p className="error-text">{nameError}</p>}
-            </>
-          )}
-
           <input
             type="email"
             placeholder="Email Address"
@@ -174,7 +109,6 @@ export default function StudentLogin() {
           />
           {emailError && <p className="error-text">{emailError}</p>}
 
-        
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -199,13 +133,11 @@ export default function StudentLogin() {
                 color: "#555",
                 fontSize: "18px",
               }}
-              title={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? "👁‍🗨" : "👁"}
             </span>
           </div>
 
-    
           {passwordErrors.length > 0 && (
             <ul
               style={{
@@ -221,33 +153,20 @@ export default function StudentLogin() {
             </ul>
           )}
 
-          <button type="submit">
-            {isSignIn ? "Sign In" : "Sign Up"}
-          </button>
+          <button type="submit">Login</button>
         </form>
 
-        <p className="switch-text">
-          {isSignIn ? "New here?" : "Already have an account?"}{" "}
-          <span onClick={() => setIsSignIn(!isSignIn)}>
-            {isSignIn ? "Create an account" : "Sign in"}
-          </span>
+        <p
+          style={{
+            marginTop: "10px",
+            textAlign: "center",
+            color: "#2563eb",
+            cursor: "pointer",
+          }}
+          onClick={() => toast.info("Use first-time login if no password")}
+        >
+          Forgot password?
         </p>
-
-        {isSignIn && (
-          <p
-            onClick={handleForgotPassword}
-            style={{
-              marginTop: "10px",
-              textAlign: "center",
-              color: "#2563eb",
-              cursor: "pointer",
-            }}
-            onMouseOver={(e) => (e.target.style.textDecoration = "underline")}
-            onMouseOut={(e) => (e.target.style.textDecoration = "none")}
-          >
-            Forgot password?
-          </p>
-        )}
       </div>
 
       <ToastContainer position="top-center" autoClose={3000} />
