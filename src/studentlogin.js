@@ -1,5 +1,5 @@
 // src/StudentLogin.js
-/*
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -145,7 +145,7 @@ export default function StudentLogin() {
         <h1>{isSignIn ? "Student Sign In" : "Student Sign Up"}</h1>
 
         <form onSubmit={handleSubmit}>
-          // NAME 
+        
           {!isSignIn && (
             <>
               <input
@@ -162,7 +162,6 @@ export default function StudentLogin() {
             </>
           )}
 
-          // EMAIL 
           <input
             type="email"
             placeholder="Email Address"
@@ -175,7 +174,7 @@ export default function StudentLogin() {
           />
           {emailError && <p className="error-text">{emailError}</p>}
 
-          // PASSWORD 
+        
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -206,7 +205,7 @@ export default function StudentLogin() {
             </span>
           </div>
 
-          // PASSWORD ERRORS 
+    
           {passwordErrors.length > 0 && (
             <ul
               style={{
@@ -255,4 +254,3 @@ export default function StudentLogin() {
     </div>
   );
 }
-*/
