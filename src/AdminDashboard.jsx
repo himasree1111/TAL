@@ -320,26 +320,34 @@ setEligibleCount(data?.length || 0);
     return Array.from(set);
   }, [students]);
 
-const handleApprove = async (id) => {
-  try {
-    const { error } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Eligible' })
-      .eq('id', id);
+const handleApprove = async (student) => {
+  // 1. insert into eligible
+  const { error: insertError } = await supabase
+    .from('eligible_students')
+    .insert([student]);
 
-    if (error) {
-      console.error(error);
-      alert(error.message);
-      return;
-    }
-
-    // ✅ remove from UI instantly
-    setStudents(prev => prev.filter(student => student.id !== id));
-
-  } catch (err) {
-    console.error(err);
-    alert("Something went wrong");
+  if (insertError) {
+    console.error(insertError);
+    alert("Insert failed");
+    return;
   }
+
+  // 2. delete from admin
+  const { error: deleteError } = await supabase
+    .from('admin_student_info')
+    .delete()
+    .eq('id', student.id);
+
+  if (deleteError) {
+    console.error(deleteError);
+    alert("Delete failed");
+    return;
+  }
+
+  // 3. update UI
+  setStudents(prev => prev.filter(s => s.id !== student.id));
+
+  alert("Moved to Eligible ✅");
 };
 const fetchStudents = async () => {
   const { data, error } = await supabase
@@ -355,25 +363,33 @@ const fetchStudents = async () => {
   setStudents(data);
 };
 
-const handleNotApprove = async (id) => {
-  
-  const { error } = await supabase
-    .from("student_form_submissions")
-    .update({ status: "Not Eligible" })
-    .eq("id", id);
+const handleNotApprove = async (student) => {
+  const { error: insertError } = await supabase
+    .from('non_eligible_students')
+    .insert([student]);
 
-  if (error) {
-    console.error(error);
-    alert("Update failed");
+  if (insertError) {
+    console.error(insertError);
+    alert("Insert failed");
+    alert(insertError.message);
     return;
   }
 
-  setStudents(prev => prev.filter(s => s.id !== id));
+  const { error: deleteError } = await supabase
+    .from('admin_student_info')
+    .delete()
+    .eq('id', student.id);
 
-  alert("Student marked Not Eligible ❌");
+  if (deleteError) {
+    console.error(deleteError);
+    alert("Delete failed");
+    return;
+  }
+
+  setStudents(prev => prev.filter(s => s.id !== student.id));
+
+  alert("Moved to Non-Eligible 🚫");
 };
-
-
 
 
 
