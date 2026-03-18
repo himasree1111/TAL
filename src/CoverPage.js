@@ -96,7 +96,7 @@
 // }
 
 // ...existing code...
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CoverPage.css"; // Using the updated CSS
 
@@ -104,6 +104,35 @@ import "./CoverPage.css"; // Using the updated CSS
 export default function CoverPage() {
   const navigate = useNavigate();
   const [isRolesDropdownOpen, setIsRolesDropdownOpen] = useState(false);
+  const [currentWord, setCurrentWord] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
+
+  // Dynamic words that cycle in the headline
+  const impactWords = ["Learn", "Dream", "Lead", "Grow", "Succeed", "Thrive"];
+
+  // Word cycling animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        setCurrentWord((prev) => (prev + 1) % impactWords.length);
+        setIsVisible(true);
+      }, 300); // Wait for fade out
+    }, 2500); // Change word every 2.5 seconds
+
+    return () => clearInterval(interval);
+  }, [impactWords.length]);
+
+  // Parallax scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleHome = () => {
     // Do nothing for now
@@ -186,29 +215,41 @@ const handleDonate = () => {
       </header>
 
       {/* Centered Hero Content */}
-      <main className="hero-content-minimal">
+      <main className="hero-content-minimal" style={{ transform: `translateY(${scrollY * 0.3}px)` }}>
         
         {/* Eyebrow Text (Context) */}
-        <p className="eyebrow-text">
+        <p className="eyebrow-text fade-in-up">
           For the Future of India's Daughters
         </p>
 
-        {/* Main Headline (Outcome-Focused) */}
+        {/* Main Headline with Dynamic Word */}
         <h2 className="main-headline">
-          Empower a Girl to <span className="highlight-text-minimal">Learn, Dream, and Lead</span>
+          Empower a Girl to{" "}
+          <span className="highlight-text-minimal dynamic-word">
+            {isVisible ? impactWords[currentWord] : ""}
+          </span>
         </h2>
         
-        {/* Subtext (Reduced Hesitation) */}
-        <p className="cta-subtext">
+        {/* Animated Subtext */}
+        <p className="cta-subtext slide-in-left">
           100% of your donation goes directly to educational needs.
         </p>
 
-        {/* Secondary Low-Friction CTA */}
-        {/*
-        <p className="secondary-cta">
-          Need details first? <a href="#" role="button" className="explore-link">Explore Our Impact Stories</a>
-        </p>
-*/}
+        {/* Animated Stats Counter */}
+        <div className="stats-container">
+          <div className="stat-item fade-in-up" style={{ animationDelay: "0.2s" }}>
+            <div className="stat-number">500+</div>
+            <div className="stat-label">Students Impacted</div>
+          </div>
+          <div className="stat-item fade-in-up" style={{ animationDelay: "0.4s" }}>
+            <div className="stat-number">50+</div>
+            <div className="stat-label">Schools Partnered</div>
+          </div>
+          <div className="stat-item fade-in-up" style={{ animationDelay: "0.6s" }}>
+            <div className="stat-number">100%</div>
+            <div className="stat-label">Transparent</div>
+          </div>
+        </div>
       </main>
 
       {/* Contact Info Section */}
