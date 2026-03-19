@@ -1073,12 +1073,12 @@ has_scholarship: "",
         </label>
         {expense?.checked && (
           <input
-            type="text"
+            type="number"
             name={`expense_amount_${expenseKey}`}
             value={expense?.amount || ""}
             onChange={(e) => {
               e.stopPropagation(); // Prevent card click from interfering
-              const value = e.target.value;
+              const value = e.target.value.replace(/\D/g, ""); // Only numbers
               const updatedExpenses = { 
                 ...formData.educational_expenses, 
                 [expenseKey]: { ...expense, amount: value }
@@ -1087,8 +1087,8 @@ has_scholarship: "",
             }}
             onClick={(e) => e.stopPropagation()} // Prevent card click when clicking input
             placeholder="Enter amount"
+            min="0"
             className="expense-amount-input"
-
           />
         )}
       </div>
