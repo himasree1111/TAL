@@ -28,7 +28,7 @@ export default function StudentLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
     const eError = validateEmail(cleanEmail);
@@ -40,24 +40,31 @@ export default function StudentLogin() {
     }
 
     try {
-      // 🔍 Fetch user from DB
-      const { data, error } = await supabase
+      // 🔍 STEP 1: Check eligibility
+      const { data: eligible, error: eligibleError } = await supabase
         .from("eligible_students")
         .select("*")
-        .ilike("email", cleanEmail)
+        .eq("email", cleanEmail)
         .maybeSingle();
 
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
+      console.log("ELIGIBLE:", eligible);
 
-      // ❌ Not found
-      if (!data) {
+      if (eligibleError || !eligible) {
         toast.error("You are not eligible");
         return;
       }
 
-      // 🔐 First-time login
-      if (!data.password) {
+      // 🔐 STEP 2: Check student_auth
+      const { data: auth } = await supabase
+        .from("student_auth")
+        .select("*")
+        .eq("email", cleanEmail)
+        .maybeSingle();
+
+      console.log("AUTH:", auth);
+
+      // 👉 FIRST TIME USER
+      if (!auth || !auth.password) {
         toast.info("First time login - please set password");
         navigate("/set-password", { state: { email: cleanEmail } });
         return;
@@ -69,8 +76,8 @@ export default function StudentLogin() {
         return;
       }
 
-      // 🔑 Password check
-      if ((data.password || "").trim() !== cleanPassword) {
+      // 🔑 PASSWORD CHECK
+      if (auth.password !== cleanPassword) {
         toast.error("Invalid credentials");
         return;
       }
@@ -82,7 +89,6 @@ export default function StudentLogin() {
       localStorage.setItem("studentEmail", cleanEmail);
       localStorage.setItem("isStudentLoggedIn", "true");
 
-      console.log("Navigating to student-dashboard...");
       navigate("/student-dashboard");
 
     } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; 
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import supabase from "./supabaseClient";
@@ -34,13 +34,15 @@ export default function SetPassword() {
     }
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
+
       const { error } = await supabase
-        .from("eligible_students")
-        .update({
-          password: password,
+        .from("student_auth") // ✅ CHANGED HERE
+        .upsert({
+          email: cleanEmail,
+          password: password.trim(),
           is_verified: true,
-        })
-        .eq("email", email);
+        });
 
       if (error) {
         toast.error("Error setting password");
