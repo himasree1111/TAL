@@ -44,6 +44,7 @@ export default function AdminDashboard() {
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
   // const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [activeReportList, setActiveReportList] = useState(null);
+  const [studentId, setStudentId] = useState(null);
 
   // Notification state
   const [notificationTitle, setNotificationTitle] = useState("");
@@ -61,6 +62,8 @@ export default function AdminDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setCurrentUser(session.user);
+            setStudentId(session.user.id); // 👈 ADD THIS
+
           // Initialize settings with current user data
           setAdminName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || "");
         } else {
@@ -68,9 +71,9 @@ export default function AdminDashboard() {
           navigate('/');
         }
 
-        // Fetch student form submissions
+  // Fetch student form submissions from admin_student_info table
        const { data: studentData, error: studentError } = await supabase
-  .from('student_form_submissions')
+  .from('admin_student_info')
   .select('*')
   .order('created_at', { ascending: false });
 
@@ -151,7 +154,24 @@ fetchEligibleCount();
 fetchNonEligibleCount();
 }, [navigate]);
 
+useEffect(() => {  
+  if (!studentId) return;  
+  
+  loadNotifications(studentId); // 🔥 LOAD OLD NOTIFICATIONS  
+}, [studentId]);
 
+const loadNotifications = async (id) => {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", id);
+
+  if (error) {
+    console.error(error);
+  } else {
+    console.log("Notifications:", data);
+  }
+};
 
   // filters now include stream (course)
   const [filters, setFilters] = useState({ class: "", donor: "", feeStatus: "", stream: "" });
@@ -322,68 +342,143 @@ setEligibleCount(data?.length || 0);
 
 const handleApprove = async (student) => {
   try {
-    const { error } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Eligible' })
-      .eq('id', student.id);
+    // Get full record first from correct table
+    const { data: record } = await supabase
+      .from('student_form_submissions')
+      .select('*')
+      .eq('id', student.student_id)
+      .single();
 
-    if (error) {
-      console.error(error);
-      alert("❌ Failed to approve: " + error.message);
+    if (!record) {
+      alert("❌ Record not found");
       return;
     }
 
-    // Update UI
-    setStudents(prev =>
-      prev.map(s =>
-        s.id === student.id ? { ...s, status: 'Eligible' } : s
-      )
-    );
+    // Insert to eligible_students
+    const { error: insertError } = await supabase
+      .from('eligible_students')
+      .insert({
+        student_id: student.student_id,
+        student_name: `${record.first_name || ''} ${record.last_name || ''}`.trim() || student.full_name,
+        email: record.email || student.email,
+        contact: record.contact || student.contact,
+        education: record.class || student.class,
+        year: record.class || student.year,
+        school: record.school || student.school,
+        college: record.college || student.college,
+        created_at: record.created_at
+      });
 
-    alert("✅ Student marked as Eligible");
+    if (insertError) {
+      console.error(insertError);
+      alert("❌ Failed to move to eligible: " + insertError.message);
+      return;
+    }
+
+    // Delete from student_form_submissions
+    const { error: deleteError } = await supabase
+      .from('student_form_submissions')
+      .delete()
+      .eq('id', student.student_id);
+
+    if (deleteError) {
+      console.error(deleteError);
+      alert("❌ Failed to remove from pending: " + deleteError.message);
+      return;
+    }
+
+// Refresh list - simple client-side update (no function scope issue)
+    setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
+
+    alert("✅ Student moved to Eligible successfully!");
 
   } catch (err) {
     console.error(err);
+    alert("Error: " + err.message);
   }
 };
 const handleNotApprove = async (student) => {
   try {
-    const { error } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Not Eligible' })
-      .eq('id', student.id);
+    // Get full record first from correct table
+    const { data: record } = await supabase
+      .from('student_form_submissions')
+      .select('*')
+      .eq('id', student.student_id)
+      .single();
 
-    if (error) {
-      console.error(error);
-      alert("❌ Failed to reject: " + error.message);
+    if (!record) {
+      alert("❌ Record not found");
       return;
     }
 
-    // Update UI
-    setStudents(prev =>
-      prev.map(s =>
-        s.id === student.id ? { ...s, status: 'Not Eligible' } : s
-      )
-    );
+    // Insert to non_eligible_students
+    const { error: insertError } = await supabase
+      .from('non_eligible_students')
+      .insert({
+        student_id: student.student_id,
+        student_name: `${record.first_name || ''} ${record.last_name || ''}`.trim() || student.full_name,
+        email: record.email || student.email,
+        contact: record.contact || student.contact,
+        education: record.class || student.class,
+        year: record.class || student.year,
+        school: record.school || student.college,
+        college: record.college || student.college,
+        created_at: record.created_at
+      });
 
-    alert("❌ Student marked as Not Eligible");
+    if (insertError) {
+      console.error(insertError);
+      alert("❌ Failed to move to non-eligible: " + insertError.message);
+      return;
+    }
+
+    // Delete from student_form_submissions
+    const { error: deleteError } = await supabase
+      .from('student_form_submissions')
+      .delete()
+      .eq('id', student.student_id);
+
+    if (deleteError) {
+      console.error(deleteError);
+      alert("❌ Failed to remove from pending: " + deleteError.message);
+      return;
+    }
+
+    // Refresh list
+    fetchStudents();
+
+    alert("✅ Student moved to Non-Eligible successfully!");
 
   } catch (err) {
     console.error(err);
+    alert("Error: " + err.message);
   }
 };
 const fetchStudents = async () => {
   const { data, error } = await supabase
     .from('admin_student_info')
     .select('*')
-    .eq('status', 'Pending'); // ✅ ADD THIS LINE
+    .eq('status', 'Pending');
 
   if (error) {
     console.error(error);
     return;
   }
 
-  setStudents(data);
+  // Transform data to match table format
+  const transformedStudents = (data || []).map((student, index) => ({
+    id: student.id || index + 1,
+    student_id: student.id,
+    name: student.student_name || student.full_name || '',
+    year: student.year || student.class || '',
+    email: student.email,
+    contact: student.contact,
+    class: student.class || student.year || '',
+    full_name: student.student_name || student.full_name || '',
+    created_at: student.created_at
+  }));
+
+  setStudents(transformedStudents);
 };
 
 
@@ -537,12 +632,16 @@ const fetchStudents = async () => {
     e.preventDefault();
     setCreatingNotification(true);
 
+  const formattedDate = notificationExpiresAt
+  ? new Date(notificationExpiresAt).toISOString()
+  : null;
+
     const result = await createNotification(
-      notificationTitle,
-      notificationMessage,
-      notificationAudience,
-      notificationExpiresAt || null
-    );
+  notificationTitle,
+  notificationMessage,
+  notificationAudience,
+  formattedDate
+);
 
     if (result.success) {
       alert("Notification created successfully!");
@@ -619,6 +718,7 @@ const fetchStudents = async () => {
         <main className="admin-content">
           {loading && (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
+              Loading dashboard...
              
             </div>
           )}
