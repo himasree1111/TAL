@@ -321,33 +321,56 @@ setEligibleCount(data?.length || 0);
   }, [students]);
 
 const handleApprove = async (student) => {
-  // 1. insert into eligible
-  const { error: insertError } = await supabase
-    .from('eligible_students')
-    .insert([student]);
+  try {
+    const { error } = await supabase
+      .from('admin_student_info')
+      .update({ status: 'Eligible' })
+      .eq('id', student.id);
 
-  if (insertError) {
-    console.error(insertError);
-    alert("Insert failed");
-    return;
+    if (error) {
+      console.error(error);
+      alert("❌ Failed to approve: " + error.message);
+      return;
+    }
+
+    // Update UI
+    setStudents(prev =>
+      prev.map(s =>
+        s.id === student.id ? { ...s, status: 'Eligible' } : s
+      )
+    );
+
+    alert("✅ Student marked as Eligible");
+
+  } catch (err) {
+    console.error(err);
   }
+};
+const handleNotApprove = async (student) => {
+  try {
+    const { error } = await supabase
+      .from('admin_student_info')
+      .update({ status: 'Not Eligible' })
+      .eq('id', student.id);
 
-  // 2. delete from admin
-  const { error: deleteError } = await supabase
-    .from('admin_student_info')
-    .delete()
-    .eq('id', student.id);
+    if (error) {
+      console.error(error);
+      alert("❌ Failed to reject: " + error.message);
+      return;
+    }
 
-  if (deleteError) {
-    console.error(deleteError);
-    alert("Delete failed");
-    return;
+    // Update UI
+    setStudents(prev =>
+      prev.map(s =>
+        s.id === student.id ? { ...s, status: 'Not Eligible' } : s
+      )
+    );
+
+    alert("❌ Student marked as Not Eligible");
+
+  } catch (err) {
+    console.error(err);
   }
-
-  // 3. update UI
-  setStudents(prev => prev.filter(s => s.id !== student.id));
-
-  alert("Moved to Eligible ✅");
 };
 const fetchStudents = async () => {
   const { data, error } = await supabase
@@ -363,33 +386,7 @@ const fetchStudents = async () => {
   setStudents(data);
 };
 
-const handleNotApprove = async (student) => {
-  const { error: insertError } = await supabase
-    .from('non_eligible_students')
-    .insert([student]);
 
-  if (insertError) {
-    console.error(insertError);
-    alert("Insert failed");
-    alert(insertError.message);
-    return;
-  }
-
-  const { error: deleteError } = await supabase
-    .from('admin_student_info')
-    .delete()
-    .eq('id', student.id);
-
-  if (deleteError) {
-    console.error(deleteError);
-    alert("Delete failed");
-    return;
-  }
-
-  setStudents(prev => prev.filter(s => s.id !== student.id));
-
-  alert("Moved to Non-Eligible 🚫");
-};
 
 
 
@@ -825,11 +822,11 @@ const handleNotApprove = async (student) => {
                               <span className="tooltiptext">View</span>
                             </div>
                             <div className="tooltip">
-                              <button className="btn small icon-btn" onClick={() => handleApprove(s.id)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
+                              <button className="btn small icon-btn" onClick={() => handleApprove(s)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
                               <span className="tooltiptext">Approved</span>
                             </div>
                             <div className="tooltip">
-                              <button className="btn small icon-btn" onClick={() => handleNotApprove(s.id)} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
+                              <button className="btn small icon-btn" onClick={() => handleNotApprove(s)} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
                               <span className="tooltiptext">Not Approved</span>
                             </div>
                           </div>

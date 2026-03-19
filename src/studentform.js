@@ -709,7 +709,7 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
     // run current full validation
     const newErrors = runFullValidation();
     setErrors(prev => ({ ...prev, ...newErrors }));
-
+const fullName = `${formData.first_name} ${formData.middle_name || ""} ${formData.last_name}`.trim();
     // if any errors present, alert and block submission
     if (Object.keys(newErrors).length > 0) {
       // popup alert summarizing
@@ -753,7 +753,7 @@ const isSingleParent = yesNoToBool(formData.is_single_parent);
   first_name: formData.first_name,
   middle_name: formData.middle_name || null,
   last_name: formData.last_name,
-
+full_name: fullName,
   dob: formData.dob || null,
   age: parseInt(formData.age),
   pob: formData.pob || null,
@@ -1073,12 +1073,12 @@ has_scholarship: "",
         </label>
         {expense?.checked && (
           <input
-            type="number"
+            type="text"
             name={`expense_amount_${expenseKey}`}
             value={expense?.amount || ""}
             onChange={(e) => {
               e.stopPropagation(); // Prevent card click from interfering
-              const value = e.target.value.replace(/\D/g, ""); // Only numbers
+              const value = e.target.value;
               const updatedExpenses = { 
                 ...formData.educational_expenses, 
                 [expenseKey]: { ...expense, amount: value }
@@ -1087,8 +1087,8 @@ has_scholarship: "",
             }}
             onClick={(e) => e.stopPropagation()} // Prevent card click when clicking input
             placeholder="Enter amount"
-            min="0"
             className="expense-amount-input"
+
           />
         )}
       </div>
