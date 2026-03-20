@@ -71,11 +71,13 @@ export default function AdminDashboard() {
           navigate('/');
         }
 
-  // Fetch student form submissions from admin_student_info table
+// Fetch ALL students from student_form_submissions (no status filter)
        const { data: studentData, error: studentError } = await supabase
-  .from('admin_student_info')
+  .from('student_form_submissions')
   .select('*')
   .order('created_at', { ascending: false });
+
+
 
         // Save raw fetch result for debugging
         setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
@@ -354,20 +356,25 @@ const handleApprove = async (student) => {
       return;
     }
 
-    // Insert to eligible_students
+    // Upsert to eligible_students to handle unique_email
     const { error: insertError } = await supabase
       .from('eligible_students')
-      .insert({
+      .upsert({
         student_id: student.student_id,
         student_name: `${record.first_name || ''} ${record.last_name || ''}`.trim() || student.full_name,
         email: record.email || student.email,
         contact: record.contact || student.contact,
         education: record.class || student.class,
-        year: record.class || student.year,
         school: record.school || student.school,
         college: record.college || student.college,
+        volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
+        volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
         created_at: record.created_at
-      });
+      }, { onConflict: 'email' });
+
+
+
+
 
     if (insertError) {
       console.error(insertError);
@@ -411,7 +418,7 @@ const handleNotApprove = async (student) => {
       return;
     }
 
-    // Insert to non_eligible_students
+    // Insert to non_eligible_students (no unique_email constraint)
     const { error: insertError } = await supabase
       .from('non_eligible_students')
       .insert({
@@ -420,11 +427,17 @@ const handleNotApprove = async (student) => {
         email: record.email || student.email,
         contact: record.contact || student.contact,
         education: record.class || student.class,
-        year: record.class || student.year,
-        school: record.school || student.college,
+        school: record.school || student.school,
         college: record.college || student.college,
+        volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
+        volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
         created_at: record.created_at
       });
+
+
+
+
+
 
     if (insertError) {
       console.error(insertError);

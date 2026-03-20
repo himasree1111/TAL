@@ -47,13 +47,23 @@ export const createNotification = async (
 
     if (targetAudience === "eligible") {
       studentQuery = supabase.from("eligible_students").select("id");
-    } else if (targetAudience === "non-eligible") {
+    }/* else if (targetAudience === "non-eligible") {
       studentQuery = supabase.from("non_eligible_students").select("id");
-    } else {
-      studentQuery = supabase.from("admin_student_info").select("id");
-    }
+    } else { // "all" - pending + eligible + non-eligible (separate queries)
+      const pendingRes = await supabase.from("admin_student_info").select("id").eq("status", "pending");
+      const eligibleRes = await supabase.from("eligible_students").select("id");
+      const nonEligibleRes = await supabase.from("non_eligible_students").select("id");
+      
+      if (pendingRes.error || eligibleRes.error || nonEligibleRes.error) throw new Error("Query error");
+      
+      const allStudents = [...pendingRes.data, ...eligibleRes.data, ...nonEligibleRes.data];
+      const students = allStudents.filter((s, index, self) => index === self.findIndex(t => t.id === s.id));
+      studentQuery = { data: students };
+    } */
 
-    const { data: students, error: studentError } = await studentQuery;
+    const { data: students, error: studentError } = studentQuery || { data: [] };
+
+    if (studentError) throw studentError;
     if (studentError) throw studentError;
 
     if (students && students.length > 0) {
