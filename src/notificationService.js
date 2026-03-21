@@ -48,7 +48,17 @@ export const createNotification = async (
 };
 
 
-// ✅ GET STUDENT NOTIFICATIONS (FIXED)
+// ✅ SHARED FILTER UTIL (NEW)
+export const filterNotification = (notification, studentType) => {
+  const audience = (notification.audience || "").toLowerCase().trim();
+  const type = (studentType || "all").toLowerCase().trim();
+  const notExpired = !notification.expires_at || new Date(notification.expires_at) > new Date();
+  const audienceMatch = audience === "all" || audience === type;
+  console.log(`[FILTER] ${notification.title || 'ID:'+notification.id}: audience="${audience}" vs type="${type}", expired=${!notExpired}`);
+  return notExpired && audienceMatch;
+};
+
+// ✅ GET STUDENT NOTIFICATIONS (ENHANCED w/ DEBUG)
 export const getStudentNotifications = async (studentType) => {
   try {
     const { data, error } = await supabase
@@ -60,17 +70,8 @@ export const getStudentNotifications = async (studentType) => {
 
     const type = (studentType || "all").toLowerCase().trim();
 
-    const filtered = data.filter(n => {
-      const audience = (n.audience || "").toLowerCase().trim();
-
-      const notExpired =
-        !n.expires_at || new Date(n.expires_at) > new Date();
-
-      const audienceMatch =
-        audience === "all" || audience === type;
-
-      return notExpired && audienceMatch;
-    });
+    console.log(`[FETCH] Fetched ${data.length} total, filtered to ${filtered.length} for type "${studentType}"`);
+    return { success: true, notifications: filtered };
 
     return { success: true, notifications: filtered };
 
@@ -93,7 +94,8 @@ export const subscribeToNotifications = (callback) => {
         table: 'notifications'
       },
       (payload) => {
-        callback(payload.new);
+      console.log("[REALTIME] New payload received:", payload.new);
+      callback(payload.new);
       }
     )
     .subscribe();

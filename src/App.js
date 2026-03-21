@@ -17,6 +17,7 @@ import Adminlogin from "./adminlogin";
 import VolunteerDashboard from "./VolunteerDashboard";
 import ResetPassword from "./ResetPassword";
 import SetPassword from "./SetPassword";
+import { StudentProvider } from "./StudentContext";
 
 function App() {
   return (
@@ -64,7 +65,7 @@ function App() {
           />
 
           {/* Student Dashboard - No protection needed after login */}
-          <Route path="/student-dashboard" element={<StudentDashboard />} />
+<Route path="/student-dashboard" element={<StudentProvider><StudentDashboard /></StudentProvider>} />
 
           <Route
             path="/donorlogin"

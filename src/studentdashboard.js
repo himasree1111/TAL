@@ -5,7 +5,9 @@ import supabase from "./supabaseClient";
 import {
   getStudentNotifications,
   subscribeToNotifications,
+  filterNotification,
 } from "./notificationService";
+import { useStudent } from "./StudentContext";
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard Overview", icon: "🏠" },
@@ -90,49 +92,79 @@ const StudentDashboard = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [studentId, setStudentId] = useState(null);
+  const [studentType, setStudentType] = useState(null);
+  const { studentEmail, logout: contextLogout } = useStudent();
 
 useEffect(() => {
+  
   let subscription;
 
   const init = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-
+    if (!studentEmail) return;
     
-
-    if (!user) return;
-
-    setUser(user);
-    setStudentId(user.id);
-console.log("Student ID:", user.id);
-
-const type = await getStudentType(user.id);
-console.log("Student Type:", type);
-
-const res = await getStudentNotifications(type);
-console.log("Fetched Notifications:", res);
+    console.log("Loading for student:", studentEmail);
+    
+    const { data: profileData, error: profileError } = await supabase
+      .from('eligible_students')
+      .select('*')
+      .eq('email', studentEmail)
+      .single();
+    
+    if (profileError || !profileData) {
+      console.error('Profile fetch error:', profileError);
+      // Try non_eligible
+      const { data: nonEligibleData, error: nonError } = await supabase
+        .from('non_eligible_students')
+        .select('*')
+        .eq('email', studentEmail)
+        .single();
+      if (nonError || !nonEligibleData) {
+        console.error('No profile found in either table:', nonError);
+        return;
+      }
+      setProfile(nonEligibleData);
+      setStudentId(nonEligibleData.id);
+    } else {
+      setProfile(profileData);
+      setStudentId(profileData.id);
+    }
+    
+    setSettings({
+      name: profileData?.full_name || profileData?.name || '',
+      email: profileData?.email || '',
+      phone: profileData?.phone || ''
+    });
+    
+    console.log("Student ID:", studentId);
+    console.log("Student profile:", profile);
+    
+    const type = await getStudentType(studentId);
+    console.log("[DASHBOARD] Student Type:", type);
+    setStudentType(type);
+    
+    const res = await getStudentNotifications(type);
+    console.log("[DASHBOARD] Fetched Notifications:", res);
     if (res.success) {
+      console.log(`[DASHBOARD] Setting ${res.notifications.length} notifications`);
       setNotifications(res.notifications);
     }
-
     
-    // ✅ Realtime with filtering
     subscription = subscribeToNotifications((newData) => {
-      console.log("Realtime incoming:", newData);
-      setNotifications(prev => {
-        // 🔹 Filter audience
-        /*if (
-          newData.audience !== "all" &&
-          newData.audience !== type
-        ) {
-          return prev;
-        }*/
-
-        // 🔹 Prevent duplicates
-        /*const exists = prev.some(n => n.id === newData.id);
-        if (exists) return prev;*/
-
-        return [newData, ...prev];
-      });
+      console.log("[DASHBOARD] Realtime incoming:", newData);
+      if (!studentType) return;
+      if (filterNotification(newData, studentType)) {
+        setNotifications(prev => {
+          const exists = prev.some(n => n.id === newData.id);
+          if (exists) {
+            console.log("[DASHBOARD] Duplicate realtime notification ignored");
+            return prev;
+          }
+          console.log("[DASHBOARD] Adding filtered realtime notification");
+          return [newData, ...prev];
+        });
+      } else {
+        console.log("[DASHBOARD] Realtime notification filtered OUT");
+      }
     });
   };
 
@@ -141,13 +173,11 @@ console.log("Fetched Notifications:", res);
   return () => {
     if (subscription) supabase.removeChannel(subscription);
   };
-}, []);
+}, [studentEmail]);
 
 
-  const handleLogout = async () => {
-    // Clear localStorage
-    localStorage.removeItem("studentEmail");
-    localStorage.removeItem("isStudentLoggedIn");
+const handleLogout = () => {
+    contextLogout();
     navigate("/");
   };
 
@@ -159,7 +189,8 @@ console.log("Fetched Notifications:", res);
       const id = `${category}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       setUploadProgress((prev) => ({ ...prev, [id]: { progress: 0, name: file.name } }));
 
-      const folder = `student_docs/${user?.id}/${category}`;
+      const safeId = studentId || studentEmail?.replace(/[^a-zA-Z0-9]/g, '_') || 'default';
+      const folder = `student_docs/${safeId}/${category}`;
       const fileName = `${Date.now()}_${file.name}`.replace(/\s+/g, "_");
       const filePath = `${folder}/${fileName}`;
 
@@ -217,18 +248,19 @@ console.log("Fetched Notifications:", res);
 
     try {
       const updates = {
-        id: user?.id,
         full_name: settings.name,
-        email: settings.email,
         phone: settings.phone,
         updated_at: new Date().toISOString(),
       };
 
-      const { error: updateError } = await supabase.from("profiles").upsert(updates);
+      const { error: updateError } = await supabase
+        .from("eligible_students")
+        .update(updates)
+        .eq('email', studentEmail);
       if (updateError) throw updateError;
 
       setSaveSuccess(true);
-      setProfile((prev) => ({ ...prev, name: settings.name, email: settings.email }));
+      setProfile((prev) => ({ ...prev, full_name: settings.name }));
     } catch (err) {
       setError(err.message || "Failed to save settings");
     } finally {
@@ -262,7 +294,7 @@ console.log("Fetched Notifications:", res);
         </div>
         <div className="profile-meta">
           <h3>{profile.name || "Student"}</h3>
-          {profile.studentId && <p className="subtle">ID: {profile.studentId}</p>}
+{profile.id && <p className="subtle">ID: {profile.id}</p>}
           {profile.email && <p className="subtle">{profile.email}</p>}
         </div>
       </div>

@@ -1,9 +1,24 @@
-# TODO: Fix StudentDashboard Babel Error
+# Notification Fix - Debug Mode
 
-## Steps:
-- [x] 1. User approved edit plan to extract getStudentType to top-level
-- [x] 2. Edit src/studentdashboard.js with precise replacements
-- [x] 3. Verify compilation with npm run build / dev server
-- [x] 4. Test functionality (login → student dashboard)
-- [x] 5. Complete task
+**Current Status**: Code fixed but needs console/DB check
 
+## Immediate Debug:
+1. Browser F12 → Console → Login to student-dashboard
+2. **PASTE ALL LOGS HERE** (search for "Student Type", "[FILTER]", errors)
+
+3. **Supabase Check**:
+   - Go to Supabase → Table Editor → notifications
+   - Login as student user → Can you see data?
+   - RLS Policy? (select * where true?)
+
+4. **Quick Test Route** (add to App.js):
+```
+<Route path="/test-notifications" element={<TestNotifications />} />
+```
+
+**Suspected Issues**:
+- RLS blocking query
+- No data or audience mismatch
+- studentEmail null
+
+Paste logs to diagnose!
