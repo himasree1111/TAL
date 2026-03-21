@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   const [activeReportList, setActiveReportList] = useState(null);
   const [studentId, setStudentId] = useState(null);
 
-  // Notification state
+
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationAudience, setNotificationAudience] = useState("all");
@@ -150,24 +150,9 @@ fetchEligibleCount();
 fetchNonEligibleCount();
 }, [navigate]);
 
-useEffect(() => {  
-  if (!studentId) return;  
-  
-  loadNotifications(studentId); // 🔥 LOAD OLD NOTIFICATIONS  
-}, [studentId]);
 
-const loadNotifications = async (id) => {
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", id);
+// REMOVED loadNotifications - no user_notifications tracking
 
-  if (error) {
-    console.error(error);
-  } else {
-    console.log("Notifications:", data);
-  }
-};
 
   // filters now include stream (course)
   const [filters, setFilters] = useState({ class: "", donor: "", feeStatus: "", stream: "" });

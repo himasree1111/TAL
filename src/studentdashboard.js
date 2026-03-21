@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import supabase from "./supabaseClient";
 import {
   getStudentNotifications,
-  markNotificationAsRead,
   subscribeToNotifications,
 } from "./notificationService";
 
@@ -40,8 +39,8 @@ const formatRelative = (dateStr) => {
 };
 
 const isImportantNotification = (item) => {
-  const title = item.notifications?.title?.toLowerCase() || "";
-  const message = item.notifications?.message?.toLowerCase() || "";
+  const title = item.title?.toLowerCase() || "";
+  const message = item.message?.toLowerCase() || "";
   return title.includes("urgent") || title.includes("important") || message.includes("urgent") || message.includes("important");
 };
 
@@ -56,6 +55,26 @@ const StatCard = ({ icon, label, value }) => (
     </div>
   </div>
 );
+
+const getStudentType = async (studentId) => {
+  const { data: eligible } = await supabase
+    .from("eligible_students")
+    .select("id")
+    .eq("id", studentId)
+    .single();
+
+  if (eligible) return "eligible";
+
+  const { data: nonEligible } = await supabase
+    .from("non_eligible_students")
+    .select("id")
+    .eq("id", studentId)
+    .single();
+
+  if (nonEligible) return "non-eligible";
+
+  return "all";
+};
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -72,53 +91,58 @@ const StudentDashboard = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [studentId, setStudentId] = useState(null);
 
+useEffect(() => {
+  let subscription;
 
-  useEffect(() => {
-  const getUser = async () => {
+  const init = async () => {
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (user) {
-      setUser(user);
-      setStudentId(user.id); // 🔥 IMPORTANT
-    }
-  };
+    
 
-  getUser();
-}, []);
+    if (!user) return;
 
-useEffect(() => {
-  if (!studentId) return;
+    setUser(user);
+    setStudentId(user.id);
+console.log("Student ID:", user.id);
 
-  const subscription = subscribeToNotifications(studentId, setNotifications);
+const type = await getStudentType(user.id);
+console.log("Student Type:", type);
 
-  return () => {
-    supabase.removeChannel(subscription);
-  };
-}, [studentId]);
-
-
-
-
-
-console.log("Student ID being used:", studentId);
-
-  const loadNotifications = async (studentId) => {
-    const { success, notifications: incoming, error: notifError } =
-      await getStudentNotifications(studentId);
-
-    if (!success) {
-      setError(notifError || "Unable to load notifications");
-      return;
+const res = await getStudentNotifications(type);
+console.log("Fetched Notifications:", res);
+    if (res.success) {
+      setNotifications(res.notifications);
     }
 
-    setNotifications((prev) => {
-      const seen = new Set(prev.map((n) => n.id));
-      const deduped = incoming.filter((n) => !seen.has(n.id));
-      return [...deduped, ...prev].sort(
-        (a, b) => new Date(b.notifications?.created_at) - new Date(a.notifications?.created_at)
-      );
+    
+    // ✅ Realtime with filtering
+    subscription = subscribeToNotifications((newData) => {
+      console.log("Realtime incoming:", newData);
+      setNotifications(prev => {
+        // 🔹 Filter audience
+        /*if (
+          newData.audience !== "all" &&
+          newData.audience !== type
+        ) {
+          return prev;
+        }*/
+
+        // 🔹 Prevent duplicates
+        /*const exists = prev.some(n => n.id === newData.id);
+        if (exists) return prev;*/
+
+        return [newData, ...prev];
+      });
     });
   };
+
+  init();
+
+  return () => {
+    if (subscription) supabase.removeChannel(subscription);
+  };
+}, []);
+
 
   const handleLogout = async () => {
     // Clear localStorage
@@ -127,16 +151,7 @@ console.log("Student ID being used:", studentId);
     navigate("/");
   };
 
-  const handleMarkRead = async (notif) => {
-    if (notif.is_read) return;
-    await markNotificationAsRead(notif.id);
-    setNotifications((prev) =>
-      prev.map((item) =>
-        item.id === notif.id ? { ...item, is_read: true, read_at: new Date().toISOString() } : item
-      )
-    );
-  };
-
+  
   const handleUpload = async (category, files) => {
     setError("");
 
@@ -227,12 +242,10 @@ console.log("Student ID being used:", studentId);
 
   const filteredNotifications = useMemo(() => {
     const list = [...notifications].sort(
-      (a, b) => new Date(b.notifications?.created_at) - new Date(a.notifications?.created_at)
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
 
-    if (notifFilter === "unread") {
-      return list.filter((item) => !item.is_read);
-    }
+   
 
     if (notifFilter === "important") {
       return list.filter(isImportantNotification);
@@ -286,7 +299,6 @@ console.log("Student ID being used:", studentId);
     <div className="filter-bar">
       {[
         { key: "all", label: "All" },
-        { key: "unread", label: "Unread" },
         { key: "important", label: "Important" },
       ].map((option) => (
         <button
@@ -308,7 +320,7 @@ console.log("Student ID being used:", studentId);
     return (
       <div className="notification-grid">
         {filteredNotifications.map((item) => {
-          const isNew = !item.is_read;
+          const isNew = false;
           const isImportant = isImportantNotification(item);
 
           return (
@@ -317,18 +329,17 @@ console.log("Student ID being used:", studentId);
               className={`notification-card ${isNew ? "new" : "read"} ${
                 isImportant ? "important" : ""
               }`}
-              onClick={() => handleMarkRead(item)}
             >
               <div className="notification-title">
-                <strong>{item.notifications?.title || "Untitled"}</strong>
+                <strong>{item.title || "Untitled"}</strong>
                 <div className="notification-tags">
                   {isNew && <span className="badge">New</span>}
                   {isImportant && <span className="badge important">Important</span>}
                 </div>
               </div>
-              <p className="notification-message">{item.notifications?.message}</p>
+              <p className="notification-message">{item.message}</p>
               <div className="notification-meta">
-                <span className="timestamp">{formatRelative(item.notifications?.created_at)}</span>
+                <span className="timestamp">{formatRelative(item.created_at)}</span>
               </div>
             </article>
           );
@@ -552,6 +563,5 @@ console.log("Student ID being used:", studentId);
     </div>
   );
 };
-
 export default StudentDashboard;
 
