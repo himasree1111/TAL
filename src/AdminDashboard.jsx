@@ -73,8 +73,9 @@ export default function AdminDashboard() {
 
 // Fetch ALL students from student_form_submissions (no status filter)
        const { data: studentData, error: studentError } = await supabase
-  .from('student_form_submissions')
+  .from('admin_student_info')
   .select('*')
+   .eq('status', 'Pending')
   .order('created_at', { ascending: false });
 
 
@@ -88,47 +89,40 @@ export default function AdminDashboard() {
           console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
   const transformedStudents = (studentData || []).map((student, index) => {
-    console.log("Full Student Object:", student);      // check all fields
-    console.log("Camp Date Value:", student.camp_date); // check camp_date specifically
+  return {
+    id: student.id || index + 1,
+    student_id: student.id,
 
-    return {
-        id: student.id || index + 1,
-        student_id: student.id,  // Use the actual ID from student_form_submissions
+    name: student.full_name || "",
+    full_name: student.full_name || "",
 
-        /* TABLE COLUMNS */
-        name: `${student.first_name} ${student.last_name}`.trim(),
-        year: student.class,
-        fee_status: student.fee || "Not Provided",
-        course: student.educationcategory || "",
-        camp: student.camp_name,
+    year: student.class,
+    fee_status: student.fee || "Not Provided",
+    course: student.educationcategory || "",
 
-        // Camp Date
-        campDate: student.camp_date
-            ? new Date(student.camp_date).toISOString().split("T")[0]
-            : "",
+    campName: student.camp_name,
 
-        /* VIEW MODAL FIELDS */
-        full_name: `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.trim(),
-        age: student.age,
-        class: student.class,
-        prev_percent: student.prev_percent,
-        present_percent: student.present_percent,
+    campDate: student.camp_date
+      ? new Date(student.camp_date).toISOString().split("T")[0]
+      : "",
 
-        /* Contacts */
-        email: student.email,
-        contact: student.contact,
-        whatsapp: student.whatsapp,
-        student_contact: student.student_contact,
+    age: student.age,
+    class: student.class,
+    prev_percent: student.prev_percent,
+    present_percent: student.present_percent,
 
-        /* Scholarship */
-        scholarship: student.scholarship,
-        has_scholarship: student.has_scholarship,
-        does_work: student.does_work,
-        earning_members: student.earning_members,
+    email: student.email,
+    contact: student.contact,
+    whatsapp: student.whatsapp,
+    student_contact: student.student_contact,
 
-        /* Other */
-        created_at: student.created_at
-    };
+    scholarship: student.scholarship,
+    has_scholarship: student.has_scholarship,
+    does_work: student.does_work,
+    earning_members: student.earning_members,
+
+    created_at: student.created_at
+  };
 });
 
      setStudents(transformedStudents);
@@ -344,37 +338,50 @@ setEligibleCount(data?.length || 0);
 
 const handleApprove = async (student) => {
   try {
-    // Get full record first from correct table
+    // Get full record first from admin_student_info table
     const { data: record } = await supabase
-      .from('student_form_submissions')
+      .from('admin_student_info')
       .select('*')
       .eq('id', student.student_id)
       .single();
 
     if (!record) {
-      alert("❌ Record not found");
+      alert("❌ Record not found in admin_student_info");
       return;
     }
 
-    // Upsert to eligible_students to handle unique_email
+    // Upsert to eligible_students with ALL fields mapped
     const { error: insertError } = await supabase
       .from('eligible_students')
       .upsert({
         student_id: student.student_id,
-        student_name: `${record.first_name || ''} ${record.last_name || ''}`.trim() || student.full_name,
+        student_name: record.student_name || record.full_name || student.full_name,
+        full_name: record.full_name || student.full_name,
+        age: record.age || student.age,
+        camp_name: record.camp_name || student.campName,
+        camp_date: record.camp_date || student.campDate || null,
+        school: record.school || student.school,
+        prev_percent: record.prev_percent || student.prev_percent,
+        present_percent: record.present_percent || student.present_percent,
+        class: record.class || student.year,
         email: record.email || student.email,
         contact: record.contact || student.contact,
-        education: record.class || student.class,
-        school: record.school || student.school,
-        college: record.college || student.college,
+        parent_contact_2: record.parent_contact_2,
+        whatsapp: record.whatsapp || student.whatsapp,
+        student_contact: record.student_contact || student.student_contact,
+        scholarship: record.scholarship || student.scholarship,
+        has_scholarship: record.has_scholarship || student.has_scholarship,
+        does_work: record.does_work || student.does_work,
+        earning_members: record.earning_members || student.earning_members,
+        education: record.educationcategory || record.class || student.year,
         volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
         volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
-        created_at: record.created_at
+        created_at: record.created_at,
+        status: 'Eligible',
+        address: record.address,
+        camp: record.camp,
+        campdate: record.campdate || record.camp_date || null
       }, { onConflict: 'email' });
-
-
-
-
 
     if (insertError) {
       console.error(insertError);
@@ -382,9 +389,9 @@ const handleApprove = async (student) => {
       return;
     }
 
-    // Delete from student_form_submissions
+    // Delete from admin_student_info
     const { error: deleteError } = await supabase
-      .from('student_form_submissions')
+      .from('admin_student_info')
       .delete()
       .eq('id', student.student_id);
 
@@ -394,7 +401,7 @@ const handleApprove = async (student) => {
       return;
     }
 
-// Refresh list - simple client-side update (no function scope issue)
+    // Refresh list
     setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
 
     alert("✅ Student moved to Eligible successfully!");
@@ -406,32 +413,49 @@ const handleApprove = async (student) => {
 };
 const handleNotApprove = async (student) => {
   try {
-    // Get full record first from correct table
+    // Get full record first from admin_student_info table
     const { data: record } = await supabase
-      .from('student_form_submissions')
+      .from('admin_student_info')
       .select('*')
       .eq('id', student.student_id)
       .single();
 
     if (!record) {
-      alert("❌ Record not found");
+      alert("❌ Record not found in admin_student_info");
       return;
     }
 
-    // Insert to non_eligible_students (no unique_email constraint)
+    // Insert to non_eligible_students with ALL fields mapped
     const { error: insertError } = await supabase
       .from('non_eligible_students')
       .insert({
         student_id: student.student_id,
-        student_name: `${record.first_name || ''} ${record.last_name || ''}`.trim() || student.full_name,
+        student_name: record.student_name || record.full_name || student.full_name,
+        full_name: record.full_name || student.full_name,
+        age: record.age || student.age,
+        camp_name: record.camp_name || student.campName,
+        camp_date: record.camp_date || student.campDate || null,
+        school: record.school || student.school,
+        prev_percent: record.prev_percent || student.prev_percent,
+        present_percent: record.present_percent || student.present_percent,
+        class: record.class || student.year,
         email: record.email || student.email,
         contact: record.contact || student.contact,
-        education: record.class || student.class,
-        school: record.school || student.school,
-        college: record.college || student.college,
+        parent_contact_2: record.parent_contact_2,
+        whatsapp: record.whatsapp || student.whatsapp,
+        student_contact: record.student_contact || student.student_contact,
+        scholarship: record.scholarship || student.scholarship,
+        has_scholarship: record.has_scholarship || student.has_scholarship,
+        does_work: record.does_work || student.does_work,
+        earning_members: record.earning_members || student.earning_members,
+        education: record.educationcategory || record.class || student.year,
         volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
         volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
-        created_at: record.created_at
+        created_at: record.created_at,
+        status: 'Not Eligible',
+        address: record.address,
+        camp: record.camp,
+        campdate: record.campdate || record.camp_date || null
       });
 
 
@@ -445,9 +469,9 @@ const handleNotApprove = async (student) => {
       return;
     }
 
-    // Delete from student_form_submissions
+    // Delete from admin_student_info
     const { error: deleteError } = await supabase
-      .from('student_form_submissions')
+      .from('admin_student_info')
       .delete()
       .eq('id', student.student_id);
 
