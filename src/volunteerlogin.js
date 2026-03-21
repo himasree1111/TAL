@@ -11,7 +11,9 @@ export default function VolunteerLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [nameError, setNameError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,12 @@ export default function VolunteerLogin() {
       return "Name can contain only letters and spaces";
     if (value.trim().length < 2)
       return "Name must be at least 2 characters";
+    return "";
+  };
+
+  const validatePhone = (value) => {
+    if (!value) return "Phone number is required";
+    if (!/^\d{10}$/.test(value)) return "Must be exactly 10 digits";
     return "";
   };
 
@@ -67,10 +75,12 @@ export default function VolunteerLogin() {
     }
 
     if (!isSignIn) {
-      const err = validateName(name);
-      setNameError(err);
-      if (err) {
-        toast.error("Fix name field");
+      const nameErr = validateName(name);
+      const phoneErr = validatePhone(phone);
+      setNameError(nameErr);
+      setPhoneError(phoneErr);
+      if (nameErr || phoneErr) {
+        toast.error("Fix name and/or phone fields");
         return;
       }
     }
@@ -100,14 +110,33 @@ export default function VolunteerLogin() {
         toast.success("Login successful");
         navigate("/volunteer-dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { name, user_type: "volunteer" },
+            data: { 
+              name, 
+              phone, 
+              user_type: "volunteer" 
+            },
           },
         });
         if (error) throw error;
+
+        // Create profiles row
+        const profileData = {
+          id: data.user.id,
+          full_name: name,
+          phone,
+          email,
+        };
+        const { error: profileError } = await supabase
+          .from('profiles_volunteers')
+          .insert([profileData]);
+
+        if (profileError) {
+          console.warn('Profile creation warning (non-blocking):', profileError);
+        }
 
         toast.success("Account created successfully");
         setIsSignIn(true);
@@ -157,6 +186,22 @@ export default function VolunteerLogin() {
               />
               {nameError && (
                 <p className="error-text">{nameError}</p>
+              )}
+
+              <input
+                type="tel"
+                placeholder="Phone Number (10 digits)"
+                value={phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0,10);
+                  setPhone(value);
+                  setPhoneError(validatePhone(value));
+                }}
+                maxLength={10}
+                required
+              />
+              {phoneError && (
+                <p className="error-text">{phoneError}</p>
               )}
             </>
           )}

@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import ProtectedRoute from "./ProtectedRoute"; // ⭐ ADD THIS
+import ProtectedRoute from "./ProtectedRoute";
+import { VolunteerProvider } from "./VolunteerContext";
 
 import CoverPage from "./CoverPage";
 import StudentLogin from "./studentlogin";
@@ -17,132 +18,133 @@ import VolunteerDashboard from "./VolunteerDashboard";
 import ResetPassword from "./ResetPassword";
 import SetPassword from "./SetPassword";
 
-
-
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* ✅ Only public page */}
-        <Route path="/" element={<CoverPage />} />
+      <VolunteerProvider>
+        <Routes>
+          {/* ✅ Only public page */}
+          <Route path="/" element={<CoverPage />} />
 
-        {/* 🔒 Protected Routes (cannot open by URL) */}
-        <Route
-          path="/login"
-          element={
-            <ProtectedRoute>
-              <LoginProfiles />
-            </ProtectedRoute>
-          }
-        />
-<Route path="/set-password" element={<SetPassword />} />
-        <Route
-          path="/volunteerlogin"
-          element={
-            <ProtectedRoute>
-              <VolunteerLogin />
-            </ProtectedRoute>
-          }
-        />
+          {/* 🔒 Protected Routes (cannot open by URL) */}
+          <Route
+            path="/login"
+            element={
+              <ProtectedRoute>
+                <LoginProfiles />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/set-password" element={<SetPassword />} />
+          <Route
+            path="/volunteerlogin"
+            element={
+              <ProtectedRoute>
+                <VolunteerLogin />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/volunteer-dashboard"
-          element={
-            <ProtectedRoute>
-              <VolunteerDashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/volunteer-dashboard"
+            element={
+              <ProtectedRoute>
+                <VolunteerDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/student-login"
-          element={
-            <ProtectedRoute>
-              <StudentLogin />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/student-login"
+            element={
+              <ProtectedRoute>
+                <StudentLogin />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Student Dashboard - No protection needed after login */}
-        <Route path="/student-dashboard" element={<StudentDashboard />} />
+          {/* Student Dashboard - No protection needed after login */}
+          <Route path="/student-dashboard" element={<StudentDashboard />} />
 
-        <Route
-          path="/donorlogin"
-          element={
-            <ProtectedRoute>
-              <DonorLogin />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/donorlogin"
+            element={
+              <ProtectedRoute>
+                <DonorLogin />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/donor-dashboard"
-          element={
-            <ProtectedRoute>
-              <DonorDashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/donor-dashboard"
+            element={
+              <ProtectedRoute>
+                <DonorDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/adminlogin"
-          element={
-            <ProtectedRoute>
-              <Adminlogin />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/adminlogin"
+            element={
+              <ProtectedRoute>
+                <Adminlogin />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin-dashboard"
-          element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/studentform"
-          element={
-            <ProtectedRoute>
-              <StudentForm />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/studentform"
+            element={
+              <ProtectedRoute>
+                <StudentForm />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/studentform/:id"
-          element={
-            <ProtectedRoute>
-              <StudentForm />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/studentform/:id"
+            element={
+              <ProtectedRoute>
+                <StudentForm />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/register"
-          element={
-            <ProtectedRoute>
-              <Register />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/register"
+            element={
+              <ProtectedRoute>
+                <Register />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/reset-password"
-          element={
-            <ProtectedRoute>
-              <ResetPassword />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/reset-password"
+            element={
+              <ProtectedRoute>
+                <ResetPassword />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* ⭐ Catch all → always CoverPage */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* ⭐ Catch all → always CoverPage */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </VolunteerProvider>
     </Router>
   );
 }
 
 export default App;
+

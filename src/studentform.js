@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./StudentForm.css";
 import supabase from "./supabaseClient";
+import { useVolunteer } from "./VolunteerContext";
 import EducationDropdown from "./EducationDropdown";
 import { useParams } from "react-router-dom";
 
@@ -17,28 +18,92 @@ export default function StudentForm() {
   const navigate = useNavigate();
   const { id } = useParams();   // student id
   const isEditMode = !!id;
-  const [volunteerEmail, setVolunteerEmail] = useState("");
+  const { volunteer /* , loading: volunteerLoading */ } = useVolunteer();
   const [successMessage, setSuccessMessage] = useState("");
   const [errors, setErrors] = useState({}); // <-- validation errors
 
+  const volunteerEmail = volunteer?.email;
+
   useEffect(() => {
-    // fetch logged-in user email (volunteer)
-    const getUser = async () => {
-      try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) {
-          console.warn("supabase.auth.getUser error:", error);
-          return;
-        }
-        if (data?.user) {
-          setVolunteerEmail(data.user.email);
-        }
-      } catch (err) {
-        console.error("getUser error:", err);
+    if (!isEditMode) return;
+
+    const fetchStudent = async () => {
+      const { data, error } = await supabase
+        .from("student_form_submissions")
+        .select("*")
+        .eq("id", parseInt(id))
+        .single();
+
+      if (error) {
+        alert("Error loading student data");
+        return;
       }
+
+      // Parse family members details if it exists
+      let updatedData = { ...data };
+      if (data.family_members_details) {
+        try {
+         updatedData.family_members_details = data.family_members_details || [];
+updatedData.num_family_members = (data.family_members_details || []).length.toString();
+
+updatedData.earning_members_details = data.earning_members_details || [];
+updatedData.num_earning_members = (data.earning_members_details || []).length.toString();
+          updatedData.num_family_members = updatedData.family_members_details.length.toString();
+        } catch (e) {
+          console.error("Error parsing family members details:", e);
+          updatedData.family_members_details = [];
+          updatedData.num_family_members = "0";
+        }
+      } else {
+        updatedData.family_members_details = [];
+        updatedData.num_family_members = data.num_family_members || "0";
+      }
+
+      // Parse earning members details if it exists
+      if (data.earning_members_details) {
+        try {
+      updatedData.earning_members_details = data.earning_members_details || [];
+updatedData.num_earning_members =
+  (data.earning_members_details || []).length.toString();
+
+          updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
+        } catch (e) {
+          console.error("Error parsing earning members details:", e);
+          updatedData.earning_members_details = [];
+          updatedData.num_earning_members = "0";
+        }
+      } else {
+        updatedData.earning_members_details = [];
+        updatedData.num_earning_members = data.earning_members || "0";
+      }
+updatedData.is_single_parent = data.is_single_parent ? "YES" : "NO";
+updatedData.does_work = data.does_work ? "YES" : "NO";
+updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
+
+      // Load educational expenses if they exist
+      if (data.educational_expenses) {
+        updatedData.educational_expenses = data.educational_expenses;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        ...updatedData
+      }));
+
     };
-    getUser();
-  }, []);
+
+    fetchStudent();
+  }, [id, isEditMode]);
+
+  useEffect(() => {
+    if (volunteer) {
+      setFormData(prev => ({
+        ...prev,
+        volunteer_name: volunteer.name,
+        volunteer_contact: volunteer.phone
+      }));
+    }
+  }, [volunteer]);
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -67,7 +132,6 @@ export default function StudentForm() {
     prev_percent: "",
     present_percent: "",
     fee: "",
-  
 
     educational_expenses: {
       tuition_fee: { checked: false, amount: "" },
@@ -83,10 +147,10 @@ export default function StudentForm() {
     scholarship: "",
     certificates: "",
     years_area: "",
-    num_family_members: "",  // New field for number of family members
-    family_members_details: [],  // New field to store family members details
-    num_earning_members: "",  // New field for number of earning members
-    earning_members_details: [],  // New field to store earning members details
+    num_family_members: "",
+    family_members_details: [],
+    num_earning_members: "",
+    earning_members_details: [],
     account_no: "",
     bank_name: "",
     bank_branch: "",

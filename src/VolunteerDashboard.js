@@ -1,72 +1,38 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useVolunteer } from "./VolunteerContext";
 import "./VolunteerDashboard.css";
 import supabase from "./supabaseClient";
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
+  const { volunteer, loading: contextLoading, updateVolunteerData, fetchVolunteerData } = useVolunteer();
   const [forms, setForms] = useState([]);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [activeSection, setActiveSection] = useState("forms");
-  const [volunteerName, setVolunteerName] = useState("Volunteer");
-  const [volunteerEmail, setVolunteerEmail] = useState("");
-  const [volunteerId, setVolunteerId] = useState(null);
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchVolunteerData = async () => {
-      const sessionResult = await supabase.auth.getSession();
-      const user = sessionResult?.data?.session?.user;
-
-      if (!user) {
-        setLoading(false);
+    if (!volunteer || contextLoading) {
+      if (!contextLoading && !volunteer) {
         navigate("/volunteerlogin");
-        return;
       }
+      return;
+    }
 
-      const email = user.email || "";
-      const name = user.user_metadata?.name || (email ? email.split("@")[0] : "Volunteer");
+    // Sync settings with context
+    setSettings({
+      name: volunteer.name,
+      email: volunteer.email,
+      phone: volunteer.phone
+    });
 
-      setVolunteerId(user.id);
-      setVolunteerEmail(email);
-      setVolunteerName(name);
-
-      setSettings({
-        name,
-        email,
-        phone: ""
-      });
-
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name,email,phone')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError && profileError.code !== 'PGRST116' && profileError.code !== '42P01') {
-          console.warn('VolunteerDashboard: profile fetch error (ignored):', profileError);
-        }
-
-        if (!profileError && profileData) {
-          setSettings({
-            name: profileData.full_name || name,
-            email: profileData.email || email,
-            phone: profileData.phone || ""
-          });
-        }
-      } catch (err) {
-        console.warn('VolunteerDashboard: profile fetch failed, continuing without profile row:', err);
-      }
-
-      await fetchForms(email);
-    };
-
-    fetchVolunteerData();
-  }, [navigate]);
+    // Fetch forms
+    fetchForms(volunteer.email);
+  }, [volunteer, contextLoading, navigate]);
 
   const fetchForms = async (volunteerEmail) => {
     setLoading(true);
@@ -119,43 +85,17 @@ export default function VolunteerDashboard() {
 
   const handleSaveSettings = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!volunteerId) return;
+    if (!volunteer?.id) return;
 
     setSavingSettings(true);
     setSettingsMessage("");
-    try {
-      const updates = {
-        id: volunteerId,
-        full_name: settings.name,
-        email: settings.email,
-        phone: settings.phone,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error: profileError } = await supabase.from("profiles").upsert(updates);
-      if (profileError && profileError.code !== 'PGRST116' && profileError.code !== '42P01') {
-        throw profileError;
-      }
-
-      try {
-        const { error: authError } = await supabase.auth.updateUser({
-          data: { name: settings.name },
-        });
-        if (authError) {
-          console.warn("Volunteer settings: auth metadata save error", authError);
-        }
-      } catch (authErr) {
-        console.warn("Volunteer settings: auth update failed (non-blocking)", authErr);
-      }
-
-      setVolunteerName(settings.name);
-      setSettingsMessage("Settings saved successfully.");
-    } catch (err) {
-      console.error("Error saving settings:", err);
-      setSettingsMessage(`Error saving settings: ${err.message || err}`);
-    } finally {
-      setSavingSettings(false);
+    const success = await updateVolunteerData(settings);
+    if (success) {
+      setSettingsMessage("Settings saved successfully!");
+    } else {
+      setSettingsMessage("Error saving settings. Please try again.");
     }
+    setSavingSettings(false);
   };
 
   const handleDeleteClick = async (id) => {
@@ -258,8 +198,9 @@ export default function VolunteerDashboard() {
         <div>
 <div className="profile-section">
             <div className="profile-avatar">V</div>
-            <h2 className="profile-name">{volunteerName}</h2>
-            <p className="profile-email">{volunteerEmail}</p>
+            <h2 className="profile-name">{volunteer ? volunteer.name : 'Volunteer'}</h2>
+            <p className="profile-email">{volunteer ? volunteer.email : ''}</p>
+            {volunteer?.phone && <p className="profile-phone">{volunteer.phone}</p>}
           </div>
 
           <div className="stats-grid">
