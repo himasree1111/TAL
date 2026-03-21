@@ -70,56 +70,37 @@ const StudentDashboard = () => {
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [studentId, setStudentId] = useState(null);
 
 
   useEffect(() => {
-    const init = async () => {
-      // Check if student is logged in via localStorage
-      const studentEmail = localStorage.getItem("studentEmail");
-      const isStudentLoggedIn = localStorage.getItem("isStudentLoggedIn");
-      
-      if (!studentEmail || !isStudentLoggedIn) {
-        navigate("/student-login");
-        return;
-      }
+  const getUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
 
-      // For now, use a mock user object since we're not using Supabase Auth
-      const mockUser = {
-        id: "student-" + studentEmail,
-        email: studentEmail,
-        user_metadata: {}
-      };
+    if (user) {
+      setUser(user);
+      setStudentId(user.id); // 🔥 IMPORTANT
+    }
+  };
 
-      setUser(mockUser);
+  getUser();
+}, []);
 
-      const fullName = studentEmail.split('@')[0]; // Simple name from email
+useEffect(() => {
+  if (!studentId) return;
 
-      setProfile({
-        name: fullName,
-        email: studentEmail,
-        studentId: "", // Can be loaded from DB later if needed
-        program: "",
-        semester: "",
-        enrollmentDate: "",
-      });
+  const subscription = subscribeToNotifications(studentId, setNotifications);
 
-      setSettings({ name: fullName, email: studentEmail, phone: "" });
+  return () => {
+    supabase.removeChannel(subscription);
+  };
+}, [studentId]);
 
-      await loadNotifications(mockUser.id);
 
-      const subscription = subscribeToNotifications(mockUser.id, (payload) => {
-        if (payload?.new?.id) {
-          loadNotifications(mockUser.id);
-        }
-      });
 
-      return () => {
-        subscription?.unsubscribe?.();
-      };
-    };
 
-    init();
-  }, [navigate]);
+
+console.log("Student ID being used:", studentId);
 
   const loadNotifications = async (studentId) => {
     const { success, notifications: incoming, error: notifError } =
@@ -134,7 +115,7 @@ const StudentDashboard = () => {
       const seen = new Set(prev.map((n) => n.id));
       const deduped = incoming.filter((n) => !seen.has(n.id));
       return [...deduped, ...prev].sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        (a, b) => new Date(b.notifications?.created_at) - new Date(a.notifications?.created_at)
       );
     });
   };
@@ -246,7 +227,7 @@ const StudentDashboard = () => {
 
   const filteredNotifications = useMemo(() => {
     const list = [...notifications].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      (a, b) => new Date(b.notifications?.created_at) - new Date(a.notifications?.created_at)
     );
 
     if (notifFilter === "unread") {
