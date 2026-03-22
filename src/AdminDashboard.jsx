@@ -114,12 +114,12 @@ export default function AdminDashboard() {
     email: student.email,
     contact: student.contact,
     whatsapp: student.whatsapp,
-    student_contact: student.student_contact,
+    student_contact: student.student_contact || "",
 
     scholarship: student.scholarship,
     has_scholarship: student.has_scholarship,
     does_work: student.does_work,
-    earning_members: student.earning_members,
+    earning_members: student.earning_members || "",
 
     created_at: student.created_at
   };
@@ -1447,54 +1447,15 @@ const fetchStudents = async () => {
       <h3>Student Details</h3>
 
       <div className="view-grid">
-
-        {/* NAME */}
-        <p><strong>Full Name:</strong> {viewStudent.full_name}</p>
-
-        {/* BASIC INFO */}
-        <p><strong>Age:</strong> {viewStudent.age}</p>
-        {/* <p><strong>Address:</strong> {viewStudent.address}</p> */}
-        {/* <p><strong>School / College:</strong> {viewStudent.school}</p> */}
-
-        {/* CAMP INFO */}
-        <p><strong>Camp Name:</strong> {viewStudent.camp}</p>
-        <p><strong>Camp Date:</strong> {viewStudent.campDate}</p>
-
-        {/* EDUCATION */}
-        <p><strong>Class / Year:</strong> {viewStudent.class}</p>
-        {/* <p><strong>Branch / Stream:</strong> {viewStudent.branch}</p> */}
-        {/* <p><strong>Course:</strong> {viewStudent.course}</p> */}
-        {/* <p><strong>Certificates:</strong> {viewStudent.certificates}</p> */}
-
-        {/* PERCENTAGES */}
-        <p><strong>Previous %:</strong> {viewStudent.prev_percent}</p>
-        <p><strong>Present %:</strong> {viewStudent.present_percent}</p>
-
-        {/* CONTACT INFO */}
-        <p><strong>Email:</strong> {viewStudent.email}</p>
+        <p><strong>Name:</strong> {viewStudent.name || viewStudent.full_name}</p>
+        <p><strong>Class & Year:</strong> {viewStudent.class || viewStudent.year || '-'}</p>
+        <p><strong>Previous %:</strong> {viewStudent.prev_percent || '-'}</p>
+        <p><strong>Present %:</strong> {viewStudent.present_percent || '-'}</p>
+        <p><strong>Has Scholarship?:</strong> {viewStudent.has_scholarship ? "Yes" : "No"}</p>
+        <p><strong>Earning Members:</strong> {viewStudent.earning_members || '-'}</p>
         <p><strong>Contact:</strong> {viewStudent.contact}</p>
-        <p><strong>WhatsApp:</strong> {viewStudent.whatsapp}</p>
-        <p><strong>Student Contact:</strong> {viewStudent.student_contact}</p>
-
-        {/* SCHOLARSHIP */}
-        <p><strong>Scholarship Type:</strong> {viewStudent.scholarship}</p>
-        <p><strong>Has Scholarship:</strong> {viewStudent.has_scholarship ? "Yes" : "No"}</p>
-        <p><strong>Does Student Work?:</strong> {viewStudent.does_work ? "Yes" : "No"}</p>
-        <p><strong>Earning Members:</strong> {viewStudent.earning_members}</p>
-
-        {/* FEE DETAILS */}
-        {/* <p><strong>Fee Amount:</strong> {viewStudent.fee}</p>
-        <p><strong>Fee Structure:</strong> {viewStudent.fee_structure}</p>
-        <p><strong>Paid Date:</strong> {viewStudent.paidDate}</p> */}
-
-        {/* DONOR */}
-        <p><strong>Donor / Volunteer:</strong> {viewStudent.donor}</p>
-
-        {/* CREATED AT */}
-        <p><strong>Record Created:</strong> 
-          {formatToIST(viewStudent.created_at)}
-        </p>
-
+        <p><strong>Student Contact:</strong> {viewStudent.student_contact || '-'}</p>
+        <p><strong>Record Created:</strong> {formatToIST(viewStudent.created_at)}</p>
       </div>
 
       <button 

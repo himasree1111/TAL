@@ -12,13 +12,14 @@ export default function VolunteerDashboard() {
   const [activeSection, setActiveSection] = useState("forms");
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState("");
+const [settingsMessage, setSettingsMessage] = useState("");
+  const [phoneError, setPhoneError] = useState(""); // Phone validation error
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!volunteer || contextLoading) {
       if (!contextLoading && !volunteer) {
-        navigate("/volunteerlogin");
+        navigate("/coverpage");
       }
       return;
     }
@@ -83,9 +84,25 @@ export default function VolunteerDashboard() {
     navigate("/studentform");
   };
 
+  // Phone validation (copied from volunteerlogin.js)
+  const validatePhone = (value) => {
+    if (!value) return "Phone number is required";
+    if (!/^\d{10}$/.test(value)) return "Must be exactly 10 digits";
+    return "";
+  };
+
   const handleSaveSettings = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!volunteer?.id) return;
+
+    // Validate phone before save
+    const phoneErr = validatePhone(settings.phone);
+    if (phoneErr) {
+      setPhoneError(phoneErr);
+      setSettingsMessage("Please fix phone number");
+      setSavingSettings(false);
+      return;
+    }
 
     setSavingSettings(true);
     setSettingsMessage("");
@@ -121,7 +138,7 @@ export default function VolunteerDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/");
+    navigate("/coverpage");
   };
 
   const renderSettings = () => (
@@ -157,12 +174,20 @@ export default function VolunteerDashboard() {
 
         <div className="form-row">
           <label>Phone</label>
-          <input
-            value={settings.phone}
-            onChange={(e) => setSettings((prev) => ({ ...prev, phone: e.target.value }))}
-            placeholder="Phone number"
-            type="tel"
-          />
+            <input
+              value={settings.phone}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0,10);
+                setSettings((prev) => ({ ...prev, phone: value }));
+                setPhoneError(validatePhone(value));
+              }}
+              placeholder="Phone Number (10 digits)"
+              type="tel"
+              maxLength={10}
+            />
+            {phoneError && (
+              <p className="error-text" style={{marginTop: '-10px', fontSize: '0.85em'}}>{phoneError}</p>
+            )}
         </div>
 
         <div className="form-actions">

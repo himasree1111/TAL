@@ -91,7 +91,7 @@ export const VolunteerProvider = ({ children }) => {
         fetchVolunteerData();
       } else if (event === 'SIGNED_OUT') {
         setVolunteer(null);
-        navigateRef.current('/');
+        navigateRef.current('/coverpage');
       }
     });
 
