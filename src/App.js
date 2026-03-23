@@ -2,6 +2,10 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import { VolunteerProvider } from "./VolunteerContext";
+import { DonorProvider } from "./DonorContext";
+
+
+
 
 import CoverPage from "./CoverPage";
 import StudentLogin from "./studentlogin";
@@ -12,6 +16,7 @@ import Register from "./register";
 import StudentForm from "./studentform";
 import StudentDashboard from "./studentdashboard";
 import DonorDashboard from "./DonorDashboard";
+
 import AdminDashboard from "./AdminDashboard";
 import Adminlogin from "./adminlogin";
 import VolunteerDashboard from "./VolunteerDashboard";
@@ -23,7 +28,13 @@ function App() {
   return (
     <Router>
       <VolunteerProvider>
+        
+
+
         <Routes>
+          
+
+
           {/* ✅ Only public page */}
           <Route path="/" element={<CoverPage />} />
 
@@ -76,12 +87,13 @@ function App() {
             }
           />
 
-          <Route
+<Route
             path="/donor-dashboard"
             element={
               <ProtectedRoute>
                 <DonorDashboard />
               </ProtectedRoute>
+
             }
           />
 
