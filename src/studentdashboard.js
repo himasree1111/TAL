@@ -91,6 +91,7 @@ const StudentDashboard = () => {
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+<<<<<<< HEAD
   const [studentId, setStudentId] = useState(null);
   const [studentType, setStudentType] = useState(null);
   const { studentEmail, logout: contextLogout } = useStudent();
@@ -165,6 +166,74 @@ useEffect(() => {
       } else {
         console.log("[DASHBOARD] Realtime notification filtered OUT");
       }
+=======
+
+
+  useEffect(() => {
+    const init = async () => {
+      // Check if student is logged in via localStorage
+      const studentEmail = localStorage.getItem("studentEmail");
+      const isStudentLoggedIn = localStorage.getItem("isStudentLoggedIn");
+      
+      if (!studentEmail || !isStudentLoggedIn) {
+        navigate("/student-login");
+        return;
+      }
+
+      // For now, use a mock user object since we're not using Supabase Auth
+      const mockUser = {
+        id: "student-" + studentEmail,
+        email: studentEmail,
+        user_metadata: {}
+      };
+
+      setUser(mockUser);
+
+      const fullName = studentEmail.split('@')[0]; // Simple name from email
+
+      setProfile({
+        name: fullName,
+        email: studentEmail,
+        studentId: "", // Can be loaded from DB later if needed
+        program: "",
+        semester: "",
+        enrollmentDate: "",
+      });
+
+      setSettings({ name: fullName, email: studentEmail, phone: "" });
+
+      await loadNotifications(mockUser.id);
+
+      const subscription = subscribeToNotifications(mockUser.id, (payload) => {
+        if (payload?.new?.id) {
+          loadNotifications(mockUser.id);
+        }
+      });
+
+      return () => {
+        subscription?.unsubscribe?.();
+      };
+    };
+
+    init();
+  }, [navigate]);
+
+  const loadNotifications = async (studentId) => {
+    const { success, notifications: incoming, error: notifError } =
+      await getStudentNotifications(studentId);
+
+    if (!success) {
+      setError(notifError || "Unable to load notifications");
+      return;
+    }
+
+    setNotifications((prev) => {
+      const seen = new Set(prev.map((n) => n.id));
+      const deduped = incoming.filter((n) => !seen.has(n.id));
+      return [...deduped, ...prev].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+>>>>>>> parent of 9e14c56 (Merge branch 'main' of https://github.com/himasree1111/TAL)
     });
   };
 

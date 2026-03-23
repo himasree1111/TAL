@@ -80,31 +80,16 @@
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, #7fc74a, #5da832);
-  color: white;
-  border: none;
-  box-shadow: 0 6px 18px rgba(127, 199, 74, 0.4);
+  background: rgba(127, 199, 74, 0.35);
+  border-color: rgba(127, 199, 74, 0.5);
 }
 
-.nav-item.active .nav-icon {
-  color: white;
-}
 .nav-icon {
   width: 26px;
   height: 26px;
   display: grid;
   place-items: center;
   font-size: 1.1rem;
-}
-
-.nav-badge {
-  background: #ef4444;
-  color: white;
-  border-radius: 50%;
-  font-size: 11px;
-  padding: 3px 7px;
-  margin-left: auto;
-  font-weight: 700;
 }
 
 .logout-btn {
@@ -409,14 +394,14 @@
 }
 
 .notification-card:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
 }
 
 .notification-card.new {
-  border-left: 5px solid #7fc74a;
-  background: rgba(127, 199, 74, 0.12);
+  border-color: rgba(127, 199, 74, 0.6);
 }
+
 .notification-title {
   display: flex;
   justify-content: space-between;
@@ -675,45 +660,3 @@
   }
 }
 
-.stats-bar {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.stat-card,
-.doc-card,
-.notification-card,
-.section-block {
-  backdrop-filter: blur(6px);
-}
-
-.btn.primary {
-  box-shadow: 0 8px 18px rgba(127, 199, 74, 0.25);
-}
-
-.btn.primary:active {
-  transform: scale(0.97);
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(127, 199, 74, 0.6);
-  border-radius: 10px;
-}
-
-.notification-card.new {
-  animation: pulseGlow 1.5s infinite alternate;
-}
-
-@keyframes pulseGlow {
-  from {
-    box-shadow: 0 0 0 rgba(127, 199, 74, 0.2);
-  }
-  to {
-    box-shadow: 0 0 12px rgba(127, 199, 74, 0.6);
-  }
-}
