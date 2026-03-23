@@ -44,6 +44,7 @@ export default function AdminDashboard() {
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
   // const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [activeReportList, setActiveReportList] = useState(null);
+  const [studentId, setStudentId] = useState(null);
 
 
   const [notificationTitle, setNotificationTitle] = useState("");
@@ -61,6 +62,8 @@ export default function AdminDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setCurrentUser(session.user);
+            setStudentId(session.user.id); // 👈 ADD THIS
+
           // Initialize settings with current user data
           setAdminName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || "");
         } else {
@@ -68,12 +71,14 @@ export default function AdminDashboard() {
           navigate('/');
         }
 
-        // Fetch student form submissions
+// Fetch ALL students from student_form_submissions (no status filter)
        const { data: studentData, error: studentError } = await supabase
   .from('admin_student_info')
   .select('*')
    .eq('status', 'Pending')
   .order('created_at', { ascending: false });
+
+
 
         // Save raw fetch result for debugging
         setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
@@ -146,11 +151,8 @@ fetchNonEligibleCount();
 }, [navigate]);
 
 
-<<<<<<< HEAD
 // REMOVED loadNotifications - no user_notifications tracking
 
-=======
->>>>>>> parent of 9e14c56 (Merge branch 'main' of https://github.com/himasree1111/TAL)
 
   // filters now include stream (course)
   const [filters, setFilters] = useState({ class: "", donor: "", feeStatus: "", stream: "" });
@@ -321,7 +323,6 @@ setEligibleCount(data?.length || 0);
 
 const handleApprove = async (student) => {
   try {
-<<<<<<< HEAD
     // Get full record first from admin_student_info table
     const { data: record } = await supabase
       .from('admin_student_info')
@@ -389,35 +390,14 @@ const handleApprove = async (student) => {
     setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
 
     alert("✅ Student moved to Eligible successfully!");
-=======
-    const { error } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Eligible' })
-      .eq('id', student.id);
-
-    if (error) {
-      console.error(error);
-      alert("❌ Failed to approve: " + error.message);
-      return;
-    }
-
-    // Update UI
-    setStudents(prev =>
-      prev.map(s =>
-        s.id === student.id ? { ...s, status: 'Eligible' } : s
-      )
-    );
-
-    alert("✅ Student marked as Eligible");
->>>>>>> parent of 9e14c56 (Merge branch 'main' of https://github.com/himasree1111/TAL)
 
   } catch (err) {
     console.error(err);
+    alert("Error: " + err.message);
   }
 };
 const handleNotApprove = async (student) => {
   try {
-<<<<<<< HEAD
     // Get full record first from admin_student_info table
     const { data: record } = await supabase
       .from('admin_student_info')
@@ -490,44 +470,37 @@ const handleNotApprove = async (student) => {
     fetchStudents();
 
     alert("✅ Student moved to Non-Eligible successfully!");
-=======
-    const { error } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Not Eligible' })
-      .eq('id', student.id);
-
-    if (error) {
-      console.error(error);
-      alert("❌ Failed to reject: " + error.message);
-      return;
-    }
-
-    // Update UI
-    setStudents(prev =>
-      prev.map(s =>
-        s.id === student.id ? { ...s, status: 'Not Eligible' } : s
-      )
-    );
-
-    alert("❌ Student marked as Not Eligible");
->>>>>>> parent of 9e14c56 (Merge branch 'main' of https://github.com/himasree1111/TAL)
 
   } catch (err) {
     console.error(err);
+    alert("Error: " + err.message);
   }
 };
 const fetchStudents = async () => {
   const { data, error } = await supabase
     .from('admin_student_info')
     .select('*')
-    .eq('status', 'Pending'); // ✅ ADD THIS LINE
+    .eq('status', 'Pending');
 
   if (error) {
     console.error(error);
     return;
   }
 
-  setStudents(data);
+  // Transform data to match table format
+  const transformedStudents = (data || []).map((student, index) => ({
+    id: student.id || index + 1,
+    student_id: student.id,
+    name: student.student_name || student.full_name || '',
+    year: student.year || student.class || '',
+    email: student.email,
+    contact: student.contact,
+    class: student.class || student.year || '',
+    full_name: student.student_name || student.full_name || '',
+    created_at: student.created_at
+  }));
+
+  setStudents(transformedStudents);
 };
 
 
@@ -681,12 +654,16 @@ const fetchStudents = async () => {
     e.preventDefault();
     setCreatingNotification(true);
 
+  const formattedDate = notificationExpiresAt
+  ? new Date(notificationExpiresAt).toISOString()
+  : null;
+
     const result = await createNotification(
-      notificationTitle,
-      notificationMessage,
-      notificationAudience,
-      notificationExpiresAt || null
-    );
+  notificationTitle,
+  notificationMessage,
+  notificationAudience,
+  formattedDate
+);
 
     if (result.success) {
       alert("Notification created successfully!");
@@ -763,6 +740,7 @@ const fetchStudents = async () => {
         <main className="admin-content">
           {loading && (
             <div style={{ textAlign: 'center', padding: '2rem' }}>
+              Loading dashboard...
              
             </div>
           )}
