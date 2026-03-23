@@ -1,4 +1,3 @@
-/*
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -199,7 +198,7 @@ const FinancialProgress = () => {
         </div>
       </div>
       <p className="chart-info">
-        You’ve achieved {percentage}% of this year’s donation target.
+        You've achieved {percentage}% of this year's donation target.
       </p>
     </div>
   );
@@ -263,4 +262,4 @@ const DonorDashboard = () => {
 };
 
 export default DonorDashboard;
-*/
+

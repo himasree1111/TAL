@@ -167,8 +167,7 @@ const handleRoleSelect = (role) => {
   } else if (role === 'Student') {
     navigate('/student-login');
   } else if (role === 'Donor') {
-    navigate('/donorlogin');
-  } else if (role === 'Admin') {
+    navigate('/donorlogin'); } else if (role === 'Admin') {
     navigate('/adminlogin');
   }
 };

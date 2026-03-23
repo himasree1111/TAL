@@ -1,6 +1,4 @@
-// src/DonorLogin.js
-/*
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -18,47 +16,29 @@ export default function DonorLogin() {
   const [nameError, setNameError] = useState("");
   const [passwordErrors, setPasswordErrors] = useState([]);
 
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  // ---------------- VALIDATIONS ---------------- 
 
   const validateName = (value) => {
     if (!value.trim()) return "Full name is required";
-    if (!/^[A-Za-z\s]+$/.test(value))
-      return "Only letters and spaces are allowed";
+    if (!/^[A-Za-z ]+$/.test(value)) return "Only letters and spaces are allowed";
     return "";
   };
 
   const validateEmail = (value) => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-      return "Please enter a valid email address";
+    const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/;
+    if (!emailRegex.test(value)) return "Please enter a valid email address";
     return "";
   };
 
   const validatePassword = (value) => {
     const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("Must include a number");
-    if (!/[@$!%*?&]/.test(value))
-      errors.push("Must include a special character (@$!%*?&)");
-    if (value.length < 8)
-      errors.push("Must be at least 8 characters long");
+    if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include number");
+    if (!/[@$!%*?&]/.test(value)) errors.push("Must include special character");
+    if (value.length < 8) errors.push("At least 8 characters long");
     return errors;
   };
-
-  // ---------------- RESET SESSION ---------------- 
-
-  useEffect(() => {
-    const resetSession = async () => {
-      await supabase.auth.signOut();
-      setLoading(false);
-    };
-    resetSession();
-  }, []);
-
-  // ---------------- SUBMIT ---------------- 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,11 +62,10 @@ export default function DonorLogin() {
 
     try {
       if (isSignIn) {
-        const { data, error } =
-          await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
         if (error) throw error;
 
@@ -96,7 +75,7 @@ export default function DonorLogin() {
           return;
         }
 
-        toast.success("Donor login successful 🎉");
+        toast.success("Donor login successful");
         navigate("/donor-dashboard");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -109,15 +88,13 @@ export default function DonorLogin() {
 
         if (error) throw error;
 
-        toast.success("Donor account created 🎉");
+        toast.success("Donor account created");
         setIsSignIn(true);
       }
     } catch (err) {
       toast.error(err.message);
     }
   };
-
-  // ---------------- FORGOT PASSWORD ---------------- 
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -130,12 +107,8 @@ export default function DonorLogin() {
     });
 
     if (error) toast.error(error.message);
-    else toast.success("Password reset email sent 📧");
+    else toast.success("Password reset email sent");
   };
-
-  if (loading) return <div>Loading...</div>;
-
-  // ---------------- UI ---------------- 
 
   return (
     <div className="auth-container">
@@ -159,7 +132,6 @@ export default function DonorLogin() {
             </>
           )}
 
-          // EMAIL 
           <input
             type="email"
             placeholder="Email Address"
@@ -172,7 +144,6 @@ export default function DonorLogin() {
           />
           {emailError && <p className="error-text">{emailError}</p>}
 
-          //PASSWORD WITH EYE ICON 
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -200,12 +171,11 @@ export default function DonorLogin() {
               }}
               title={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? "👁‍🗨" : "👁"}
+              {showPassword ? "👁" : "👁"}
             </span>
           </div>
 
-          // PASSWORD RULES 
-          { passwordErrors.length > 0 && (
+          {passwordErrors.length > 0 && (
             <ul className="error-text">
               {passwordErrors.map((err, i) => (
                 <li key={i}>{err}</li>
@@ -220,15 +190,16 @@ export default function DonorLogin() {
 
         <p className="switch-text">
           {isSignIn ? "New here?" : "Already have an account?"}{" "}
-          <span onClick={() => setIsSignIn(!isSignIn)}>
-            {isSignIn ? "Create an account" : "Sign in"}
+          <span onClick={() => setIsSignIn(!isSignIn)} style={{ cursor: "pointer", color: "#4F46E5" }}>
+            {isSignIn ? "Create account" : "Sign in"}
           </span>
         </p>
 
         {isSignIn && (
-          <p
-            className="forgot-password"
+          <p 
+            className="forgot-password" 
             onClick={handleForgotPassword}
+            style={{ cursor: "pointer", textAlign: "center", marginTop: "10px" }}
           >
             Forgot password?
           </p>
@@ -239,4 +210,4 @@ export default function DonorLogin() {
     </div>
   );
 }
-*/
+

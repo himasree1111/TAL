@@ -70,9 +70,9 @@ export const getStudentNotifications = async (studentType) => {
 
     const type = (studentType || "all").toLowerCase().trim();
 
-    console.log(`[FETCH] Fetched ${data.length} total, filtered to ${filtered.length} for type "${studentType}"`);
-    return { success: true, notifications: filtered };
+    const filtered = data.filter((notification) => filterNotification(notification, type));
 
+    console.log(`[FETCH] Fetched ${data.length} total, filtered to ${filtered.length} for type "${studentType}"`);
     return { success: true, notifications: filtered };
 
   } catch (error) {
