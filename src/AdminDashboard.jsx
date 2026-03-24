@@ -44,7 +44,7 @@ export default function AdminDashboard() {
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
   // const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [activeReportList, setActiveReportList] = useState(null);
-  const [studentId, setStudentId] = useState(null);
+  // const [studentId, setStudentId] = useState(null); // unused
 
 
   const [notificationTitle, setNotificationTitle] = useState("");
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setCurrentUser(session.user);
-            setStudentId(session.user.id); // 👈 ADD THIS
+        // setStudentId(session.user.id); // unused
 
           // Initialize settings with current user data
           setAdminName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || "");
