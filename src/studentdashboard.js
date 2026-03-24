@@ -11,6 +11,7 @@ import { useStudent } from "./StudentContext";
 
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard Overview", icon: "🏠" },
+  { key: "profile", label: "My Profile", icon: "👤" },
   { key: "notifications", label: "Alerts & Broadcasts", icon: "🔔" },
   { key: "documents", label: "Document Upload", icon: "📄" },
   { key: "settings", label: "Student Settings", icon: "⚙️" },
@@ -88,12 +89,72 @@ const StudentDashboard = () => {
   const [documents, setDocuments] = useState(initialDocumentState);
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState("");
-  const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
+  const [settings, setSettings] = useState({ name: '', email: '', phone: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [studentId, setStudentId] = useState(null);
   const [studentType, setStudentType] = useState(null);
   const { studentEmail, logout: contextLogout } = useStudent();
+    
+  // Profile form state
+  const [profileForm, setProfileForm] = useState({
+    first_name: '',
+    last_name: '',
+    middle_name: '',
+    dob: '',
+    age: '',
+    pob: '',
+    nationality: '',
+    address: '',
+    class: '',
+    educationcategory: '',
+    educationsubcategory: '',
+    educationyear: '',
+    educationcategory_custom: '',
+    educationsubcategory_custom: '',
+    educationyear_custom: '',
+    email: '',
+    contact: '',
+    parent_contact_2: '',
+    whatsapp: '',
+    student_contact: '',
+    school: '',
+    branch: '',
+    prev_percent: '',
+    present_percent: '',
+    fee: '',
+    educational_expenses: {
+      tuition_fee: { checked: false, amount: '' },
+      books_study_materials: { checked: false, amount: '' },
+      uniform: { checked: false, amount: '' },
+      transport_fee: { checked: false, amount: '' },
+      examination_fee: { checked: false, amount: '' },
+      hostel_accommodation: { checked: false, amount: '' },
+      food_mess_charges: { checked: false, amount: '' }
+    },
+    job: '',
+    aspiration: '',
+    scholarship: '',
+    num_family_members: '',
+    family_members_details: [],
+    num_earning_members: '',
+    earning_members_details: [],
+    account_no: '',
+    bank_name: '',
+    bank_branch: '',
+    ifsc_code: '',
+    special_remarks: '',
+    academic_achievements: '',
+    non_academic_achievements: '',
+    is_single_parent: '',
+    does_work: '',
+    has_scholarship: ''
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalFormData, setOriginalFormData] = useState(null);
 
 useEffect(() => {
   
@@ -110,6 +171,8 @@ useEffect(() => {
       .eq('email', studentEmail)
       .single();
     
+    console.log('[PROFILE] eligible_students query result:', { profileData, profileError });
+    
     if (profileError || !profileData) {
       console.error('Profile fetch error:', profileError);
       // Try non_eligible
@@ -118,6 +181,7 @@ useEffect(() => {
         .select('*')
         .eq('email', studentEmail)
         .single();
+      console.log('[PROFILE] non_eligible_students query result:', { nonEligibleData, nonError });
       if (nonError || !nonEligibleData) {
         console.error('No profile found in either table:', nonError);
         return;
@@ -173,6 +237,109 @@ useEffect(() => {
   return () => {
     if (subscription) supabase.removeChannel(subscription);
   };
+}, [studentEmail]);
+
+// Fetch profile form data when component mounts or studentEmail changes
+useEffect(() => {
+  const fetchProfileFormData = async () => {
+    if (!studentEmail) {
+      console.log('[PROFILE] No studentEmail available');
+      return;
+    }
+    
+    setProfileLoading(true);
+    try {
+      console.log('[PROFILE] Fetching from student_form_submissions with email:', studentEmail);
+      
+      // Fetch from student_form_submissions using email
+      const { data: formData, error } = await supabase
+        .from('student_form_submissions')
+        .select('*')
+        .eq('email', studentEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      console.log('[PROFILE] Query result:', { formData, error });
+      
+      if (error) {
+        console.error('Error fetching profile form:', error);
+        setProfileLoading(false);
+        return;
+      }
+      
+      if (formData) {
+        // Map the form data to profileForm state based on actual table schema
+        console.log('[PROFILE] Fetched formData from student_form_submissions:', formData);
+        
+        const mappedData = {
+          first_name: formData.first_name || '',
+          last_name: formData.last_name || '',
+          middle_name: formData.middle_name || '',
+          dob: formData.dob || '',
+          age: formData.age?.toString() || '',
+          pob: formData.pob || '',
+          nationality: formData.nationality || '',
+          address: formData.address || '',
+          class: formData.class || '',
+          educationcategory: formData.educationcategory || '',
+          educationsubcategory: formData.educationsubcategory || '',
+          educationyear: formData.educationyear || '',
+          educationcategory_custom: '',
+          educationsubcategory_custom: '',
+          educationyear_custom: '',
+          email: formData.email || '',
+          contact: formData.contact || '',
+          parent_contact_2: formData.parent_contact_2 || '',
+          whatsapp: formData.whatsapp || '',
+          student_contact: formData.student_contact || '',
+          school: formData.school || '',
+          branch: formData.branch || '',
+          prev_percent: formData.prev_percent?.toString() || '',
+          present_percent: formData.present_percent?.toString() || '',
+          fee: formData.fee?.toString() || '',
+          educational_expenses: formData.educational_expenses || {
+            tuition_fee: { checked: false, amount: '' },
+            books_study_materials: { checked: false, amount: '' },
+            uniform: { checked: false, amount: '' },
+            transport_fee: { checked: false, amount: '' },
+            examination_fee: { checked: false, amount: '' },
+            hostel_accommodation: { checked: false, amount: '' },
+            food_mess_charges: { checked: false, amount: '' }
+          },
+          job: formData.job || '',
+          aspiration: formData.aspiration || '',
+          scholarship: formData.scholarship || '',
+          num_family_members: formData.num_family_members?.toString() || '',
+          family_members_details: formData.family_members_details || [],
+          num_earning_members: formData.earning_members?.toString() || '',
+          earning_members_details: formData.earning_members_details || [],
+          account_no: formData.account_no || '',
+          bank_name: formData.bank_name || '',
+          bank_branch: formData.bank_branch || '',
+          ifsc_code: formData.ifsc_code || '',
+          special_remarks: formData.special_remarks || '',
+          academic_achievements: formData.academic_achievements || '',
+          non_academic_achievements: formData.non_academic_achievements || '',
+          is_single_parent: formData.is_single_parent ? 'YES' : 'NO',
+          does_work: formData.does_work ? 'YES' : 'NO',
+          has_scholarship: formData.has_scholarship ? 'YES' : 'NO'
+        };
+        
+        setProfileForm(mappedData);
+        setOriginalFormData(mappedData); // Store original data for cancel functionality
+        console.log('[PROFILE] Mapped profileForm data:', mappedData);
+      } else {
+        console.log('[PROFILE] No formData found for student email:', studentEmail);
+      }
+    } catch (err) {
+      console.error('Error in fetchProfileFormData:', err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+  
+  fetchProfileFormData();
 }, [studentEmail]);
 
 
@@ -265,6 +432,183 @@ const handleLogout = () => {
       setError(err.message || "Failed to save settings");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Profile form handlers
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelClick = () => {
+    // Reset to original data
+    setProfileForm(originalFormData);
+    setIsEditing(false);
+    setProfileMessage('');
+    setProfileError('');
+  };
+
+  const handleProfileChange = (field, value) => {
+    setProfileForm(prev => ({ ...prev, [field]: value }));
+    setProfileMessage('');
+    setProfileError('');
+  };
+
+  const handleEducationalExpenseChange = (expenseKey, field, value) => {
+    const updatedExpenses = {
+      ...profileForm.educational_expenses,
+      [expenseKey]: {
+        ...profileForm.educational_expenses[expenseKey],
+        [field]: value
+      }
+    };
+    setProfileForm(prev => ({ ...prev, educational_expenses: updatedExpenses }));
+  };
+
+  const handleFamilyMemberChange = (index, field, value) => {
+    const updatedDetails = [...profileForm.family_members_details];
+    if (updatedDetails[index]) {
+      updatedDetails[index][field] = value;
+    }
+    setProfileForm(prev => ({ ...prev, family_members_details: updatedDetails }));
+  };
+
+  const handleEarningMemberChange = (index, field, value) => {
+    const updatedDetails = [...profileForm.earning_members_details];
+    if (updatedDetails[index]) {
+      updatedDetails[index][field] = value;
+    }
+    setProfileForm(prev => ({ ...prev, earning_members_details: updatedDetails }));
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setProfileLoading(true);
+    setProfileMessage('');
+    setProfileError('');
+
+    try {
+      // Prepare payload for eligible_students - ONLY update fields that exist in the table
+      const fullName = `${profileForm.first_name} ${profileForm.middle_name || ''} ${profileForm.last_name}`.trim();
+      
+      const eligibleStudentsUpdate = {
+        full_name: fullName,
+        student_name: fullName,
+        email: profileForm.email,
+        contact: profileForm.contact,
+        whatsapp: profileForm.whatsapp,
+        parent_contact_2: profileForm.parent_contact_2,
+        student_contact: profileForm.student_contact,
+        address: profileForm.address
+        // No updated_at column in eligible_students table
+      };
+
+      // Update eligible_students
+      const { error: eligibleError } = await supabase
+        .from('eligible_students')
+        .update(eligibleStudentsUpdate)
+        .eq('email', studentEmail);
+
+      if (eligibleError) throw eligibleError;
+
+      // Update student_form_submissions with timestamp
+      const formSubmissionUpdate = {
+        first_name: profileForm.first_name,
+        middle_name: profileForm.middle_name || null,
+        last_name: profileForm.last_name,
+        full_name: fullName,
+        dob: profileForm.dob || null,
+        age: parseInt(profileForm.age) || null,
+        pob: profileForm.pob || null,
+        nationality: profileForm.nationality || null,
+        address: profileForm.address,
+        class: profileForm.class,
+        educationcategory: profileForm.educationcategory || null,
+        educationsubcategory: profileForm.educationsubcategory || null,
+        educationyear: profileForm.educationyear || null,
+        email: profileForm.email,
+        contact: profileForm.contact,
+        parent_contact_2: profileForm.parent_contact_2 || null,
+        whatsapp: profileForm.whatsapp,
+        student_contact: profileForm.student_contact || null,
+        school: profileForm.school,
+        branch: profileForm.branch || null,
+        prev_percent: parseFloat(profileForm.prev_percent) || null,
+        present_percent: parseFloat(profileForm.present_percent) || null,
+        fee: profileForm.fee || null,
+        educational_expenses: profileForm.educational_expenses,
+        job: profileForm.job || null,
+        aspiration: profileForm.aspiration || null,
+        scholarship: profileForm.scholarship || null,
+        num_family_members: parseInt(profileForm.num_family_members) || 0,
+        family_members_details: profileForm.family_members_details,
+        earning_members: parseInt(profileForm.num_earning_members) || 0,
+        earning_members_details: profileForm.earning_members_details,
+        account_no: profileForm.account_no || null,
+        bank_name: profileForm.bank_name || null,
+        bank_branch: profileForm.bank_branch || null,
+        ifsc_code: profileForm.ifsc_code || null,
+        special_remarks: profileForm.special_remarks || null,
+        academic_achievements: profileForm.academic_achievements || null,
+        non_academic_achievements: profileForm.non_academic_achievements || null,
+        is_single_parent: profileForm.is_single_parent === 'YES',
+        does_work: profileForm.does_work === 'YES',
+        has_scholarship: profileForm.has_scholarship === 'YES'
+      };
+
+      // Update student_form_submissions
+      const { error: submissionError } = await supabase
+        .from('student_form_submissions')
+        .update(formSubmissionUpdate)
+        .eq('email', studentEmail);
+
+      if (submissionError) throw submissionError;
+
+      // Update admin_student_info if exists (only update relevant fields)
+      const { data: adminData } = await supabase
+        .from('admin_student_info')
+        .select('id')
+        .eq('email', studentEmail)
+        .maybeSingle();
+
+      if (adminData) {
+        const adminUpdate = {
+          full_name: fullName,
+          email: profileForm.email,
+          contact: profileForm.contact,
+          whatsapp: profileForm.whatsapp,
+          parent_contact_2: profileForm.parent_contact_2,
+          student_contact: profileForm.student_contact,
+          address: profileForm.address,
+          scholarship: profileForm.scholarship,
+          has_scholarship: profileForm.has_scholarship === 'YES',
+          does_work: profileForm.does_work === 'YES',
+          earning_members: parseInt(profileForm.num_earning_members) || 0
+        };
+        
+        const { error: adminError } = await supabase
+          .from('admin_student_info')
+          .update(adminUpdate)
+          .eq('email', studentEmail);
+
+        if (adminError) {
+          console.error('Error updating admin_student_info:', adminError);
+          // Don't throw - this is optional
+        }
+      }
+
+      setProfileMessage('Profile updated successfully!');
+      setOriginalFormData(profileForm); // Update original data with new values
+      setIsEditing(false); // Exit edit mode after successful save
+      
+      // Update profile context
+      setProfile(prev => ({ ...prev, full_name: fullName, student_name: fullName, contact: profileForm.contact }));
+      
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setProfileError(err.message || 'Failed to update profile');
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -514,6 +858,831 @@ const handleLogout = () => {
     </div>
   );
 
+  const renderProfile = () => (
+    <div className="settings-panel">
+      <div className="settings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2>My Profile</h2>
+          <p className="section-note">View and update your personal information, academic details, and family background.</p>
+        </div>
+        {!isEditing ? (
+          <button 
+            className="btn primary" 
+            onClick={handleEditClick}
+            style={{ padding: '10px 20px', fontSize: '0.9rem' }}
+          >
+            ✎ Edit Profile
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              className="btn" 
+              onClick={handleCancelClick}
+              style={{ padding: '10px 20px', fontSize: '0.9rem', background: '#e5e7eb', color: '#374151' }}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn primary" 
+              type="submit"
+              form="profile-form"
+              disabled={profileLoading}
+              style={{ padding: '10px 20px', fontSize: '0.9rem' }}
+            >
+              {profileLoading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {profileLoading && (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#5b6b6d' }}>
+          Loading profile...
+        </div>
+      )}
+
+      {profileMessage && (
+        <div style={{ padding: '14px', background: 'rgba(127, 199, 74, 0.15)', border: '1px solid rgba(127, 199, 74, 0.4)', borderRadius: '14px', color: '#2f7b3b', marginBottom: '16px', fontWeight: '600' }}>
+          {profileMessage}
+        </div>
+      )}
+
+      {profileError && (
+        <div style={{ padding: '14px', background: 'rgba(230, 90, 85, 0.12)', border: '1px solid rgba(230, 90, 85, 0.35)', borderRadius: '14px', color: '#b92c2c', marginBottom: '16px' }}>
+          {profileError}
+        </div>
+      )}
+
+      <form className="settings-form" onSubmit={handleSaveProfile}>
+        {/* Personal Information */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Personal Information</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div className="form-row">
+              <label>First Name</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.first_name}
+                  onChange={(e) => handleProfileChange('first_name', e.target.value)}
+                  required
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.first_name || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Middle Name</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.middle_name}
+                  onChange={(e) => handleProfileChange('middle_name', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.middle_name || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Last Name</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.last_name}
+                  onChange={(e) => handleProfileChange('last_name', e.target.value)}
+                  required
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.last_name || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '14px' }}>
+            <div className="form-row">
+              <label>Date of Birth</label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={profileForm.dob}
+                  onChange={(e) => handleProfileChange('dob', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.dob ? new Date(profileForm.dob).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Age</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  value={profileForm.age}
+                  onChange={(e) => handleProfileChange('age', e.target.value)}
+                  min="6"
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.age ? `${profileForm.age} years` : 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Place of Birth</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.pob}
+                  onChange={(e) => handleProfileChange('pob', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.pob || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Nationality</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.nationality}
+                onChange={(e) => handleProfileChange('nationality', e.target.value)}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                {profileForm.nationality || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Address</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.address}
+                onChange={(e) => handleProfileChange('address', e.target.value)}
+                style={{ minHeight: '60px' }}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                {profileForm.address || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Contact Information</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div className="form-row">
+              <label>Email</label>
+              {isEditing ? (
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                  required
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.email || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Parent Contact</label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  value={profileForm.contact}
+                  onChange={(e) => handleProfileChange('contact', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  maxLength={10}
+                  required
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.contact || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Second Parent Contact</label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  value={profileForm.parent_contact_2}
+                  onChange={(e) => handleProfileChange('parent_contact_2', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  maxLength={10}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.parent_contact_2 || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '14px' }}>
+            <div className="form-row">
+              <label>WhatsApp Number</label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  value={profileForm.whatsapp}
+                  onChange={(e) => handleProfileChange('whatsapp', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  maxLength={10}
+                  required
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.whatsapp || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Student Contact</label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  value={profileForm.student_contact}
+                  onChange={(e) => handleProfileChange('student_contact', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  maxLength={10}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.student_contact || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Academic Information */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Academic Information</h3>
+          
+          <div className="form-row">
+            <label>School/College Name</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.school}
+                onChange={(e) => handleProfileChange('school', e.target.value)}
+                required
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                {profileForm.school || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Branch</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.branch}
+                onChange={(e) => handleProfileChange('branch', e.target.value)}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                {profileForm.branch || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Class/Course</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.class}
+                onChange={(e) => handleProfileChange('class', e.target.value)}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                {profileForm.class || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '14px' }}>
+            <div className="form-row">
+              <label>Previous Year %</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.prev_percent}
+                  onChange={(e) => handleProfileChange('prev_percent', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.prev_percent ? `${profileForm.prev_percent}%` : 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Present Year %</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.present_percent}
+                  onChange={(e) => handleProfileChange('present_percent', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.present_percent ? `${profileForm.present_percent}%` : 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Academic Achievements</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.academic_achievements}
+                onChange={(e) => handleProfileChange('academic_achievements', e.target.value)}
+                style={{ minHeight: '60px' }}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                {profileForm.academic_achievements || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Non-Academic Achievements</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.non_academic_achievements}
+                onChange={(e) => handleProfileChange('non_academic_achievements', e.target.value)}
+                style={{ minHeight: '60px' }}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                {profileForm.non_academic_achievements || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Educational Expenses */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Educational Expenses</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '12px' }}>
+            {Object.entries(profileForm.educational_expenses).map(([key, expense]) => (
+              <div
+                key={key}
+                style={{
+                  padding: '12px',
+                  border: `1px solid ${expense.checked ? 'rgba(127, 199, 74, 0.4)' : 'rgba(46, 46, 46, 0.15)'}`,
+                  borderRadius: '12px',
+                  background: expense.checked ? 'rgba(127, 199, 74, 0.08)' : '#ffffff',
+                  opacity: isEditing ? 1 : 0.6
+                }}
+              >
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: isEditing ? 'pointer' : 'default' }}>
+                  {isEditing ? (
+                    <input
+                      type="checkbox"
+                      checked={expense.checked}
+                      onChange={(e) => handleEducationalExpenseChange(key, 'checked', e.target.checked)}
+                      style={{ width: 'auto' }}
+                    />
+                  ) : null}
+                  <span style={{ fontWeight: '600', textTransform: 'capitalize', fontSize: '0.9rem' }}>
+                    {key.replace(/_/g, ' ')}
+                  </span>
+                </label>
+                {expense.checked && (
+                  <input
+                    type="number"
+                    value={expense.amount}
+                    onChange={(e) => handleEducationalExpenseChange(key, 'amount', e.target.value.replace(/\D/g, ''))}
+                    placeholder="Enter amount"
+                    disabled={!isEditing}
+                    style={{ width: '100%', marginTop: '8px' }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Family Details */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Family Details</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div className="form-row">
+              <label>Number of Family Members</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  value={profileForm.num_family_members}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value) || 0;
+                    handleProfileChange('num_family_members', e.target.value);
+                    const newDetails = [...profileForm.family_members_details];
+                    while (newDetails.length < num) newDetails.push({ name: '', relation: '' });
+                    while (newDetails.length > num) newDetails.pop();
+                    handleProfileChange('family_members_details', newDetails);
+                  }}
+                  min="0"
+                  max="15"
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.num_family_members || '0'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Number of Earning Members</label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  value={profileForm.num_earning_members}
+                  onChange={(e) => {
+                    const num = parseInt(e.target.value) || 0;
+                    handleProfileChange('num_earning_members', e.target.value);
+                    const newDetails = [...profileForm.earning_members_details];
+                    while (newDetails.length < num) newDetails.push({ name: '', occupation: '' });
+                    while (newDetails.length > num) newDetails.pop();
+                    handleProfileChange('earning_members_details', newDetails);
+                  }}
+                  min="0"
+                  max="10"
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.num_earning_members || '0'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Family Members Details */}
+          {profileForm.family_members_details.length > 0 && (
+            <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(127, 199, 74, 0.08)', borderRadius: '12px' }}>
+              <h4 style={{ fontSize: '1rem', color: '#1d2b4a', marginBottom: '12px' }}>Family Members</h4>
+              {profileForm.family_members_details.map((member, index) => (
+                <div key={index} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                  <div className="form-row">
+                    <label>Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={member.name}
+                        onChange={(e) => handleFamilyMemberChange(index, 'name', e.target.value)}
+                        placeholder="Family member name"
+                      />
+                    ) : (
+                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                        {member.name || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="form-row">
+                    <label>Relation</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={member.relation}
+                        onChange={(e) => handleFamilyMemberChange(index, 'relation', e.target.value)}
+                        placeholder="Relationship with student"
+                      />
+                    ) : (
+                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                        {member.relation || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Earning Members Details */}
+          {profileForm.earning_members_details.length > 0 && (
+            <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(127, 199, 74, 0.08)', borderRadius: '12px' }}>
+              <h4 style={{ fontSize: '1rem', color: '#1d2b4a', marginBottom: '12px' }}>Earning Members</h4>
+              {profileForm.earning_members_details.map((member, index) => (
+                <div key={index} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                  <div className="form-row">
+                    <label>Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={member.name}
+                        onChange={(e) => handleEarningMemberChange(index, 'name', e.target.value)}
+                        placeholder="Earning member name"
+                      />
+                    ) : (
+                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                        {member.name || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="form-row">
+                    <label>Occupation</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={member.occupation}
+                        onChange={(e) => handleEarningMemberChange(index, 'occupation', e.target.value)}
+                        placeholder="Occupation"
+                      />
+                    ) : (
+                      <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                        {member.occupation || 'Not provided'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Other Details */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Other Details</h3>
+          
+          <div className="form-row">
+            <label>Is she currently being raised by a single parent or guardian?</label>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+              {isEditing ? (
+                <>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="is_single_parent"
+                      value="YES"
+                      checked={profileForm.is_single_parent === 'YES'}
+                      onChange={(e) => handleProfileChange('is_single_parent', e.target.value)}
+                      style={{ width: 'auto' }}
+                    />
+                    Yes
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="is_single_parent"
+                      value="NO"
+                      checked={profileForm.is_single_parent === 'NO'}
+                      onChange={(e) => handleProfileChange('is_single_parent', e.target.value)}
+                      style={{ width: 'auto' }}
+                    />
+                    No
+                  </label>
+                </>
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.is_single_parent || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Does she work to support her family?</label>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+              {isEditing ? (
+                <>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="does_work"
+                      value="YES"
+                      checked={profileForm.does_work === 'YES'}
+                      onChange={(e) => handleProfileChange('does_work', e.target.value)}
+                      style={{ width: 'auto' }}
+                    />
+                    Yes
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="does_work"
+                      value="NO"
+                      checked={profileForm.does_work === 'NO'}
+                      onChange={(e) => handleProfileChange('does_work', e.target.value)}
+                      style={{ width: 'auto' }}
+                    />
+                    No
+                  </label>
+                </>
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.does_work || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {profileForm.does_work === 'YES' && (
+            <div className="form-row" style={{ marginTop: '14px' }}>
+              <label>What kind of job does she do?</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.job}
+                  onChange={(e) => handleProfileChange('job', e.target.value)}
+                  placeholder="Describe occupation"
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                  {profileForm.job || 'Not provided'}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Is she getting any scholarship / Govt help / financial assistance?</label>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+              {isEditing ? (
+                <>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="has_scholarship"
+                      value="YES"
+                      checked={profileForm.has_scholarship === 'YES'}
+                      onChange={(e) => handleProfileChange('has_scholarship', e.target.value)}
+                      style={{ width: 'auto' }}
+                    />
+                    Yes
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="has_scholarship"
+                      value="NO"
+                      checked={profileForm.has_scholarship === 'NO'}
+                      onChange={(e) => handleProfileChange('has_scholarship', e.target.value)}
+                      style={{ width: 'auto' }}
+                    />
+                    No
+                  </label>
+                </>
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.has_scholarship || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {profileForm.has_scholarship === 'YES' && (
+            <div className="form-row" style={{ marginTop: '14px' }}>
+              <label>Scholarship / Assistance Details</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.scholarship}
+                  onChange={(e) => handleProfileChange('scholarship', e.target.value)}
+                  placeholder="Enter scholarship details"
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                  {profileForm.scholarship || 'Not provided'}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Career Aspirations</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.aspiration}
+                onChange={(e) => handleProfileChange('aspiration', e.target.value)}
+                placeholder="Career aspirations and planned courses"
+                style={{ minHeight: '60px' }}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                {profileForm.aspiration || 'Not provided'}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row" style={{ marginTop: '14px' }}>
+            <label>Special Remarks</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={profileForm.special_remarks}
+                onChange={(e) => handleProfileChange('special_remarks', e.target.value)}
+                placeholder="Any additional notes"
+                style={{ minHeight: '60px' }}
+              />
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500', whiteSpace: 'pre-wrap' }}>
+                {profileForm.special_remarks || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bank Details */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', color: '#1d2b4a', marginBottom: '14px', borderBottom: '2px solid rgba(127, 199, 74, 0.2)', paddingBottom: '8px' }}>Bank Account Details</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div className="form-row">
+              <label>Account Number</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.account_no}
+                  onChange={(e) => handleProfileChange('account_no', e.target.value.replace(/\D/g, '').slice(0, 18))}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.account_no || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Bank Name</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.bank_name}
+                  onChange={(e) => handleProfileChange('bank_name', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.bank_name || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>Branch</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.bank_branch}
+                  onChange={(e) => handleProfileChange('bank_branch', e.target.value)}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.bank_branch || 'Not provided'}
+                </div>
+              )}
+            </div>
+            <div className="form-row">
+              <label>IFSC Code</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={profileForm.ifsc_code}
+                  onChange={(e) => handleProfileChange('ifsc_code', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11))}
+                />
+              ) : (
+                <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
+                  {profileForm.ifsc_code || 'Not provided'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button className="btn primary" type="submit" disabled={profileLoading}>
+            {profileLoading ? 'Updating...' : 'Update Profile'}
+          </button>
+          {profileMessage && <span className="success-text">{profileMessage}</span>}
+          {profileError && <span style={{ color: '#b92c2c', fontWeight: '600' }}>{profileError}</span>}
+        </div>
+      </form>
+    </div>
+  );
+
   const renderOverview = () => (
     <>
       <div className="section-header">
@@ -572,6 +1741,10 @@ const handleLogout = () => {
 
     if (activeNav === "settings") {
       return renderSettings();
+    }
+
+    if (activeNav === "profile") {
+      return renderProfile();
     }
 
     return renderOverview();
