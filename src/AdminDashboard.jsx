@@ -28,8 +28,8 @@ export default function AdminDashboard() {
   const [donors, setDonors] = useState([]);
   const [lastFetch, setLastFetch] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [adminName, setAdminName] = useState("");
+// Removed unused: currentUser, adminName
+
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationAudience, setNotificationAudience] = useState("all");
@@ -46,17 +46,15 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
-  const [broadcastOpen, setBroadcastOpen] = useState(false);
+// broadcastOpen unused - kept for future modal
+  // const [broadcastOpen, setBroadcastOpen] = useState(false);
 
   // Fetch user and data
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setCurrentUser(session.user);
-          setAdminName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || "");
-        } else {
+        if (!session) {
           navigate('/');
         }
 
@@ -377,7 +375,7 @@ export default function AdminDashboard() {
           </div>
           <div className="header-actions">
             <input placeholder="Search students or college..." value={query} onChange={(e) => setQuery(e.target.value)} />
-            <button className="btn primary" onClick={() => setBroadcastOpen(true)}>New Broadcast</button>
+            <button className="btn primary" onClick={() => setActiveSection("broadcast")}>New Broadcast</button>
           </div>
         </header>
 

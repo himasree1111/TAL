@@ -82,7 +82,8 @@ const getStudentType = async (studentId) => {
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("dashboard");
-  //const [user, setUser] = useState(null);
+// user, setUser removed - using StudentContext instead
+
   const [profile, setProfile] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [notifFilter, setNotifFilter] = useState("all");

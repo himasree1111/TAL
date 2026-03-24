@@ -6,7 +6,7 @@ import supabase from "./supabaseClient";
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
-  const { volunteer, loading: contextLoading, updateVolunteerData, fetchVolunteerData } = useVolunteer();
+  const { volunteer, loading: contextLoading, updateVolunteerData } = useVolunteer();
   const [forms, setForms] = useState([]);
   const [formsThisMonth, setFormsThisMonth] = useState(0);
   const [formsToday, setFormsToday] = useState(0);
