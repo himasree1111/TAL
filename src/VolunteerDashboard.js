@@ -6,16 +6,60 @@ import supabase from "./supabaseClient";
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
-  const { volunteer, loading: contextLoading, updateVolunteerData, fetchVolunteerData } = useVolunteer();
+  const { volunteer, loading: contextLoading, updateVolunteerData } = useVolunteer();
   const [forms, setForms] = useState([]);
+  const [formsThisMonth, setFormsThisMonth] = useState(0);
+  const [formsToday, setFormsToday] = useState(0);
+  const [formsPreviously, setFormsPreviously] = useState(0);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [activeSection, setActiveSection] = useState("forms");
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
-const [settingsMessage, setSettingsMessage] = useState("");
-  const [phoneError, setPhoneError] = useState(""); // Phone validation error
-  const [loading, setLoading] = useState(true);
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
+  const [loading, setLoading] = useState(true);
+useEffect(() => {
+  const fetchCounts = async () => {
+    const now = new Date();
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // 👉 TODAY COUNT
+    const { count: todayCount } = await supabase
+      .from("student_form_submissions")
+      .select("*", { count: "exact", head: true })
+      .eq("volunteer_email", volunteer?.email) // optional filter
+      .gte("created_at", startOfToday.toISOString());
+
+    // 👉 MONTH COUNT
+    const { count: monthCount } = await supabase
+      .from("student_form_submissions")
+      .select("*", { count: "exact", head: true })
+      .eq("volunteer_email", volunteer?.email)
+      .gte("created_at", startOfMonth.toISOString());
+
+    // 👉 TOTAL COUNT
+    const { count: totalCount } = await supabase
+      .from("student_form_submissions")
+      .select("*", { count: "exact", head: true })
+      .eq("volunteer_email", volunteer?.email);
+
+    // 👉 PREVIOUS = TOTAL - THIS MONTH
+    const previousCount = (totalCount || 0) - (monthCount || 0);
+
+    setFormsToday(todayCount || 0);
+    setFormsThisMonth(monthCount || 0);
+    setFormsPreviously(previousCount);
+  };
+
+  if (volunteer?.email) {
+    fetchCounts();
+  }
+}, [volunteer]);
   useEffect(() => {
     if (!volunteer || contextLoading) {
       if (!contextLoading && !volunteer) {
@@ -24,14 +68,12 @@ const [settingsMessage, setSettingsMessage] = useState("");
       return;
     }
 
-    // Sync settings with context
     setSettings({
       name: volunteer.name,
       email: volunteer.email,
       phone: volunteer.phone
     });
 
-    // Fetch forms
     fetchForms(volunteer.email);
   }, [volunteer, contextLoading, navigate]);
 
@@ -72,6 +114,21 @@ const [settingsMessage, setSettingsMessage] = useState("");
     }));
 
     setForms(transformedForms);
+
+    // Compute new stats
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const thisMonthCount = transformedForms.filter(f => {
+      const formDate = new Date(f.dateSubmitted);
+      return formDate.getMonth() === now.getMonth() && formDate.getFullYear() === now.getFullYear();
+    }).length;
+    const todayCount = transformedForms.filter(f => new Date(f.dateSubmitted).toDateString() === todayStr).length;
+    const previouslyCount = transformedForms.length - thisMonthCount;
+
+    setFormsThisMonth(thisMonthCount);
+    setFormsToday(todayCount);
+    setFormsPreviously(previouslyCount);
+
     setLoading(false);
   };
 
@@ -84,7 +141,6 @@ const [settingsMessage, setSettingsMessage] = useState("");
     navigate("/studentform");
   };
 
-  // Phone validation (copied from volunteerlogin.js)
   const validatePhone = (value) => {
     if (!value) return "Phone number is required";
     if (!/^\d{10}$/.test(value)) return "Must be exactly 10 digits";
@@ -95,7 +151,6 @@ const [settingsMessage, setSettingsMessage] = useState("");
     if (e && e.preventDefault) e.preventDefault();
     if (!volunteer?.id) return;
 
-    // Validate phone before save
     const phoneErr = validatePhone(settings.phone);
     if (phoneErr) {
       setPhoneError(phoneErr);
@@ -153,7 +208,7 @@ const [settingsMessage, setSettingsMessage] = useState("");
           handleSaveSettings();
         }}
       >
-        <div className="form-row">
+        <div className="form-group">
           <label>Name</label>
           <input
             value={settings.name}
@@ -162,7 +217,7 @@ const [settingsMessage, setSettingsMessage] = useState("");
           />
         </div>
 
-        <div className="form-row">
+        <div className="form-group">
           <label>Email</label>
           <input
             value={settings.email}
@@ -191,10 +246,10 @@ const [settingsMessage, setSettingsMessage] = useState("");
         </div>
 
         <div className="form-actions">
-          <button className="btn primary" type="submit" disabled={savingSettings}>
+          <button className="btn btn-primary" type="submit" disabled={savingSettings}>
             {savingSettings ? "Saving..." : "Save Changes"}
           </button>
-          {settingsMessage && <span className="success-text">{settingsMessage}</span>}
+          {settingsMessage && <span className="success-message">{settingsMessage}</span>}
         </div>
       </form>
     </div>
@@ -202,26 +257,12 @@ const [settingsMessage, setSettingsMessage] = useState("");
 
   const selectedForm = forms.find((f) => f.id === selectedFormId);
 
-  const thisMonthForms = forms.filter(
-    (f) => new Date(f.dateSubmitted).getMonth() === new Date().getMonth()
-  ).length;
-
-  const lastMonthForms = forms.filter((f) => {
-    const formDate = new Date(f.dateSubmitted);
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    return (
-      formDate.getMonth() === lastMonth.getMonth() &&
-      formDate.getFullYear() === lastMonth.getFullYear()
-    );
-  }).length;
-
   return (
     <div className="volunteer-dashboard">
       {/* Sidebar */}
       <aside className="sidebar">
         <div>
-<div className="profile-section">
+          <div className="profile-section">
             <div className="profile-avatar">V</div>
             <h2 className="profile-name">{volunteer ? volunteer.name : 'Volunteer'}</h2>
             <p className="profile-email">{volunteer ? volunteer.email : ''}</p>
@@ -230,20 +271,20 @@ const [settingsMessage, setSettingsMessage] = useState("");
 
           <div className="stats-grid">
             <div className="sidebar-item">
-              <h3>{thisMonthForms}</h3>
-              <p>This Month</p>
+              <h3>{formsThisMonth}</h3>
+              <p>Forms Submitted<br/>This Month</p>
             </div>
             <div className="sidebar-item">
-              <h3>{lastMonthForms}</h3>
-              <p>Last Month</p>
+              <h3>{formsToday}</h3>
+              <p>Forms Submitted<br/>Today</p>
             </div>
             <div className="sidebar-item" style={{gridColumn: 'span 2'}}>
-              <h3>{forms.length}</h3>
-              <p>Total Forms</p>
+              <h3>{formsPreviously}</h3>
+              <p>Prior Forms<br/>Submitted</p>
             </div>
           </div>
 
-<nav className="sidebar-nav">
+          <nav className="sidebar-nav">
             <button 
               className={`nav-btn ${activeSection === "forms" ? "active" : ""}`} 
               onClick={() => setActiveSection("forms")}
@@ -266,14 +307,14 @@ const [settingsMessage, setSettingsMessage] = useState("");
 
       {/* Main Content */}
       <main className="main-content">
-{activeSection === "forms" ? (
+        {activeSection === "forms" ? (
           <>
             <div className="main-header">
               <div className="tab-buttons">
                 <h1>Student Forms</h1>
               </div>
-              <button className="btn primary fill-form-btn" onClick={handleFillFormClick}>
-                New Form
+              <button className="btn btn-primary" onClick={handleFillFormClick}>
+                + New Form
               </button>
             </div>
 
@@ -314,16 +355,18 @@ const [settingsMessage, setSettingsMessage] = useState("");
                       </td>
                       <td>
                         <button
-                          className="btn primary small icon"
+                          className="btn primary btn-small"
                           onClick={() => handleEditClick(form)}
+                          style={{fontSize: '0.85rem', padding: '0.5rem 0.75rem'}}
                         >
-                          ✎
+                          ✎ Edit
                         </button>
                         <button
-                          className="btn danger small icon"
+                          className="btn btn-small"
+                          style={{background: '#ef4444', color: 'white', fontSize: '0.85rem', padding: '0.5rem 0.75rem'}}
                           onClick={() => handleDeleteClick(form.id)}
                         >
-                          🗑
+                          🗑 Delete
                         </button>
                       </td>
                     </tr>

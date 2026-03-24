@@ -157,9 +157,14 @@ export default function AdminLogin() {
             placeholder="Email Address"
             value={email}
             onChange={(e) => {
-              setEmail(e.target.value);
-              setEmailError(validateEmail(e.target.value));
+              const val = e.target.value;
+              setEmail(val);
+              // Debounce validation - only validate on blur or submit
+              if (val.length === 0) {
+                setEmailError("");
+              }
             }}
+            onBlur={(e) => setEmailError(validateEmail(e.target.value))}
             className={emailError ? "input-error" : ""}
           />
           {emailError && <p className="error-text">{emailError}</p>}
