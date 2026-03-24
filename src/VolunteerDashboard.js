@@ -6,8 +6,7 @@ import supabase from "./supabaseClient";
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
-const { volunteer, loading: contextLoading, updateVolunteerData } = useVolunteer();
-  const { volunteer, loading: contextLoading, updateVolunteerData } = useVolunteer();
+  const { volunteer, loading: contextLoading, updateVolunteerData, fetchVolunteerData } = useVolunteer();
   const [forms, setForms] = useState([]);
   const [formsThisMonth, setFormsThisMonth] = useState(0);
   const [formsToday, setFormsToday] = useState(0);
@@ -18,49 +17,56 @@ const { volunteer, loading: contextLoading, updateVolunteerData } = useVolunteer
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [phoneError, setPhoneError] = useState("");
-
   const [loading, setLoading] = useState(true);
-useEffect(() => {
-  const fetchCounts = async () => {
-    const now = new Date();
 
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+  // Fetch stats directly from Supabase counts for accuracy
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (!volunteer?.email) return;
 
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // 👉 TODAY COUNT
-    const { count: todayCount } = await supabase
-      .from("student_form_submissions")
-      .select("*", { count: "exact", head: true })
-      .eq("volunteer_email", volunteer?.email) // optional filter
-      .gte("created_at", startOfToday.toISOString());
+      try {
+        // Today count
+        const { count: todayCount } = await supabase
+          .from("student_form_submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("volunteer_email", volunteer.email)
+          .gte("created_at", startOfToday.toISOString());
 
-    // 👉 MONTH COUNT
-    const { count: monthCount } = await supabase
-      .from("student_form_submissions")
-      .select("*", { count: "exact", head: true })
-      .eq("volunteer_email", volunteer?.email)
-      .gte("created_at", startOfMonth.toISOString());
+        // Month count
+        const { count: monthCount } = await supabase
+          .from("student_form_submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("volunteer_email", volunteer.email)
+          .gte("created_at", startOfMonth.toISOString());
 
-    // 👉 TOTAL COUNT
-    const { count: totalCount } = await supabase
-      .from("student_form_submissions")
-      .select("*", { count: "exact", head: true })
-      .eq("volunteer_email", volunteer?.email);
+        // Total count
+        const { count: totalCount } = await supabase
+          .from("student_form_submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("volunteer_email", volunteer.email);
 
-    // 👉 PREVIOUS = TOTAL - THIS MONTH
-    const previousCount = (totalCount || 0) - (monthCount || 0);
+        const previouslyCount = (totalCount || 0) - (monthCount || 0);
 
-    setFormsToday(todayCount || 0);
-    setFormsThisMonth(monthCount || 0);
-    setFormsPreviously(previousCount);
-  };
+        setFormsToday(todayCount || 0);
+        setFormsThisMonth(monthCount || 0);
+        setFormsPreviously(previouslyCount);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
 
-  if (volunteer?.email) {
     fetchCounts();
-  }
-}, [volunteer]);
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [volunteer?.email]);
+
   useEffect(() => {
     if (!volunteer || contextLoading) {
       if (!contextLoading && !volunteer) {
@@ -69,12 +75,14 @@ useEffect(() => {
       return;
     }
 
+    // Sync settings with context
     setSettings({
       name: volunteer.name,
       email: volunteer.email,
       phone: volunteer.phone
     });
 
+    // Fetch forms
     fetchForms(volunteer.email);
   }, [volunteer, contextLoading, navigate]);
 
@@ -115,21 +123,6 @@ useEffect(() => {
     }));
 
     setForms(transformedForms);
-
-    // Compute new stats
-    const now = new Date();
-    const todayStr = now.toDateString();
-    const thisMonthCount = transformedForms.filter(f => {
-      const formDate = new Date(f.dateSubmitted);
-      return formDate.getMonth() === now.getMonth() && formDate.getFullYear() === now.getFullYear();
-    }).length;
-    const todayCount = transformedForms.filter(f => new Date(f.dateSubmitted).toDateString() === todayStr).length;
-    const previouslyCount = transformedForms.length - thisMonthCount;
-
-    setFormsThisMonth(thisMonthCount);
-    setFormsToday(todayCount);
-    setFormsPreviously(previouslyCount);
-
     setLoading(false);
   };
 
@@ -184,7 +177,10 @@ useEffect(() => {
       return;
     }
 
-    setForms((prev) => prev.filter((form) => form.id !== id));
+    // Refresh forms and stats
+    if (volunteer?.email) {
+      fetchForms(volunteer.email);
+    }
     if (selectedFormId === id) setSelectedFormId(null);
   };
 
@@ -209,7 +205,7 @@ useEffect(() => {
           handleSaveSettings();
         }}
       >
-        <div className="form-group">
+        <div className="form-row">
           <label>Name</label>
           <input
             value={settings.name}
@@ -218,7 +214,7 @@ useEffect(() => {
           />
         </div>
 
-        <div className="form-group">
+        <div className="form-row">
           <label>Email</label>
           <input
             value={settings.email}
@@ -247,10 +243,10 @@ useEffect(() => {
         </div>
 
         <div className="form-actions">
-          <button className="btn btn-primary" type="submit" disabled={savingSettings}>
+          <button className="btn primary" type="submit" disabled={savingSettings}>
             {savingSettings ? "Saving..." : "Save Changes"}
           </button>
-          {settingsMessage && <span className="success-message">{settingsMessage}</span>}
+          {settingsMessage && <span className="success-text">{settingsMessage}</span>}
         </div>
       </form>
     </div>
@@ -273,15 +269,15 @@ useEffect(() => {
           <div className="stats-grid">
             <div className="sidebar-item">
               <h3>{formsThisMonth}</h3>
-              <p>Forms Submitted<br/>This Month</p>
+              <p>Forms filled in this month</p>
             </div>
             <div className="sidebar-item">
               <h3>{formsToday}</h3>
-              <p>Forms Submitted<br/>Today</p>
+              <p>Forms filled today</p>
             </div>
             <div className="sidebar-item" style={{gridColumn: 'span 2'}}>
               <h3>{formsPreviously}</h3>
-              <p>Prior Forms<br/>Submitted</p>
+              <p>Forms filled previously</p>
             </div>
           </div>
 
@@ -314,8 +310,8 @@ useEffect(() => {
               <div className="tab-buttons">
                 <h1>Student Forms</h1>
               </div>
-              <button className="btn btn-primary" onClick={handleFillFormClick}>
-                + New Form
+              <button className="btn primary fill-form-btn" onClick={handleFillFormClick}>
+                New Form
               </button>
             </div>
 
@@ -356,18 +352,16 @@ useEffect(() => {
                       </td>
                       <td>
                         <button
-                          className="btn primary btn-small"
+                          className="btn primary small icon"
                           onClick={() => handleEditClick(form)}
-                          style={{fontSize: '0.85rem', padding: '0.5rem 0.75rem'}}
                         >
-                          ✎ Edit
+                          ✎
                         </button>
                         <button
-                          className="btn btn-small"
-                          style={{background: '#ef4444', color: 'white', fontSize: '0.85rem', padding: '0.5rem 0.75rem'}}
+                          className="btn danger small icon"
                           onClick={() => handleDeleteClick(form.id)}
                         >
-                          🗑 Delete
+                          🗑
                         </button>
                       </td>
                     </tr>
@@ -394,3 +388,4 @@ useEffect(() => {
     </div>
   );
 }
+
