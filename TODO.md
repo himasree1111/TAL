@@ -1,11 +1,11 @@
-# Professional Donor Dashboard Refinement - TODO
+# Fix Donor/Student Login Errors & Add Validations
 
-## Updated Plan Steps:
-- [x] 1. User approved refinement (CoverPage → donorlogin → dashboard flow)
-- [ ] 2. Revert CoverPage Donor to '/donorlogin'
-- [x] 3. Fix DonorDashboard.js compilation (done)
-- [ ] 4. Simplify DonorDashboard: minimal sidebar, Total Donated + Goal chart only, remove student tables/campaigns
-- [ ] 5. Test full flow
-- [ ] 6. Complete
+## Steps:
+- [x] Step 1: Check Supabase .env vars (.env exists)
+- [x] Step 2: Edit src/donorlogin.js - added loading state, trim inputs, fixed regex, button loading
+- [x] Step 3: Edit src/studentlogin.js - added password validation, error UI, loading state
 
-**Status**: Implementing refined dashboard...
+- [ ] Step 4: Test donor login/signup
+- [ ] Step 5: Test student login (eligible_students table)
+- [ ] Step 6: Complete & cleanup TODO.md
+

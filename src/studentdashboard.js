@@ -82,7 +82,8 @@ const getStudentType = async (studentId) => {
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("dashboard");
-  const [user, setUser] = useState(null);
+// user, setUser removed - using StudentContext instead
+
   const [profile, setProfile] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [notifFilter, setNotifFilter] = useState("all");
@@ -237,7 +238,7 @@ useEffect(() => {
   return () => {
     if (subscription) supabase.removeChannel(subscription);
   };
-}, [studentEmail]);
+}, [studentEmail, profile, studentId, studentType]);
 
 // Define fetchProfileFormData function that can be called from anywhere
 const fetchProfileFormData = async () => {
@@ -614,8 +615,8 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
           {profile.name ? profile.name.charAt(0).toUpperCase() : "S"}
         </div>
         <div className="profile-meta">
-          <h3>{profile.name || "Student"}</h3>
-{profile.id && <p className="subtle">ID: {profile.id}</p>}
+          <h3>{profile.full_name?.trim() || "Student"}</h3>
+{/* profile.id && <p className="subtle">ID: {profile.id}</p> */}
           {profile.email && <p className="subtle">{profile.email}</p>}
         </div>
       </div>
@@ -913,17 +914,17 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
             </div>
             <div className="form-row">
               <label>Middle Name</label>
-              {isEditing ? (
+{isEditing ? (
                 <input
                   type="text"
                   value={profileForm.middle_name}
                   onChange={(e) => handleProfileChange('middle_name', e.target.value)}
                 />
-              ) : (
+              ) : profileForm.middle_name ? (
                 <div style={{ padding: '10px 12px', background: '#f9fafb', borderRadius: '14px', border: '1px solid rgba(46, 46, 46, 0.1)', color: '#1d2b4a', fontWeight: '500' }}>
-                  {profileForm.middle_name || 'Not provided'}
+                  {profileForm.middle_name}
                 </div>
-              )}
+              ) : null}
             </div>
             <div className="form-row">
               <label>Last Name</label>

@@ -1,4 +1,3 @@
-// src/VolunteerLogin.js
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -12,46 +11,11 @@ export default function VolunteerLogin() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [nameError, setNameError] = useState("");
-  const [phoneError, setPhoneError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+
   const navigate = useNavigate();
-
-  /* ---------------- VALIDATIONS ---------------- */
-
-  const validateEmail = (value) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-
-  const validateName = (value) => {
-    if (!value.trim()) return "Full name is required";
-    if (!/^[A-Za-z\s]+$/.test(value))
-      return "Name can contain only letters and spaces";
-    if (value.trim().length < 2)
-      return "Name must be at least 2 characters";
-    return "";
-  };
-
-  const validatePhone = (value) => {
-    if (!value) return "Phone number is required";
-    if (!/^\d{10}$/.test(value)) return "Must be exactly 10 digits";
-    return "";
-  };
-
-  const validatePassword = (value) => {
-    const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("Must include a lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("Must include an uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("Must include a number");
-    if (!/[@$!%*?&]/.test(value))
-      errors.push("Must include a special character (@$!%*?&)");
-    if (value.length < 8)
-      errors.push("Must be at least 8 characters long");
-    return errors;
-  };
-
-  /* ---------------- SESSION CHECK ---------------- */
 
   useEffect(() => {
     const checkSession = async () => {
@@ -59,112 +23,101 @@ export default function VolunteerLogin() {
       if (data.session?.user?.user_metadata?.user_type === "volunteer") {
         navigate("/volunteer-dashboard");
       }
-      setLoading(false);
     };
     checkSession();
   }, [navigate]);
 
-  /* ---------------- SUBMIT ---------------- */
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setShowErrors(true);
 
-    if (!validateEmail(email)) {
-      toast.error("Invalid email format");
-      return;
-    }
+    const emailError = email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Invalid email format' : '';
+    const nameError = !isSignIn && name.trim() === '' ? 'Full name is required' : '';
+    const phoneError = !isSignIn && phone.trim() === '' ? 'Phone number required' : (!isSignIn && !/^\d{10}$/.test(phone.trim()) ? '10 digits only' : '');
+    const pwdErrors = password ? validatePassword(password) : [];
 
-    if (!isSignIn) {
-      const nameErr = validateName(name);
-      const phoneErr = validatePhone(phone);
-      setNameError(nameErr);
-      setPhoneError(phoneErr);
-      if (nameErr || phoneErr) {
-        toast.error("Fix name and/or phone fields");
-        return;
-      }
-    }
-
-    const pwdErrors = validatePassword(password);
-    setPasswordErrors(pwdErrors);
-
-    if (pwdErrors.length > 0) {
-      toast.error("Please fix password requirements");
+    if (emailError || nameError || phoneError || pwdErrors.length > 0) {
+      toast.error("Fix highlighted fields");
       return;
     }
 
     try {
       if (isSignIn) {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: email.trim(),
+          password: password.trim(),
         });
         if (error) throw error;
 
         if (data.user.user_metadata.user_type !== "volunteer") {
           await supabase.auth.signOut();
-          toast.error("Unauthorized access");
+          toast.error("Unauthorized");
           return;
         }
 
         toast.success("Login successful");
         navigate("/volunteer-dashboard");
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
+        const { data: userData, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: password.trim(),
           options: {
-            data: { 
-              name, 
-              phone, 
-              user_type: "volunteer" 
-            },
+            data: { name: name.trim(), phone: phone.trim(), user_type: "volunteer" },
           },
         });
         if (error) throw error;
 
-        // Create profiles row
+        // Insert profile
         const profileData = {
-          id: data.user.id,
-          full_name: name,
-          phone,
-          email,
+          id: userData.user.id,
+          full_name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
         };
-        const { error: profileError } = await supabase
-          .from('profiles_volunteers')
-          .insert([profileData]);
+        await supabase.from('profiles_volunteers').insert([profileData]);
 
-        if (profileError) {
-          console.warn('Profile creation warning (non-blocking):', profileError);
-        }
-
-        toast.success("Account created successfully");
+        toast.success("Account created!");
         setIsSignIn(true);
+        setShowErrors(false);
+        setEmail("");
+        setPassword("");
+        setName("");
+        setPhone("");
       }
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ---------------- FORGOT PASSWORD ---------------- */
+  const validatePassword = (value) => {
+    const errors = [];
+    if (!/[a-z]/.test(value)) errors.push("Lowercase letter required");
+    if (!/[A-Z]/.test(value)) errors.push("Uppercase letter required");
+    if (!/[0-9]/.test(value)) errors.push("Number required");
+    if (!/[@$!%*?&]/.test(value)) errors.push("Special character required");
+    if (value.length < 8) errors.push("Minimum 8 characters");
+    return errors;
+  };
+
+  // Errors shown only after submit
+  const emailErrorMsg = showErrors ? (email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Invalid email format' : '') : '';
+  const nameErrorMsg = showErrors && !isSignIn ? (name.trim() === '' ? 'Full name required' : '') : '';
+  const phoneErrorMsg = showErrors && !isSignIn ? (phone.trim() === '' ? 'Phone required' : !/^\d{10}$/.test(phone.trim()) ? '10 digits only' : '') : '';
+  const passwordErrorMsgs = showErrors ? validatePassword(password) : [];
 
   const handleForgotPassword = async () => {
-    if (!email) {
+    if (!email.trim()) {
       toast.error("Enter email first");
       return;
     }
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/reset-password",
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin + "/reset-password",
     });
-
     if (error) toast.error(error.message);
-    else toast.success("Password reset email sent");
+    else toast.success("Reset email sent");
   };
-
-  if (loading) return <div>Loading...</div>;
-
-  /* ---------------- UI ---------------- */
 
   return (
     <div className="auth-container">
@@ -178,59 +131,42 @@ export default function VolunteerLogin() {
                 type="text"
                 placeholder="Full Name"
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setNameError(validateName(e.target.value));
-                }}
-                required
+                onChange={(e) => setName(e.target.value)}
+                className={nameErrorMsg ? "input-error" : ""}
               />
-              {nameError && (
-                <p className="error-text">{nameError}</p>
-              )}
+              {nameErrorMsg && <p className="error-text">{nameErrorMsg}</p>}
 
               <input
                 type="tel"
-                placeholder="Phone Number (10 digits)"
+                placeholder="Phone (10 digits)"
                 value={phone}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0,10);
-                  setPhone(value);
-                  setPhoneError(validatePhone(value));
-                }}
-                maxLength={10}
-                required
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0,10))}
+                maxLength="10"
+                className={phoneErrorMsg ? "input-error" : ""}
               />
-              {phoneError && (
-                <p className="error-text">{phoneError}</p>
-              )}
+              {phoneErrorMsg && <p className="error-text">{phoneErrorMsg}</p>}
             </>
           )}
 
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
+            className={emailErrorMsg ? "input-error" : ""}
           />
+          {emailErrorMsg && <p className="error-text">{emailErrorMsg}</p>}
 
-          {/* PASSWORD FIELD WITH EYE ICON */}
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
-              onChange={(e) => {
-                const value = e.target.value;
-                setPassword(value);
-                setPasswordErrors(validatePassword(value));
-              }}
-              required
-              style={{ paddingRight: "40px" }}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ paddingRight: "42px" }}
+              className={passwordErrorMsgs.length > 0 ? "input-error" : ""}
             />
-
             <span
-              onClick={() => setShowPassword(!showPassword)}
               style={{
                 position: "absolute",
                 right: "12px",
@@ -240,48 +176,41 @@ export default function VolunteerLogin() {
                 color: "#555",
                 fontSize: "18px",
               }}
-              title={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword(!showPassword)}
+              title={showPassword ? "Hide" : "Show"}
             >
-              {showPassword ? "👁‍🗨" : "👁"}
+              {showPassword ? "👁" : "👁"}
             </span>
           </div>
 
-          {passwordErrors.length > 0 && (
+          {passwordErrorMsgs.length > 0 && (
             <ul className="error-text">
-              {passwordErrors.map((err, index) => (
-                <li key={index}>{err}</li>
-              ))}
+              {passwordErrorMsgs.map((err, i) => <li key={i}>{err}</li>)}
             </ul>
           )}
 
-          <button type="submit">
-            {isSignIn ? "Sign In" : "Sign Up"}
+          <button type="submit" disabled={loading}>
+            {loading ? "Loading..." : (isSignIn ? "Sign In" : "Sign Up")}
           </button>
         </form>
 
-        <p className="switch-text">
-          {isSignIn ? "New here?" : "Already have an account?"}{" "}
-          <span onClick={() => setIsSignIn(!isSignIn)}>
-            {isSignIn ? "Create an account" : "Sign in"}
+        <p className="switch-text" style={{textAlign: 'center'}}>
+          {isSignIn ? "New volunteer?" : "Have account?"}{' '}
+          <span onClick={() => {setIsSignIn(!isSignIn); setShowErrors(false);}} style={{ cursor: 'pointer', color: '#4F46E5' }}>
+            {isSignIn ? "Sign up" : "Sign in"}
           </span>
         </p>
 
         {isSignIn && (
-          <p
-            onClick={handleForgotPassword}
-            style={{
-              marginTop: "10px",
-              textAlign: "center",
-              color: "#6a5acd",
-              cursor: "pointer",
-            }}
-          >
+          <p className="forgot-password" onClick={handleForgotPassword} style={{textAlign: 'center', marginTop: '10px', cursor: 'pointer', color: '#666'}}>
             Forgot password?
           </p>
         )}
+
       </div>
 
       <ToastContainer position="top-center" autoClose={3000} />
     </div>
   );
 }
+

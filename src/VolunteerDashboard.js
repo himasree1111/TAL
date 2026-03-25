@@ -6,15 +6,66 @@ import supabase from "./supabaseClient";
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
-  const { volunteer, loading: contextLoading, updateVolunteerData, fetchVolunteerData } = useVolunteer();
+  const { volunteer, loading: contextLoading, updateVolunteerData } = useVolunteer();
   const [forms, setForms] = useState([]);
+  const [formsThisMonth, setFormsThisMonth] = useState(0);
+  const [formsToday, setFormsToday] = useState(0);
+  const [formsPreviously, setFormsPreviously] = useState(0);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [activeSection, setActiveSection] = useState("forms");
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
-const [settingsMessage, setSettingsMessage] = useState("");
-  const [phoneError, setPhoneError] = useState(""); // Phone validation error
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Fetch stats directly from Supabase counts for accuracy
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (!volunteer?.email) return;
+
+      const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      try {
+        // Today count
+        const { count: todayCount } = await supabase
+          .from("student_form_submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("volunteer_email", volunteer.email)
+          .gte("created_at", startOfToday.toISOString());
+
+        // Month count
+        const { count: monthCount } = await supabase
+          .from("student_form_submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("volunteer_email", volunteer.email)
+          .gte("created_at", startOfMonth.toISOString());
+
+        // Total count
+        const { count: totalCount } = await supabase
+          .from("student_form_submissions")
+          .select("*", { count: "exact", head: true })
+          .eq("volunteer_email", volunteer.email);
+
+        const previouslyCount = (totalCount || 0) - (monthCount || 0);
+
+        setFormsToday(todayCount || 0);
+        setFormsThisMonth(monthCount || 0);
+        setFormsPreviously(previouslyCount);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    fetchCounts();
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [volunteer?.email]);
 
   useEffect(() => {
     if (!volunteer || contextLoading) {
@@ -84,7 +135,6 @@ const [settingsMessage, setSettingsMessage] = useState("");
     navigate("/studentform");
   };
 
-  // Phone validation (copied from volunteerlogin.js)
   const validatePhone = (value) => {
     if (!value) return "Phone number is required";
     if (!/^\d{10}$/.test(value)) return "Must be exactly 10 digits";
@@ -95,7 +145,6 @@ const [settingsMessage, setSettingsMessage] = useState("");
     if (e && e.preventDefault) e.preventDefault();
     if (!volunteer?.id) return;
 
-    // Validate phone before save
     const phoneErr = validatePhone(settings.phone);
     if (phoneErr) {
       setPhoneError(phoneErr);
@@ -128,7 +177,10 @@ const [settingsMessage, setSettingsMessage] = useState("");
       return;
     }
 
-    setForms((prev) => prev.filter((form) => form.id !== id));
+    // Refresh forms and stats
+    if (volunteer?.email) {
+      fetchForms(volunteer.email);
+    }
     if (selectedFormId === id) setSelectedFormId(null);
   };
 
@@ -202,26 +254,12 @@ const [settingsMessage, setSettingsMessage] = useState("");
 
   const selectedForm = forms.find((f) => f.id === selectedFormId);
 
-  const thisMonthForms = forms.filter(
-    (f) => new Date(f.dateSubmitted).getMonth() === new Date().getMonth()
-  ).length;
-
-  const lastMonthForms = forms.filter((f) => {
-    const formDate = new Date(f.dateSubmitted);
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    return (
-      formDate.getMonth() === lastMonth.getMonth() &&
-      formDate.getFullYear() === lastMonth.getFullYear()
-    );
-  }).length;
-
   return (
     <div className="volunteer-dashboard">
       {/* Sidebar */}
       <aside className="sidebar">
         <div>
-<div className="profile-section">
+          <div className="profile-section">
             <div className="profile-avatar">V</div>
             <h2 className="profile-name">{volunteer ? volunteer.name : 'Volunteer'}</h2>
             <p className="profile-email">{volunteer ? volunteer.email : ''}</p>
@@ -230,20 +268,20 @@ const [settingsMessage, setSettingsMessage] = useState("");
 
           <div className="stats-grid">
             <div className="sidebar-item">
-              <h3>{thisMonthForms}</h3>
-              <p>This Month</p>
+              <h3>{formsThisMonth}</h3>
+              <p>Forms filled in this month</p>
             </div>
             <div className="sidebar-item">
-              <h3>{lastMonthForms}</h3>
-              <p>Last Month</p>
+              <h3>{formsToday}</h3>
+              <p>Forms filled today</p>
             </div>
             <div className="sidebar-item" style={{gridColumn: 'span 2'}}>
-              <h3>{forms.length}</h3>
-              <p>Total Forms</p>
+              <h3>{formsPreviously}</h3>
+              <p>Forms filled previously</p>
             </div>
           </div>
 
-<nav className="sidebar-nav">
+          <nav className="sidebar-nav">
             <button 
               className={`nav-btn ${activeSection === "forms" ? "active" : ""}`} 
               onClick={() => setActiveSection("forms")}
@@ -266,7 +304,7 @@ const [settingsMessage, setSettingsMessage] = useState("");
 
       {/* Main Content */}
       <main className="main-content">
-{activeSection === "forms" ? (
+        {activeSection === "forms" ? (
           <>
             <div className="main-header">
               <div className="tab-buttons">
@@ -350,3 +388,4 @@ const [settingsMessage, setSettingsMessage] = useState("");
     </div>
   );
 }
+

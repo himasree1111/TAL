@@ -61,24 +61,30 @@ const Sidebar = ({ navigate }) => (
       <h1 className="logo-text">Touch A Life</h1>
       <nav className="nav-menu">
         {NAV_ITEMS.map((item) => (
-          <a key={item.name} href="#" className={`nav-item ${item.active ? "active" : ""}`}>
+          <button 
+            key={item.name} 
+            className={`nav-item ${item.active ? "active" : ""}`}
+          >
             <item.icon size={18} className="nav-icon" />
             {item.name}
-          </a>
+          </button>
         ))}
       </nav>
       <hr className="divider" />
       <nav className="nav-menu">
         {DONOR_ITEMS.map((item) => (
-          <a key={item.name} href="#" className="nav-item">
+          <button 
+            key={item.name} 
+            className="nav-item"
+          >
             <item.icon size={18} className="nav-icon" />
             {item.name}
-          </a>
+          </button>
         ))}
-        <a onClick={() => navigate("/")} className="nav-item" style={{ cursor: "pointer" }}>
+        <button onClick={() => navigate("/")} className="nav-item">
           <LogOut size={18} className="nav-icon" />
           Quit
-        </a>
+        </button>
       </nav>
     </div>
     <div className="support-box">
@@ -115,9 +121,9 @@ const OverviewCard = () => (
   <div className="dashboard-card overview-list">
     <div className="card-header-flex">
       <h2 className="card-header-title">Donation Overview</h2>
-      <a href="#" className="view-link">
+      <button className="view-link">
         This Quarter <ChevronDown size={14} style={{ marginLeft: "4px" }} />
-      </a>
+      </button>
     </div>
     <div className="overview-items">
       {DONATION_OVERVIEW.map((item, index) => (
@@ -125,7 +131,7 @@ const OverviewCard = () => (
           <span className="overview-item-title">{item.title}</span>
           <span className="overview-item-value">
             {item.title.includes("Goal") || item.title.includes("Funds")
-              ? `₹${item.value.toLocaleString()}`
+              ? `₹${item.value.toLocaleString()}` 
               : item.value.toLocaleString()}
           </span>
         </div>
@@ -139,7 +145,7 @@ const SponsorshipTable = () => (
   <div className="dashboard-card student-table">
     <div className="card-header-flex">
       <h2 className="card-header-title">Your Sponsored Students</h2>
-      <a href="#" className="view-link-green">Export Report</a>
+      <button className="view-link-green">Export Report</button>
     </div>
     <table>
       <thead>
@@ -175,7 +181,7 @@ const FinancialProgress = () => {
     <div className="dashboard-card total-sale-chart">
       <div className="card-header-flex">
         <h2 className="card-header-title">Annual Donation Goal</h2>
-        <a href="#" className="view-link-green">View Progress</a>
+        <button className="view-link-green">View Progress</button>
       </div>
       <div className="chart-container">
         <svg viewBox="0 0 140 140" className="chart-svg">
@@ -209,7 +215,7 @@ const ImpactFeed = () => (
   <div className="dashboard-card activity-feed">
     <div className="card-header-flex">
       <h2 className="card-header-title">Recent Impact Updates</h2>
-      <a href="#" className="view-link-green">View All</a>
+      <button className="view-link-green">View All</button>
     </div>
     {IMPACT_UPDATES.map((item, index) => (
       <div key={index} className="activity-item">
