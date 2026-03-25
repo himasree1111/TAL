@@ -1,19 +1,11 @@
-# Admin Dashboard Manage Beneficiaries Filters - COMPLETE ✅
+# Fix Donor/Student Login Errors & Add Validations
 
-**Implemented:**
-1. ✅ Dynamic Years dropdown (unique `class` from admin_student_info)
-2. ✅ Scholarship filter (All/Yes/No based on `has_scholarship`)
-3. ✅ **Separate Camp Name** (text input, partial match)
-4. ✅ **Separate Camp Date** (date input, exact YYYY-MM-DD)
-5. ✅ Client-side `filteredStudents` useMemo updated
-6. ✅ Empty state: "No students found for selected filters"
+## Steps:
+- [x] Step 1: Check Supabase .env vars (.env exists)
+- [x] Step 2: Edit src/donorlogin.js - added loading state, trim inputs, fixed regex, button loading
+- [x] Step 3: Edit src/studentlogin.js - added password validation, error UI, loading state
 
-**Test:** 
-- Admin Dashboard → Manage Beneficiaries
-- Apply any combo → Table filters instantly
-- No matches → Clear empty message
-
-**Live:** http://localhost:3000 (dev server running, ESLint warnings non-blocking)
-
-Filters work perfectly! 🎉
+- [ ] Step 4: Test donor login/signup
+- [ ] Step 5: Test student login (eligible_students table)
+- [ ] Step 6: Complete & cleanup TODO.md
 

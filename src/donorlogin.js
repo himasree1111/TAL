@@ -11,60 +11,30 @@ export default function DonorLogin() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const [emailError, setEmailError] = useState("");
-  const [nameError, setNameError] = useState("");
-  const [passwordErrors, setPasswordErrors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const navigate = useNavigate();
 
-  const validateName = (value) => {
-    if (!value.trim()) return "Full name is required";
-    if (!/^[A-Za-z ]+$/.test(value)) return "Only letters and spaces are allowed";
-    return "";
-  };
-
-  const validateEmail = (value) => {
-    const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/;
-    if (!emailRegex.test(value)) return "Please enter a valid email address";
-    return "";
-  };
-
-  const validatePassword = (value) => {
-    const errors = [];
-    if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
-    if (!/[A-Z]/.test(value)) errors.push("Must include uppercase letter");
-    if (!/[0-9]/.test(value)) errors.push("Must include number");
-    if (!/[@$!%*?&]/.test(value)) errors.push("Must include special character");
-    if (value.length < 8) errors.push("At least 8 characters long");
-    return errors;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setShowErrors(true);
 
-    const eErr = validateEmail(email);
-    setEmailError(eErr);
+    const emailError = email.trim() === '' ? 'Email is required' : (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? '' : 'Please enter a valid email address');
+    const nameError = !isSignIn && name.trim() === '' ? 'Full name is required' : '';
+    const passwordErrors = validatePassword(password);
 
-    let nErr = "";
-    if (!isSignIn) {
-      nErr = validateName(name);
-      setNameError(nErr);
-    }
-
-    const pwdErrs = validatePassword(password);
-    setPasswordErrors(pwdErrs);
-
-    if (eErr || nErr || pwdErrs.length > 0) {
+    if (emailError || nameError || passwordErrors.length > 0) {
       toast.error("Please fix the highlighted errors");
       return;
     }
 
+    setLoading(true);
     try {
       if (isSignIn) {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: email.trim(),
+          password: password.trim(),
         });
 
         if (error) throw error;
@@ -79,10 +49,10 @@ export default function DonorLogin() {
         navigate("/donor-dashboard");
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: email.trim(),
+          password: password.trim(),
           options: {
-            data: { name, user_type: "donor" },
+            data: { name: name.trim(), user_type: "donor" },
           },
         });
 
@@ -90,19 +60,39 @@ export default function DonorLogin() {
 
         toast.success("Donor account created");
         setIsSignIn(true);
+        setShowErrors(false);
+        setEmail("");
+        setPassword("");
+        setName("");
       }
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const validatePassword = (value) => {
+    const errors = [];
+    if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include number");
+    if (!/[@$!%*?&]/.test(value)) errors.push("Must include special character");
+    if (value.length < 8) errors.push("At least 8 characters long");
+    return errors;
+  };
+
+  const emailError = showErrors ? (email.trim() === '' ? 'Email is required' : (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? '' : 'Please enter a valid email address')) : '';
+  const nameError = showErrors && !isSignIn ? (name.trim() === '' ? 'Full name is required' : '') : '';
+  const passwordErrors = showErrors ? validatePassword(password) : [];
+
   const handleForgotPassword = async () => {
-    if (!email) {
+    if (!email.trim()) {
       toast.error("Please enter your email first");
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: window.location.origin + "/reset-password",
     });
 
@@ -122,10 +112,7 @@ export default function DonorLogin() {
                 type="text"
                 placeholder="Full Name"
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setNameError(validateName(e.target.value));
-                }}
+                onChange={(e) => setName(e.target.value)}
                 className={nameError ? "input-error" : ""}
               />
               {nameError && <p className="error-text">{nameError}</p>}
@@ -136,10 +123,7 @@ export default function DonorLogin() {
             type="email"
             placeholder="Email Address"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setEmailError(validateEmail(e.target.value));
-            }}
+            onChange={(e) => setEmail(e.target.value)}
             className={emailError ? "input-error" : ""}
           />
           {emailError && <p className="error-text">{emailError}</p>}
@@ -149,10 +133,7 @@ export default function DonorLogin() {
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordErrors(validatePassword(e.target.value));
-              }}
+              onChange={(e) => setPassword(e.target.value)}
               style={{ paddingRight: "42px" }}
               className={passwordErrors.length ? "input-error" : ""}
             />
@@ -183,8 +164,8 @@ export default function DonorLogin() {
             </ul>
           )}
 
-          <button type="submit">
-            {isSignIn ? "Sign In" : "Sign Up"}
+          <button type="submit" disabled={loading}>
+            {loading ? "Loading..." : (isSignIn ? "Sign In" : "Sign Up")}
           </button>
         </form>
 

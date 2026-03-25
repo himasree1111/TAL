@@ -1,5 +1,3 @@
-// src/StudentLogin.js
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -11,107 +9,91 @@ export default function StudentLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [emailError, setEmailError] = useState("");
+  const [showErrors, setShowErrors] = useState(false);
 
   const navigate = useNavigate();
 
-  // ---------------- VALIDATION ----------------
-  const validateEmail = (value) => {
-    if (!value.trim()) return "Email is required";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return "Please enter a valid email address";
-    }
-    return "";
-  };
-
-  // ---------------- SUBMIT ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setShowErrors(true);
+
+    // Validate only on submit
+    const emailError = email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Please enter valid email' : '';
+    const pwdErrors = !password ? [] : validatePassword(password);
+
+    if (emailError || pwdErrors.length > 0) {
+      toast.error("Please fix errors");
+      return;
+    }
 
     const cleanEmail = email.trim();
     const cleanPassword = password.trim();
 
-    const eError = validateEmail(cleanEmail);
-    setEmailError(eError);
-
-    if (eError) {
-      toast.error(eError);
-      return;
-    }
-
     try {
-      // 🔍 Fetch user from DB
       const { data, error } = await supabase
         .from("eligible_students")
         .select("*")
         .ilike("email", cleanEmail)
         .maybeSingle();
 
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
+      if (error) throw error;
 
-      // ❌ Not found
       if (!data) {
         toast.error("You are not eligible");
         return;
       }
 
-      // 🔐 First-time login
       if (!data.password) {
-        toast.info("First time login - please set password");
+        toast.info("First time - set password");
         navigate("/set-password", { state: { email: cleanEmail } });
         return;
       }
 
-      // ❌ Password not entered
-      if (!cleanPassword) {
-        toast.error("Please enter password");
-        return;
-      }
-
-      // 🔑 Password check
-      if ((data.password || "").trim() !== cleanPassword) {
+      if (cleanPassword !== data.password.trim()) {
         toast.error("Invalid credentials");
         return;
       }
 
-      // ✅ SUCCESS
-      toast.success("Login successful 🎉");
+      toast.success("Login successful!");
 
-      // Store session locally
       localStorage.setItem("studentEmail", cleanEmail);
       localStorage.setItem("isStudentLoggedIn", "true");
 
-      console.log("Navigating to student-dashboard...");
       navigate("/student-dashboard");
-
     } catch (err) {
-      console.error(err);
-      toast.error("Something went wrong");
+      toast.error("Error occurred");
     }
   };
 
-  // ---------------- UI ----------------
+  const validatePassword = (value) => {
+    const errors = [];
+    if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include number");
+    if (!/[@$!%*?&]/.test(value)) errors.push("Must include special character");
+    if (value.length < 8) errors.push("At least 8 characters");
+    return errors;
+  };
+
+  // Errors computed but shown only after submit
+  const currentEmailError = showErrors && (email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) ? 'Please enter valid email' : '';
+  const currentPasswordErrors = showErrors && password.length > 0 ? validatePassword(password) : [];
+
   return (
     <div className="auth-container">
       <div className="auth-box">
         <h1>Student Login</h1>
 
         <form onSubmit={handleSubmit}>
-          {/* EMAIL */}
           <input
             type="email"
             placeholder="Email Address"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setEmailError(validateEmail(e.target.value));
-            }}
-            required
+            onChange={(e) => setEmail(e.target.value)}
+            className={currentEmailError ? "input-error" : ""}
           />
-          {emailError && <p className="error-text">{emailError}</p>}
+          {currentEmailError && <p className="error-text">{currentEmailError}</p>}
 
-          {/* PASSWORD */}
           <div style={{ position: "relative" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -119,6 +101,7 @@ export default function StudentLogin() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{ paddingRight: "42px" }}
+              className={currentPasswordErrors.length ? "input-error" : ""}
             />
 
             <span
@@ -133,24 +116,21 @@ export default function StudentLogin() {
                 fontSize: "18px",
               }}
             >
-              {showPassword ? "👁‍🗨" : "👁"}
+              {showPassword ? "👁" : "👁"}
             </span>
           </div>
+
+          {currentPasswordErrors.length > 0 && (
+            <ul className="error-text">
+              {currentPasswordErrors.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          )}
 
           <button type="submit">Login</button>
         </form>
 
-        <p
-          style={{
-            marginTop: "10px",
-            textAlign: "center",
-            color: "#2563eb",
-            cursor: "pointer",
-          }}
-          onClick={() =>
-            toast.info("If first time, just enter email and click login")
-          }
-        >
+        <p style={{ marginTop: "10px", textAlign: "center", color: "#2563eb", cursor: "pointer" }}
+           onClick={() => toast.info("First time? Enter email only and click login")}>
           First time user?
         </p>
       </div>
@@ -159,3 +139,4 @@ export default function StudentLogin() {
     </div>
   );
 }
+
