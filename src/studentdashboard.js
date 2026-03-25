@@ -240,106 +240,107 @@ useEffect(() => {
   };
 }, [studentEmail, profile, studentId, studentType]);
 
-// Fetch profile form data when component mounts or studentEmail changes
-useEffect(() => {
-  const fetchProfileFormData = async () => {
-    if (!studentEmail) {
-      console.log('[PROFILE] No studentEmail available');
+// Define fetchProfileFormData function that can be called from anywhere
+const fetchProfileFormData = async () => {
+  if (!studentEmail) {
+    console.log('[PROFILE] No studentEmail available');
+    return;
+  }
+  
+  setProfileLoading(true);
+  try {
+    console.log('[PROFILE] Fetching from student_form_submissions with email:', studentEmail);
+    
+    // Fetch from student_form_submissions using email
+    const { data: formData, error } = await supabase
+      .from('student_form_submissions')
+      .select('*')
+      .eq('email', studentEmail)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    console.log('[PROFILE] Query result:', { formData, error });
+    
+    if (error) {
+      console.error('Error fetching profile form:', error);
+      setProfileLoading(false);
       return;
     }
     
-    setProfileLoading(true);
-    try {
-      console.log('[PROFILE] Fetching from student_form_submissions with email:', studentEmail);
+    if (formData) {
+      // Map the form data to profileForm state based on actual table schema
+      console.log('[PROFILE] Fetched formData from student_form_submissions:', formData);
       
-      // Fetch from student_form_submissions using email
-      const { data: formData, error } = await supabase
-        .from('student_form_submissions')
-        .select('*')
-        .eq('email', studentEmail)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const mappedData = {
+        first_name: formData.first_name || '',
+        last_name: formData.last_name || '',
+        middle_name: formData.middle_name || '',
+        dob: formData.dob || '',
+        age: formData.age?.toString() || '',
+        pob: formData.pob || '',
+        nationality: formData.nationality || '',
+        address: formData.address || '',
+        class: formData.class || '',
+        educationcategory: formData.educationcategory || '',
+        educationsubcategory: formData.educationsubcategory || '',
+        educationyear: formData.educationyear || '',
+        educationcategory_custom: '',
+        educationsubcategory_custom: '',
+        educationyear_custom: '',
+        email: formData.email || '',
+        contact: formData.contact || '',
+        parent_contact_2: formData.parent_contact_2 || '',
+        whatsapp: formData.whatsapp || '',
+        student_contact: formData.student_contact || '',
+        school: formData.school || '',
+        branch: formData.branch || '',
+        prev_percent: formData.prev_percent?.toString() || '',
+        present_percent: formData.present_percent?.toString() || '',
+        fee: formData.fee?.toString() || '',
+        educational_expenses: formData.educational_expenses || {
+          tuition_fee: { checked: false, amount: '' },
+          books_study_materials: { checked: false, amount: '' },
+          uniform: { checked: false, amount: '' },
+          transport_fee: { checked: false, amount: '' },
+          examination_fee: { checked: false, amount: '' },
+          hostel_accommodation: { checked: false, amount: '' },
+          food_mess_charges: { checked: false, amount: '' }
+        },
+        job: formData.job || '',
+        aspiration: formData.aspiration || '',
+        scholarship: formData.scholarship || '',
+        num_family_members: formData.num_family_members?.toString() || '',
+        family_members_details: formData.family_members_details || [],
+        num_earning_members: formData.earning_members?.toString() || '',
+        earning_members_details: formData.earning_members_details || [],
+        account_no: formData.account_no || '',
+        bank_name: formData.bank_name || '',
+        bank_branch: formData.bank_branch || '',
+        ifsc_code: formData.ifsc_code || '',
+        special_remarks: formData.special_remarks || '',
+        academic_achievements: formData.academic_achievements || '',
+        non_academic_achievements: formData.non_academic_achievements || '',
+        is_single_parent: formData.is_single_parent ? 'YES' : 'NO',
+        does_work: formData.does_work ? 'YES' : 'NO',
+        has_scholarship: formData.has_scholarship ? 'YES' : 'NO'
+      };
       
-      console.log('[PROFILE] Query result:', { formData, error });
-      
-      if (error) {
-        console.error('Error fetching profile form:', error);
-        setProfileLoading(false);
-        return;
-      }
-      
-      if (formData) {
-        // Map the form data to profileForm state based on actual table schema
-        console.log('[PROFILE] Fetched formData from student_form_submissions:', formData);
-        
-        const mappedData = {
-          first_name: formData.first_name || '',
-          last_name: formData.last_name || '',
-          middle_name: formData.middle_name || '',
-          dob: formData.dob || '',
-          age: formData.age?.toString() || '',
-          pob: formData.pob || '',
-          nationality: formData.nationality || '',
-          address: formData.address || '',
-          class: formData.class || '',
-          educationcategory: formData.educationcategory || '',
-          educationsubcategory: formData.educationsubcategory || '',
-          educationyear: formData.educationyear || '',
-          educationcategory_custom: '',
-          educationsubcategory_custom: '',
-          educationyear_custom: '',
-          email: formData.email || '',
-          contact: formData.contact || '',
-          parent_contact_2: formData.parent_contact_2 || '',
-          whatsapp: formData.whatsapp || '',
-          student_contact: formData.student_contact || '',
-          school: formData.school || '',
-          branch: formData.branch || '',
-          prev_percent: formData.prev_percent?.toString() || '',
-          present_percent: formData.present_percent?.toString() || '',
-          fee: formData.fee?.toString() || '',
-          educational_expenses: formData.educational_expenses || {
-            tuition_fee: { checked: false, amount: '' },
-            books_study_materials: { checked: false, amount: '' },
-            uniform: { checked: false, amount: '' },
-            transport_fee: { checked: false, amount: '' },
-            examination_fee: { checked: false, amount: '' },
-            hostel_accommodation: { checked: false, amount: '' },
-            food_mess_charges: { checked: false, amount: '' }
-          },
-          job: formData.job || '',
-          aspiration: formData.aspiration || '',
-          scholarship: formData.scholarship || '',
-          num_family_members: formData.num_family_members?.toString() || '',
-          family_members_details: formData.family_members_details || [],
-          num_earning_members: formData.earning_members?.toString() || '',
-          earning_members_details: formData.earning_members_details || [],
-          account_no: formData.account_no || '',
-          bank_name: formData.bank_name || '',
-          bank_branch: formData.bank_branch || '',
-          ifsc_code: formData.ifsc_code || '',
-          special_remarks: formData.special_remarks || '',
-          academic_achievements: formData.academic_achievements || '',
-          non_academic_achievements: formData.non_academic_achievements || '',
-          is_single_parent: formData.is_single_parent ? 'YES' : 'NO',
-          does_work: formData.does_work ? 'YES' : 'NO',
-          has_scholarship: formData.has_scholarship ? 'YES' : 'NO'
-        };
-        
-        setProfileForm(mappedData);
-        setOriginalFormData(mappedData); // Store original data for cancel functionality
-        console.log('[PROFILE] Mapped profileForm data:', mappedData);
-      } else {
-        console.log('[PROFILE] No formData found for student email:', studentEmail);
-      }
-    } catch (err) {
-      console.error('Error in fetchProfileFormData:', err);
-    } finally {
-      setProfileLoading(false);
+      setProfileForm(mappedData);
+      setOriginalFormData(mappedData); // Store original data for cancel functionality
+      console.log('[PROFILE] Mapped profileForm data:', mappedData);
+    } else {
+      console.log('[PROFILE] No formData found for student email:', studentEmail);
     }
-  };
-  
+  } catch (err) {
+    console.error('Error in fetchProfileFormData:', err);
+  } finally {
+    setProfileLoading(false);
+  }
+};
+
+// Fetch profile form data when component mounts or studentEmail changes
+useEffect(() => {
   fetchProfileFormData();
 }, [studentEmail]);
 
@@ -489,30 +490,31 @@ const handleLogout = () => {
     setProfileError('');
 
     try {
-      // Prepare payload for eligible_students - ONLY update fields that exist in the table
       const fullName = `${profileForm.first_name} ${profileForm.middle_name || ''} ${profileForm.last_name}`.trim();
       
-      const eligibleStudentsUpdate = {
-        full_name: fullName,
-        student_name: fullName,
-        email: profileForm.email,
-        contact: profileForm.contact,
-        whatsapp: profileForm.whatsapp,
-        parent_contact_2: profileForm.parent_contact_2,
-        student_contact: profileForm.student_contact,
-        address: profileForm.address
-        // No updated_at column in eligible_students table
-      };
+      // First, get the ID from student_form_submissions to ensure we update the correct record
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('student_form_submissions')
+        .select('id')
+        .eq('email', studentEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      // Update eligible_students
-      const { error: eligibleError } = await supabase
-        .from('eligible_students')
-        .update(eligibleStudentsUpdate)
-        .eq('email', studentEmail);
+      if (fetchError) {
+        console.error('[PROFILE] Error fetching existing record:', fetchError);
+        throw new Error('Failed to fetch existing record');
+      }
 
-      if (eligibleError) throw eligibleError;
+      if (!existingRecord) {
+        console.error('[PROFILE] No record found for email:', studentEmail);
+        throw new Error('No existing record found to update');
+      }
 
-      // Update student_form_submissions with timestamp
+      const recordId = existingRecord.id;
+      console.log('[PROFILE] Found student_form_submissions record with ID:', recordId);
+
+      // Update ONLY student_form_submissions table using the ID (primary key)
       const formSubmissionUpdate = {
         first_name: profileForm.first_name,
         middle_name: profileForm.middle_name || null,
@@ -536,8 +538,7 @@ const handleLogout = () => {
         branch: profileForm.branch || null,
         prev_percent: parseFloat(profileForm.prev_percent) || null,
         present_percent: parseFloat(profileForm.present_percent) || null,
-        fee: profileForm.fee || null,
-        educational_expenses: profileForm.educational_expenses,
+fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileForm.educational_expenses,
         job: profileForm.job || null,
         aspiration: profileForm.aspiration || null,
         scholarship: profileForm.scholarship || null,
@@ -557,53 +558,29 @@ const handleLogout = () => {
         has_scholarship: profileForm.has_scholarship === 'YES'
       };
 
-      // Update student_form_submissions
+      console.log('[PROFILE] Updating student_form_submissions with ID:', recordId);
+      
+      // Update ONLY student_form_submissions using ID (primary key)
       const { error: submissionError } = await supabase
         .from('student_form_submissions')
         .update(formSubmissionUpdate)
-        .eq('email', studentEmail);
+        .eq('id', recordId);
 
-      if (submissionError) throw submissionError;
-
-      // Update admin_student_info if exists (only update relevant fields)
-      const { data: adminData } = await supabase
-        .from('admin_student_info')
-        .select('id')
-        .eq('email', studentEmail)
-        .maybeSingle();
-
-      if (adminData) {
-        const adminUpdate = {
-          full_name: fullName,
-          email: profileForm.email,
-          contact: profileForm.contact,
-          whatsapp: profileForm.whatsapp,
-          parent_contact_2: profileForm.parent_contact_2,
-          student_contact: profileForm.student_contact,
-          address: profileForm.address,
-          scholarship: profileForm.scholarship,
-          has_scholarship: profileForm.has_scholarship === 'YES',
-          does_work: profileForm.does_work === 'YES',
-          earning_members: parseInt(profileForm.num_earning_members) || 0
-        };
-        
-        const { error: adminError } = await supabase
-          .from('admin_student_info')
-          .update(adminUpdate)
-          .eq('email', studentEmail);
-
-        if (adminError) {
-          console.error('Error updating admin_student_info:', adminError);
-          // Don't throw - this is optional
-        }
+      if (submissionError) {
+        console.error('[PROFILE] Error updating student_form_submissions:', submissionError);
+        throw submissionError;
       }
 
+      console.log('[PROFILE] Successfully updated student_form_submissions record ID:', recordId);
+
       setProfileMessage('Profile updated successfully!');
-      setOriginalFormData(profileForm); // Update original data with new values
       setIsEditing(false); // Exit edit mode after successful save
       
       // Update profile context
       setProfile(prev => ({ ...prev, full_name: fullName, student_name: fullName, contact: profileForm.contact }));
+      
+      // Reload the profile form data from database to show updated values
+      await fetchProfileFormData();
       
     } catch (err) {
       console.error('Error updating profile:', err);
