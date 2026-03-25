@@ -166,10 +166,16 @@ textarea:focus {
   transform: translateY(-1px);
 }
 
-.readonly-age {
+.readonly-age, .readonly-field {
   background: linear-gradient(135deg, var(--gray-100), #e2e8f0);
   color: var(--gray-700);
   cursor: not-allowed;
+}
+
+.readonly-field:focus {
+  border-color: var(--gray-300);
+  box-shadow: none;
+  background: linear-gradient(135deg, var(--gray-100), #e2e8f0);
 }
 
 /* === LAYOUT === */

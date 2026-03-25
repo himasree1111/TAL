@@ -1,11 +1,16 @@
-# Fix Donor/Student Login Errors & Add Validations
+# Autofill Volunteer Details in StudentForm - Progress Tracker
 
-## Steps:
-- [x] Step 1: Check Supabase .env vars (.env exists)
-- [x] Step 2: Edit src/donorlogin.js - added loading state, trim inputs, fixed regex, button loading
-- [x] Step 3: Edit src/studentlogin.js - added password validation, error UI, loading state
+## Current Status: ✅ **Step 1 COMPLETE** (BLACKBOXAI)
 
-- [ ] Step 4: Test donor login/signup
-- [ ] Step 5: Test student login (eligible_students table)
-- [ ] Step 6: Complete & cleanup TODO.md
+### ✅ Completed (1/5)
+- [x] 1. Create TODO.md **✓ DONE**
+
+### ⏳ Remaining (4/5)
+- [x] 2. Add VolunteerContext import and hook to studentform.js **✓ Import added**
+- [ ] 3. Implement auto-fill logic in useEffect
+- [ ] 4. Make volunteer fields readonly + update labels/validation
+- [ ] 5. Test autofill works after volunteer login
+
+### 📋 Next Steps
+- Step 2: Edit src/studentform.js
 

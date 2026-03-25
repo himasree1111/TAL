@@ -1,10 +1,10 @@
 // src/StudentForm.js
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useVolunteer } from "./VolunteerContext";
 import "./StudentForm.css";
 import supabase from "./supabaseClient";
 import EducationDropdown from "./EducationDropdown";
-import { useParams } from "react-router-dom";
 
 /*
   NOTE: This file preserves your UI exactly and only adds Supabase integration:
@@ -15,6 +15,7 @@ import { useParams } from "react-router-dom";
 
 export default function StudentForm() {
   const navigate = useNavigate();
+  const { volunteer } = useVolunteer();
   const { id } = useParams();   // student id
   const isEditMode = !!id;
   const [volunteerEmail, setVolunteerEmail] = useState("");
@@ -34,6 +35,14 @@ const [isSubmitting, setIsSubmitting] = useState(false);
         }
         if (data?.user) {
           setVolunteerEmail(data.user.email);
+          
+          // Auto-fill volunteer details from context
+          if (volunteer?.name) {
+            setFormData(prev => ({ ...prev, volunteer_name: volunteer.name }));
+          }
+          if (volunteer?.phone) {
+            setFormData(prev => ({ ...prev, volunteer_contact: volunteer.phone }));
+          }
         }
       } catch (err) {
         console.error("getUser error:", err);
@@ -134,8 +143,8 @@ has_scholarship: "",
       return "";
     }
 
-    // Phone fields (exactly 10 digits)
-    if (name === "contact" || name === "whatsapp" || name === "volunteer_contact" || name === "parent_contact_2") {
+  // Phone fields (exactly 10 digits)
+    if (name === "contact" || name === "whatsapp" || name === "parent_contact_2") {
       if (name === "parent_contact_2") {
         // Second parent contact is optional
         if (!value) return "";
@@ -244,7 +253,7 @@ has_scholarship: "",
     let { value } = e.target;
 
     // PHONE FIELDS: block non-digits and limit to 10
-    if (["contact", "whatsapp", "student_contact", "volunteer_contact", "parent_contact_2"].includes(name)) {
+    if (["contact", "whatsapp", "student_contact", "parent_contact_2"].includes(name)) {
       // remove non-digits
       value = value.replace(/\D/g, "");
       // limit length to 10 digits
@@ -1168,22 +1177,24 @@ has_scholarship: "",
                 name="volunteer_name"
                 value={formData.volunteer_name}
                 onChange={handleInputChange}
-                className={errors.volunteer_name ? "input-error" : ""}
-                placeholder="Enter Name"
+                className={`readonly-field ${errors.volunteer_name ? "input-error" : ""}`}
+                readOnly
+                placeholder={volunteer?.name || "Enter Name"}
                 required
               />
               {errors.volunteer_name && <p className="error-text">{errors.volunteer_name}</p>}
             </label>
             <label>
-              <span className="field-label">Contact Number<span className="required">*</span></span>
+              <span className="field-label">Contact Number <span className="required">*</span></span>
               <input
                 type="text"
                 name="volunteer_contact"
                 value={formData.volunteer_contact || ""}
                 onChange={handleInputChange}
-                placeholder="Enter Contact Number"
+                placeholder={volunteer?.phone || "Enter Contact Number"}
                 maxLength={10}
-                className={errors.volunteer_contact ? "input-error" : ""}
+                className={`readonly-field ${errors.volunteer_contact ? "input-error" : ""}`}
+                readOnly
                 required
               />
               {errors.volunteer_contact && <p className="error-text">{errors.volunteer_contact}</p>}
