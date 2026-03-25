@@ -18,7 +18,9 @@ export default function StudentForm() {
   const { id } = useParams();   // student id
   const isEditMode = !!id;
   const [volunteerEmail, setVolunteerEmail] = useState("");
+const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [errors, setErrors] = useState({}); // <-- validation errors
 
   useEffect(() => {
@@ -726,10 +728,34 @@ const fullName = `${formData.first_name} ${formData.middle_name || ""} ${formDat
 
     // Ensure volunteer is logged in (we attach email)
     if (!volunteerEmail) {
-      alert("⚠️ Volunteer not logged in — student will still be saved locally if needed. Please sign in.");
-      // but proceed to save? We'll stop to avoid orphan records.
+      setErrorMessage("Volunteer not logged in. Please sign in to submit.");
       return;
     }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    
+
+    // Frontend duplicate check: Check if student with this email already exists for this volunteer
+    try {
+      const { data: existingStudent } = await supabase
+        .from('student_form_submissions')
+        .select('id')
+        .eq('volunteer_email', volunteerEmail)
+        .eq('email', formData.email)
+        .maybeSingle();
+      
+      if (existingStudent && !isEditMode) {
+        setErrorMessage("Student with this email already exists. Please use a different email or edit the existing record.");
+        setIsSubmitting(false);
+        return;
+      }
+    } catch (checkErr) {
+      console.error('Error checking duplicate:', checkErr);
+    }
+
+    setIsSubmitting(true);
 
     try {
       // Upload files to Supabase storage and get URLs
@@ -855,14 +881,18 @@ scholarship: hasScholarship ? formData.scholarship : null,
 
       if (result.error) {
         console.error("Supabase save error:", result.error);
-        alert("❌ Error saving student: " + result.error.message);
+        if (result.error.message.includes('duplicate key value')) {
+          setErrorMessage("Student with this email already exists for this volunteer.");
+        } else {
+          setErrorMessage("Error saving student: " + result.error.message);
+        }
         return;
       }
 
       // Success
-      alert("🎉 Form submitted successfully!");
       console.log("Form saved successfully, result:", result);
       setSuccessMessage("Form submitted successfully!");
+      setIsSubmitting(false);
       // Navigate back to dashboard and force refresh to show new form
       navigate('/volunteer-dashboard');
 
@@ -932,7 +962,9 @@ has_scholarship: "",
       setErrors({});
     } catch (err) {
       console.error("Unexpected error on submit:", err);
-      alert("❌ Unexpected error occurred. Check console.");
+      setErrorMessage("Submission failed: " + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1114,6 +1146,11 @@ has_scholarship: "",
       <div className="form-container">
         <h1 className="form-title">STUDENT APPLICATION FORM</h1>
 
+      {errorMessage && (
+        <div className="error-message" style={{ color: "red", marginBottom: "1rem", fontWeight: "bold" }}>
+          {errorMessage}
+        </div>
+      )}
       {successMessage && (
         <div className="success-message" style={{ color: "green", marginBottom: "1rem", fontWeight: "bold" }}>
           {successMessage}
@@ -1634,8 +1671,15 @@ has_scholarship: "",
           <textarea name="special_remarks" value={formData.special_remarks} onChange={handleInputChange} placeholder="Any additional notes or comments" rows={4} style={{ width: "100%" }}></textarea>
         </div>
 
-        <div className="submit-container">
-          <button type="submit">{isEditMode ? "Save" : "Submit Application"}</button>
+<div className="submit-container">
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className={isSubmitting ? "submitting" : ""}
+            style={{opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? "not-allowed" : "pointer"}}
+          >
+            {isSubmitting ? "Submitting..." : (isEditMode ? "Save" : "Submit Application")}
+          </button>
         </div>
       </form>
       </div>
