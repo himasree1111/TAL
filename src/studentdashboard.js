@@ -138,10 +138,7 @@ const StudentDashboard = () => {
     family_members_details: [],
     num_earning_members: '',
     earning_members_details: [],
-    account_no: '',
-    bank_name: '',
-    bank_branch: '',
-    ifsc_code: '',
+
     special_remarks: '',
     academic_achievements: '',
     non_academic_achievements: '',
@@ -511,10 +508,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
         family_members_details: profileForm.family_members_details,
         earning_members: parseInt(profileForm.num_earning_members) || 0,
         earning_members_details: profileForm.earning_members_details,
-        account_no: profileForm.account_no || null,
-        bank_name: profileForm.bank_name || null,
-        bank_branch: profileForm.bank_branch || null,
-        ifsc_code: profileForm.ifsc_code || null,
+
         special_remarks: profileForm.special_remarks || null,
         academic_achievements: profileForm.academic_achievements || null,
         non_academic_achievements: profileForm.non_academic_achievements || null,
