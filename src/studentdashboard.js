@@ -1586,7 +1586,7 @@ const totalDocuments = useMemo(() => 0, []);
           {profileMessage && <span className="success-text">{profileMessage}</span>}
           {profileError && <span style={{ color: '#b92c2c', fontWeight: '600' }}>{profileError}</span>}
         </div>
-      )}
+  
     </div>
   );
 
