@@ -1294,7 +1294,7 @@ has_scholarship: "",
               {errors.contact && <p className="error-text">{errors.contact}</p>}
             </label>
             <label>
-              <span className="field-label">Second Parent's Contact Number</span>
+              <span className="field-label">Second Parent's/Guardian's Contact Number</span>
               <input
                 type="text"
                 name="parent_contact_2"
@@ -1420,8 +1420,28 @@ has_scholarship: "",
           <h2>3. Academic Data</h2>
           <div className="form-group">
             <label>
-              <span className="field-label">Name of School/College/University(with Branch Name)<span className="required">*</span></span>
-              <input type="text" name="school" value={formData.school} onChange={handleInputChange} required />
+              <span className="field-label">Name of School/College/University<span className="required">*</span></span>
+              <input
+                type="text"
+                name="school"
+                value={formData.school}
+                onChange={handleInputChange}
+                className={errors.school ? "input-error" : ""}
+                required
+              />
+              {errors.school && <p className="error-text">{errors.school}</p>}
+            </label>
+            <label>
+              <span className="field-label">Address with Branch Name<span className="required">*</span></span>
+              <input
+                type="text"
+                name="branch"
+                value={formData.branch}
+                onChange={handleInputChange}
+                className={errors.branch ? "input-error" : ""}
+                required
+              />
+              {errors.branch && <p className="error-text">{errors.branch}</p>}
             </label>
           </div>
 
@@ -1617,7 +1637,7 @@ has_scholarship: "",
           </label>
 
           <label className="full-width">
-            From how long are they living in this area? (Is she a migrant worker?)
+            From how long are they living in this area? (Is she a migrant?)
             <input
               type="text"
               name="years_area"
