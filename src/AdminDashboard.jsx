@@ -1396,7 +1396,7 @@ const fetchStudents = async () => {
                 
                 <div className="settings-card">
                   <h4>Notification Preferences</h4> 
-                  <h4>(Under Construction)</h4>
+                
                   <div className="settings-form">
                     <label className="checkbox-label">
                       <input 
@@ -1651,7 +1651,6 @@ const fetchStudents = async () => {
               <p><strong>Education Level:</strong> {viewNonEligibleStudent.class || '-'}</p>
               <p><strong>Camp Name:</strong> {viewNonEligibleStudent.camp_name || '-'}</p>
               <p><strong>School:</strong> {viewNonEligibleStudent.school || '-'}</p>
-             
               
               <p><strong>Date Added:</strong> {formatToIST(viewNonEligibleStudent.created_at)}</p>
               {viewNonEligibleStudent.student_id && (

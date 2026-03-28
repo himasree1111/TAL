@@ -242,9 +242,9 @@ html {
 }
 .settings-card{
   background:#fff;
-  padding:18px;
-  border-radius:10px;
-  box-shadow:0 4px 12px rgba(20,24,40,0.04);
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(20,24,40,0.06);
   min-width: 280px;
   flex: 1;
 }
@@ -724,6 +724,7 @@ html {
 }
 
 .settings-card h4 {
+  margin-bottom: 12px;
   margin: 0 0 20px 0;
   color: #2E2E2E;
   font-size: 18px;
@@ -732,40 +733,30 @@ html {
   padding-bottom: 8px;
 }
 
-.settings-form {
+.settings-card .settings-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  flex: 1;
 }
 
-.form-input {
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid #A4A5A6;
-  background: #FFFFFF;
-  color: #2E2E2E;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-}
-
-.form-input::placeholder {
-  color: #878981;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: rgba(127, 199, 74, 0.8);
-  box-shadow: 0 0 0 3px rgba(127, 199, 74, 0.2);
-}
-
-.checkbox-label {
+.settings-card .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.settings-card .checkbox-label input {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.settings-card .checkbox-label span {
+  flex-grow: 1;
   font-size: 14px;
-  color: #A4A5A6;
+  color: #333;
 }
 
 /* Tooltip styles */
