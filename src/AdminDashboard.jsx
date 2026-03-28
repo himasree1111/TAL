@@ -1263,7 +1263,6 @@ const fetchStudents = async () => {
                         <th>Email</th>
                         <th>Contact</th>
                         <th>Education</th>
-                        {/* <th>Year</th> */}
                         <th>School/College</th>
                         <th>Date Added</th>
                         <th>Actions</th>
@@ -1276,7 +1275,6 @@ const fetchStudents = async () => {
                           <td>{s.email || s.email}</td>
                           <td>{s.contact || s.contact}</td>
                           <td>{s.education || s.class}</td>
-                          {/* <td>{s.year || '-'}</td> */}
                           <td>{s.school || s.college || '-'}</td>
                           <td>
                             {s.created_at 
@@ -1323,7 +1321,6 @@ const fetchStudents = async () => {
                           <td>{s.contact || s.contact}</td>
                           <td>{s.education || s.class}</td>
                           <td>{s.school || s.college || '-'}</td>
-                         
                           <td>
                             {s.created_at 
                               ? new Date(s.created_at).toLocaleDateString() 
@@ -1396,7 +1393,6 @@ const fetchStudents = async () => {
                 
                 <div className="settings-card">
                   <h4>Notification Preferences</h4> 
-                
                   <div className="settings-form">
                     <label className="checkbox-label">
                       <input 
@@ -1418,34 +1414,6 @@ const fetchStudents = async () => {
                         checked={systemNotifications}
                         onChange={(e) => setSystemNotifications(e.target.checked)} 
                       /> System Notifications
-                    </label>
-                  </div>
-                </div>
-
-                <div className="settings-card">
-                  <h4>System Preferences</h4> 
-                  <h4>(Under Construction)</h4>
-                  <div className="settings-form">
-                    <label>
-                      Default Language
-                      <select 
-                        className="form-input"
-                        value={defaultLanguage}
-                        onChange={(e) => setDefaultLanguage(e.target.value)}
-                      >
-                        <option>English</option>
-                        <option>Hindi</option>
-                      </select>
-                    </label>
-                    <label>
-                      Time Zone
-                      <select 
-                        className="form-input"
-                        value={timeZone}
-                        onChange={(e) => setTimeZone(e.target.value)}
-                      >
-                        <option>IST (UTC+5:30)</option>
-                      </select>
                     </label>
                   </div>
                 </div>
