@@ -89,7 +89,13 @@ const StudentDashboard = () => {
   const [documents, setDocuments] = useState(initialDocumentState);
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState("");
-  const [settings, setSettings] = useState({ name: '', email: '', phone: '' });
+const [settings, setSettings] = useState({
+  newPassword: "",
+  confirmPassword: ""
+});
+const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [studentId, setStudentId] = useState(null);
@@ -317,23 +323,26 @@ const StudentDashboard = () => {
     setError("");
     setSaveSuccess(false);
 
-    try {
-      const updates = {
-        full_name: settings.name,
-        phone: settings.phone,
-        updated_at: new Date().toISOString(),
-      };
+    if (settings.newPassword !== settings.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      setSavingSettings(false);
+      return;
+    }
 
-      const { error: updateError } = await supabase
-        .from("eligible_students")
-        .update(updates)
-        .eq('email', studentEmail);
-      if (updateError) throw updateError;
+    try {
+      // Call backend to update password
+      const { error } = await supabase.auth.updateUser({
+        password: settings.newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
 
       setSaveSuccess(true);
-      setProfile((prev) => ({ ...prev, full_name: settings.name }));
+      setSettings({ newPassword: "", confirmPassword: "" });
     } catch (err) {
-      setError(err.message || "Failed to save settings");
+      setErrorMessage(err.message || "Failed to update password.");
     } finally {
       setSavingSettings(false);
     }
@@ -716,56 +725,86 @@ const totalDocuments = useMemo(() => 0, []);
     </div>
   );
 
-  const renderSettings = () => (
-    <div className="settings-panel">
-      <div className="settings-header">
-        <h2>Student Settings</h2>
-        <p className="section-note">Update your profile and change your password.</p>
+  const renderSettings = ({
+    settings,
+    setSettings,
+    showNewPassword,
+    setShowNewPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    errorMessage,
+    setErrorMessage,
+    savingSettings,
+    setSavingSettings,
+    saveSuccess,
+    setSaveSuccess,
+  }) => {
+    return (
+      <div className="settings-panel">
+        <div className="settings-header">
+          <h2>Student Settings</h2>
+          <p className="section-note">Update your account settings and preferences.</p>
+        </div>
+
+        <div className="settings-form">
+          <div className="form-group">
+            <label>New Password</label>
+            <div className="password-field">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                value={settings.newPassword}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, newPassword: e.target.value }))
+                }
+                className="input-field modern-input"
+                placeholder="Enter new password"
+              />
+              <span
+                className={`eye-icon ${showNewPassword ? "eye-open" : "eye-closed"}`}
+                onClick={() => setShowNewPassword((prev) => !prev)}
+                aria-label="Toggle password visibility"
+                role="button"
+              ></span>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Confirm Password</label>
+            <div className="password-field">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={settings.confirmPassword}
+                onChange={(e) =>
+                  setSettings((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                }
+                className="input-field modern-input"
+                placeholder="Confirm new password"
+              />
+              <span
+                className={`eye-icon ${showConfirmPassword ? "eye-open" : "eye-closed"}`}
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label="Toggle password visibility"
+                role="button"
+              ></span>
+            </div>
+          </div>
+
+          {errorMessage && <p className="error-message">{errorMessage}</p>}
+
+          <div className="form-actions">
+            <button
+              className="btn primary modern-btn"
+              onClick={handleSaveSettings}
+              disabled={savingSettings}
+            >
+              {savingSettings ? "Saving..." : "Save Settings"}
+            </button>
+            {saveSuccess && <p className="success-message">Settings saved successfully!</p>}
+          </div>
+        </div>
       </div>
-
-      <form
-        className="settings-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSaveSettings();
-        }}
-      >
-        <div className="form-row">
-          <label>Name</label>
-          <input
-            value={settings.name}
-            onChange={(e) => handleSettingsChange("name", e.target.value)}
-            placeholder="Full name"
-          />
-        </div>
-
-        <div className="form-row">
-          <label>Email</label>
-          <input
-            value={settings.email}
-            onChange={(e) => handleSettingsChange("email", e.target.value)}
-            placeholder="Email address"
-          />
-        </div>
-
-        <div className="form-row">
-          <label>Phone</label>
-          <input
-            value={settings.phone}
-            onChange={(e) => handleSettingsChange("phone", e.target.value)}
-            placeholder="Phone number"
-          />
-        </div>
-
-        <div className="form-actions">
-          <button className="btn primary" type="submit" disabled={savingSettings}>
-            {savingSettings ? "Saving…" : "Save Changes"}
-          </button>
-          {saveSuccess && <span className="success-text">Saved successfully.</span>}
-        </div>
-      </form>
-    </div>
-  );
+    );
+  };
 
   const renderProfile = () => (
     <div className="settings-panel">
@@ -1611,7 +1650,20 @@ const totalDocuments = useMemo(() => 0, []);
     }
 
     if (activeNav === "settings") {
-      return renderSettings();
+      return renderSettings({
+        settings,
+        setSettings,
+        showNewPassword,
+        setShowNewPassword,
+        showConfirmPassword,
+        setShowConfirmPassword,
+        errorMessage,
+        setErrorMessage,
+        savingSettings,
+        setSavingSettings,
+        saveSuccess,
+        setSaveSuccess,
+      });
     }
 
     if (activeNav === "profile") {
