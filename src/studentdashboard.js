@@ -85,7 +85,7 @@ const StudentDashboard = () => {
 
   const [profile, setProfile] = useState({});
   const [notifications, setNotifications] = useState([]);
-  const [notifFilter, setNotifFilter] = useState("all");
+  // notifFilter state removed
   const [documents, setDocuments] = useState(initialDocumentState);
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState("");
@@ -553,19 +553,7 @@ const totalDocuments = useMemo(() => 0, []);
 
   const totalNotifications = notifications.length;
 
-  const filteredNotifications = useMemo(() => {
-    const list = [...notifications].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
-    );
-
-   
-
-    if (notifFilter === "important") {
-      return list.filter(isImportantNotification);
-    }
-
-    return list;
-  }, [notifications, notifFilter]);
+  const filteredNotifications = useMemo(() => [...notifications].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)), [notifications]);
 
   const renderSidebar = () => (
     <aside className="student-sidebar">
@@ -607,26 +595,11 @@ const totalDocuments = useMemo(() => 0, []);
     </div>
   );
 
-  const renderNotificationFilters = () => (
-    <div className="filter-bar">
-      {[
-        { key: "all", label: "All" },
-        { key: "important", label: "Important" },
-      ].map((option) => (
-        <button
-          key={option.key}
-          className={`filter-button ${notifFilter === option.key ? "active" : ""}`}
-          onClick={() => setNotifFilter(option.key)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
+  // renderNotificationFilters removed
 
   const renderNotifications = () => {
     if (!filteredNotifications.length) {
-      return <div className="empty-state">No notifications match this filter.</div>;
+      return <div className="empty-state">No notifications available.</div>;
     }
 
     return (
@@ -1604,9 +1577,8 @@ const totalDocuments = useMemo(() => 0, []);
       <div className="section-block">
         <div className="section-header">
           <h3>Recent Alerts</h3>
-          <p className="section-note">Tap to mark as read and keep up to date.</p>
+          <p className="section-note">Stay up to date with announcements.</p>
         </div>
-        {renderNotificationFilters()}
         {renderNotifications()}
       </div>
     </>
@@ -1626,14 +1598,13 @@ const totalDocuments = useMemo(() => 0, []);
       );
     }
 
-    if (activeNav === "notifications") {
+  if (activeNav === "notifications") {
       return (
         <>
           <div className="section-header">
             <h2>Alerts & Reminders</h2>
-            <span className="section-note">Tap a notification to mark it as read.</span>
+            <span className="section-note">Stay updated with latest announcements.</span>
           </div>
-          {renderNotificationFilters()}
           {renderNotifications()}
         </>
       );
