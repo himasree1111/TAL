@@ -1218,7 +1218,7 @@ const fetchStudents = async () => {
                 </div>
               )}
 
-              <form onSubmit={handleCreateNotification} className="notification-form">
+<form onSubmit={handleCreateNotification} className="notification-form" noValidate>
                 <div className="form-group">
 
                   <label>
@@ -1258,8 +1258,8 @@ const fetchStudents = async () => {
                 </div>
 
 
-                <div className="form-group" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                  <div style={{display: 'flex', alignItems: 'center'}}>
+<div className="notification-form-group">
+                  <div className="checkbox-container">
                     <label className="checkbox-label">
                       <input 
                         type="checkbox" 
@@ -1267,13 +1267,12 @@ const fetchStudents = async () => {
                         onChange={(e) => {
                           setIsAllTimeNotification(e.target.checked);
                           if (e.target.checked) setNotificationExpiresAt("");
-                        }} 
-                        style={{marginRight: '0.5rem'}}
+                        }}
                       /> All time notification (no expiry)
                     </label>
                   </div>
-                  <div style={{marginTop: '1rem'}}>
-                    <label style={{width: '100%'}}>
+                  <div className="expiry-container">
+                    <label>
                       <span className="field-label">Expires At <span style={{color: 'red'}}>*</span> (Mandatory unless checked above)</span>
                       <input
                         type="datetime-local"
@@ -1281,7 +1280,6 @@ const fetchStudents = async () => {
                         onChange={(e) => setNotificationExpiresAt(e.target.value)}
                         required={!isAllTimeNotification}
                         disabled={isAllTimeNotification}
-                        style={{width: '100%'}}
                       />
                     </label>
                   </div>
@@ -1290,7 +1288,7 @@ const fetchStudents = async () => {
 
                 <button
                   type="submit"
-                  className="btn primary"
+                  className="btn form-submit-btn primary"
                   disabled={creatingNotification}
                 >
                   {creatingNotification ? "Creating..." : "Create Notification"}
