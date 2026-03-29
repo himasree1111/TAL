@@ -132,14 +132,7 @@ function App() {
             }
           />
 
-          <Route
-            path="/reset-password"
-            element={
-              <ProtectedRoute>
-                <ResetPassword />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* ⭐ Catch all → always CoverPage */}
           <Route path="*" element={<Navigate to="/" replace />} />

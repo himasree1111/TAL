@@ -78,6 +78,24 @@ export default function StudentLogin() {
   // Errors computed but shown only after submit
   const currentEmailError = showErrors && (email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) ? 'Please enter valid email' : '';
   const currentPasswordErrors = showErrors && password.length > 0 ? validatePassword(password) : [];
+  const handleForgotPassword = async () => {
+  if (!email.trim()) {
+    toast.error("Enter your email first");
+    return;
+  }
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: "http://localhost:3000/reset-password?role=student",
+    });
+
+    if (error) throw error;
+
+    toast.success("Reset link sent to your email!");
+  } catch (err) {
+    toast.error(err.message || "Error sending email");
+  }
+};
 
   return (
     <div className="auth-container">
@@ -129,10 +147,23 @@ export default function StudentLogin() {
           <button type="submit">Login</button>
         </form>
 
-        <p style={{ marginTop: "10px", textAlign: "center", color: "#2563eb", cursor: "pointer" }}
-           onClick={() => toast.info("First time? Enter email only and click login")}>
-          First time user?
-        </p>
+      <div style={{ textAlign: "center", marginTop: "10px" }}>
+  <p
+    style={{ color: "#2563eb", cursor: "pointer", margin: "4px 0" }}
+    onClick={() =>
+      toast.info("First time? Enter email only and click login")
+    }
+  >
+    First time user?
+  </p>
+
+  <p
+    style={{ color: "#6b7280", cursor: "pointer", fontSize: "14px" }}
+    onClick={handleForgotPassword}
+  >
+    Forgot password?
+  </p>
+</div>
       </div>
 
       <ToastContainer position="top-center" autoClose={3000} />
