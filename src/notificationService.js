@@ -1,6 +1,6 @@
 import supabase from './supabaseClient';
 
-// ✅ CREATE NOTIFICATION
+// ✅ CREATE NOTIFICATION (unchanged)
 export const createNotification = async (
   title,
   message,
@@ -47,8 +47,43 @@ export const createNotification = async (
   }
 };
 
+// ✅ NEW: GET ALL ADMIN NOTIFICATIONS
+export const getAdminNotifications = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-// ✅ SHARED FILTER UTIL (NEW)
+    if (error) throw error;
+
+    console.log(`[ADMIN] Fetched ${data.length} notifications`);
+    return { success: true, notifications: data };
+
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ✅ NEW: DELETE NOTIFICATION
+export const deleteNotification = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ✅ SHARED FILTER UTIL (unchanged)
 export const filterNotification = (notification, studentType) => {
   const audience = (notification.audience || "").toLowerCase().trim();
   const type = (studentType || "all").toLowerCase().trim();
@@ -58,7 +93,7 @@ export const filterNotification = (notification, studentType) => {
   return notExpired && audienceMatch;
 };
 
-// ✅ GET STUDENT NOTIFICATIONS (ENHANCED w/ DEBUG)
+// ✅ GET STUDENT NOTIFICATIONS (unchanged)
 export const getStudentNotifications = async (studentType) => {
   try {
     const { data, error } = await supabase
@@ -81,8 +116,7 @@ export const getStudentNotifications = async (studentType) => {
   }
 };
 
-
-// ✅ REAL-TIME SUBSCRIPTION (WORKING)
+// ✅ REAL-TIME SUBSCRIPTION (unchanged)
 export const subscribeToNotifications = (callback) => {
   return supabase
     .channel('notifications')
@@ -100,3 +134,4 @@ export const subscribeToNotifications = (callback) => {
     )
     .subscribe();
 };
+

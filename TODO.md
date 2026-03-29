@@ -1,21 +1,15 @@
-# Student Dashboard UI Refactor (VolunteerDashboard Style)
+# TAL Project TODO
 
-## Status: 🚀 In Progress
+## Current Task: All-time Notification Feature + UI Polish
+✅ **1. Verify feature implemented** - Checkbox handles null expiry correctly  
+✅ **2. Create TODO.md** - Track progress  
+✅ **3. Polish UI** - Vertical layout for checkbox + expiry input  
+✅ **4. Test form behavior**  
+✅ **5. Update TODO & complete**  
 
-### [x] Previous Task - Prevented duplicate submissions
+## Task Complete 🎉
+- All-time notifications: Working (null expiry)
+- UI: Checkbox top, expiry below w/ 1rem margin, auto-clear + disabled
+- Form validation: Perfect
 
-### [ ] New Task - Student Dashboard UI
-### [x] 1. Update TODO.md
-### [x] 2. Copy + adapt VolunteerDashboard.css → studentdashboard.css (green theme)
-### [x] 3. Refactor src/studentdashboard.js:
-### [x]   - Sidebar: profile avatar, stats grid, nav buttons (Dashboard, Profile, Notifications, Documents, Settings), logout
-### [x]   - Main: header with h1+CTA, sections (overview table, profile form, notifications grid, documents table, settings)
-### [x]   - Reuse all current logic (tabs, uploads, notifications)
-### [ ] 4. Test responsive (mobile sidebar, table scroll)
-### [ ] 5. Update TODO + complete
-
-### [ ] 4. Test responsive (mobile sidebar, table scroll)
-### [ ] 5. Update TODO + complete
-
-**Notes:** Keep features, match Volunteer layout/colors.
-
+*Completed: $(date)*

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 import supabase from "./supabaseClient";
-import { createNotification } from "./notificationService";
+import { createNotification, getAdminNotifications, deleteNotification } from "./notificationService";
 
 // Utility function to convert UTC to IST (Indian Standard Time)
 const formatToIST = (dateString) => {
@@ -51,7 +51,51 @@ export default function AdminDashboard() {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationAudience, setNotificationAudience] = useState("all");
   const [notificationExpiresAt, setNotificationExpiresAt] = useState("");
+  const [isAllTimeNotification, setIsAllTimeNotification] = useState(false);
   const [creatingNotification, setCreatingNotification] = useState(false);
+
+  // Admin notifications list
+  const [adminNotifications, setAdminNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [showNotificationsList, setShowNotificationsList] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Notification list handlers
+  const handleToggleNotificationsList = async () => {
+    if (!showNotificationsList) {
+      setLoadingNotifications(true);
+      const result = await getAdminNotifications();
+      if (result.success) {
+        setAdminNotifications(result.notifications);
+      }
+      setLoadingNotifications(false);
+    }
+    setShowNotificationsList(!showNotificationsList);
+  };
+
+
+  const handleDeleteNotification = async (id) => {
+    if (!window.confirm('Delete this notification?')) return;
+    
+    setDeletingId(id);
+    const result = await deleteNotification(id);
+    console.log('[DEBUG] Delete result:', result); // DEBUG
+    
+    if (result.success) {
+      // Refresh full list from server
+      const refreshResult = await getAdminNotifications();
+      if (refreshResult.success) {
+        setAdminNotifications(refreshResult.notifications);
+      }
+      alert('✅ Deleted successfully');
+    } else {
+      alert('❌ Delete failed: ' + result.error);
+    }
+    
+    setDeletingId(null);
+  };
+
+
 
 
   // Fetch user and real data from Supabase
@@ -680,12 +724,20 @@ const fetchStudents = async () => {
   formattedDate
 );
 
+    if (!isAllTimeNotification && !notificationExpiresAt) {
+      alert("Please select an expiry time or check 'All time notification'.");
+      setCreatingNotification(false);
+      return;
+    }
+
     if (result.success) {
       alert("Notification created successfully!");
+      // Reset form including new state
       setNotificationTitle("");
       setNotificationMessage("");
       setNotificationAudience("all");
       setNotificationExpiresAt("");
+      setIsAllTimeNotification(false);
     } else {
       alert("Error creating notification: " + result.error);
     }
@@ -748,7 +800,6 @@ const fetchStudents = async () => {
         
           <div className="header-actions">
             <input placeholder="Search students or college..." value={query} onChange={(e) => setQuery(e.target.value)} />
-            <button className="btn primary" onClick={() => setBroadcastOpen(true)}>New Broadcast</button>
           </div>
         </header>
 
@@ -1113,10 +1164,63 @@ const fetchStudents = async () => {
             <section className="broadcast-section">
               <div className="section-header">
                 <h3>Create Notification</h3>
+                <div className="section-actions">
+                  <button className="btn primary" onClick={handleToggleNotificationsList}>
+                    {showNotificationsList ? 'Hide List' : 'View All Notifications'}
+                  </button>
+                </div>
               </div>
+
+              {showNotificationsList && (
+                <div className="notifications-list" style={{marginBottom: '2rem', background: '#fff', padding: '1.5rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(20,24,40,0.06)'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                    <h4 style={{margin: 0}}>All Notifications ({adminNotifications.length})</h4>
+                    <button className="btn" onClick={() => setShowNotificationsList(false)}>Close</button>
+                  </div>
+                  {loadingNotifications ? (
+                    <p>Loading notifications...</p>
+                  ) : adminNotifications.length === 0 ? (
+                    <p>No notifications created yet.</p>
+                  ) : (
+                    <div className="table-wrap">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Title</th>
+                            <th>Audience</th>
+                            <th>Expires</th>
+                            <th>Created</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminNotifications.map((notif) => (
+                            <tr key={notif.id}>
+                              <td style={{fontWeight: 500}}>{notif.title}</td>
+                              <td>{notif.audience}</td>
+                              <td>{notif.expires_at ? formatToIST(notif.expires_at) : 'Never'}</td>
+                              <td>{formatToIST(notif.created_at)}</td>
+                              <td>
+                                <button 
+                                  className="btn small danger" 
+                                  onClick={() => handleDeleteNotification(notif.id)}
+                                  disabled={deletingId === notif.id}
+                                >
+                                  {deletingId === notif.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <form onSubmit={handleCreateNotification} className="notification-form">
                 <div className="form-group">
+
                   <label>
                     <span className="field-label">Notification Title</span>
                     <input
@@ -1153,16 +1257,36 @@ const fetchStudents = async () => {
                   </label>
                 </div>
 
-                <div className="form-group">
-                  <label>
-                    <span className="field-label">Expires At (Optional)</span>
-                    <input
-                      type="datetime-local"
-                      value={notificationExpiresAt}
-                      onChange={(e) => setNotificationExpiresAt(e.target.value)}
-                    />
-                  </label>
+
+                <div className="form-group" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                  <div style={{display: 'flex', alignItems: 'center'}}>
+                    <label className="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        checked={isAllTimeNotification}
+                        onChange={(e) => {
+                          setIsAllTimeNotification(e.target.checked);
+                          if (e.target.checked) setNotificationExpiresAt("");
+                        }} 
+                        style={{marginRight: '0.5rem'}}
+                      /> All time notification (no expiry)
+                    </label>
+                  </div>
+                  <div style={{marginTop: '1rem'}}>
+                    <label style={{width: '100%'}}>
+                      <span className="field-label">Expires At <span style={{color: 'red'}}>*</span> (Mandatory unless checked above)</span>
+                      <input
+                        type="datetime-local"
+                        value={notificationExpiresAt}
+                        onChange={(e) => setNotificationExpiresAt(e.target.value)}
+                        required={!isAllTimeNotification}
+                        disabled={isAllTimeNotification}
+                        style={{width: '100%'}}
+                      />
+                    </label>
+                  </div>
                 </div>
+
 
                 <button
                   type="submit"
