@@ -213,9 +213,24 @@ const loadNotifications = async (id) => {
   }
 };
 
-  // filters now include stream (course)
-  const [filters, setFilters] = useState({ class: "", donor: "", feeStatus: "", stream: "" });
+  // New filters for replacement
+  const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: false });
   const [query, setQuery] = useState("");
+
+  // Unique values for dropdowns
+  const uniqueCamps = useMemo(() => {
+    const camps = students.map(s => s.campName || 'Unknown').filter(Boolean);
+    return ['all', ...new Set(camps)];
+  }, [students]);
+
+  const uniqueEducations = useMemo(() => {
+    const educations = [...students.map(s => s.course).filter(Boolean), ...students.map(s => s.year).filter(Boolean)];
+    return ['all', ...new Set(educations)];
+  }, [students]);
+
+  // Old filters (deprecated)
+  const [filters, setFilters] = useState({ class: "", donor: "", feeStatus: "", stream: "" });
+
 
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -233,24 +248,26 @@ const loadNotifications = async (id) => {
     return { totalStudents, feesCollected, pendingFees, activeDonors };
   }, [students, donors]);
 
-  // filteredStudents takes stream/course into account
+  const getMaxPercent = (s) => Math.max(parseFloat(s.prev_percent || 0), parseFloat(s.present_percent || 0));
+
+  // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      if (filters.class && s.year !== filters.class) return false;
-      if (filters.donor) {
-        // When "None" is selected, show students with donor "None"
-        if (filters.donor === "None") {
-          if (s.donor !== "None") return false;
-        } else {
-          if (s.donor !== filters.donor) return false;
-        }
-      }
-      if (filters.feeStatus && s.feeStatus !== filters.feeStatus) return false;
-      if (filters.stream && s.course !== filters.stream) return false;
-      if (query && !`${s.name} ${s.college}`.toLowerCase().includes(query.toLowerCase())) return false;
+      // Old filters (commented out)
+      // if (filters.class && s.year !== filters.class) return false;
+      // if (filters.donor) { ... }
+      // if (filters.feeStatus && s.fee_status !== filters.feeStatus) return false;
+      // if (filters.stream && s.course !== filters.stream) return false;
+
+      // New filters
+      if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
+      if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
+      if (newFilters.toppers && getMaxPercent(s) < 90) return false;
+      if (newFilters.achievements && getMaxPercent(s) < 85) return false;
+      if (query && !`${s.name} ${s.course || s.year}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
-    });
-  }, [students, filters, query]);
+    }).sort((a, b) => newFilters.toppers ? getMaxPercent(b) - getMaxPercent(a) : 0);
+  }, [students, newFilters, query]);
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
     .from("eligible_students")
@@ -745,7 +762,29 @@ const fetchStudents = async () => {
     setCreatingNotification(false);
   };
 
+  // Filter Components
+  const FilterCard = ({ title, icon, options, value, onChange }) => (
+    <div className="filter-card" style={{position: 'relative'}}>
+      <div className="filter-icon">{icon}</div>
+      <div className="filter-title">{title}</div>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="filter-select">
+        {options.map((opt, idx) => (
+          <option key={idx} value={opt}>{opt === 'all' ? 'All' : opt}</option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const FilterToggle = ({ title, icon, checked, onChange }) => (
+    <div className={`filter-card filter-toggle ${checked ? 'filter-active' : ''}`} onClick={() => onChange(!checked)}>
+      <div className="filter-icon">{icon}</div>
+      <div className="filter-title">{title}</div>
+      <div className={`toggle-switch ${checked ? 'active' : ''}`}></div>
+    </div>
+  );
+
   return (
+
     <div className="admin-root">
      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-top">
@@ -940,33 +979,33 @@ const fetchStudents = async () => {
           {activeSection === "manage" && (
             <section className="manage-section">
               <div className="manage-controls">
-                <div className="filters">
-                  <select value={filters.class} onChange={(e) => setFilters(f => ({...f, class: e.target.value}))}>
-                    <option value="">All Years</option>
-                    <option>1st</option>
-                    <option>2nd</option>
-                    <option>3rd</option>
-                    <option>4th</option>
-                  </select>
-
-                  <select value={filters.donor} onChange={(e) => setFilters(f => ({...f, donor: e.target.value}))}>
-                    <option value="">All Donors</option>
-                    <option>None</option>
-                    {donors.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
-                  </select>
-
-                  <select value={filters.feeStatus} onChange={(e) => setFilters(f => ({...f, feeStatus: e.target.value}))}>
-                    <option value="">All Fee Status</option>
-                    <option>Paid</option>
-                    <option>Partial</option>
-                    <option>Pending</option>
-                  </select>
-
-                  {/* NEW: Stream / Course filter */}
-                  <select value={filters.stream} onChange={(e) => setFilters(f => ({...f, stream: e.target.value}))}>
-                    <option value="">All Streams</option>
-                    {uniqueCourses.map((c, idx) => <option key={idx} value={c}>{c}</option>)}
-                  </select>
+<div className="new-filters-grid">
+                  <FilterCard 
+                    title="Camp" 
+                    icon="🏕️" 
+                    options={uniqueCamps} 
+                    value={newFilters.camp} 
+                    onChange={(val) => setNewFilters(f => ({...f, camp: val}))} 
+                  />
+                  <FilterCard 
+                    title="Education" 
+                    icon="🎓" 
+                    options={uniqueEducations} 
+                    value={newFilters.education} 
+                    onChange={(val) => setNewFilters(f => ({...f, education: val}))} 
+                  />
+                  <FilterToggle 
+                    title="Toppers" 
+                    icon="⭐" 
+                    checked={newFilters.toppers} 
+                    onChange={(val) => setNewFilters(f => ({...f, toppers: val}))} 
+                  />
+                  <FilterToggle 
+                    title="Achievements" 
+                    icon="🏆" 
+                    checked={newFilters.achievements} 
+                    onChange={(val) => setNewFilters(f => ({...f, achievements: val}))} 
+                  />
                 </div>
 
                 <div className="manage-actions">
