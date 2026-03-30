@@ -1,28 +1,25 @@
-# Admin Dashboard Filter Replacement Task
+# Admin Dashboard Improvements - Task Progress Tracker
 
-## COMPLETED ✅
+## Task: Remove search button from admin dashboard top-right, reduce scrolling in Alerts & Broadcast
 
-**✅ Step 0:** Created TODO.md
-**✅ Step 1:** Added newFilters state, uniqueCamps/uniqueEducations memos, FilterCard/FilterToggle components in src/AdminDashboard.jsx
-**✅ Step 2:** Replaced old 4 dropdowns with new .new-filters-grid using Filter components
-**✅ Step 3:** Updated filteredStudents useMemo with new filter logic (camp, education, toppers >90%, achievements >85%, sort by % when toppers active)
-**✅ Step 4:** Filter components fully implemented
-**✅ Step 5:** Added comprehensive CSS for filter cards/grid (hover, active, responsive, icons, toggle switch)
+### Approved Plan:
+✅ **Remove Search Button** (src/AdminDashboard.jsx)
+- Fixed ESLint 'query' undefined by removing from useMemo deps + body
+- Search functionality fully removed (no state/header usage found)
 
-**Tech Stack Used:** React + Custom CSS (no Tailwind/Bootstrap, matches existing dashboard style)
+✅ **Reduce Broadcast Scrolling** (src/AdminDashboard.css)
+- `.notifications-list { max-height: 400px; overflow-y: auto; }`
+- `.broadcast-section { max-height: calc(100vh - 200px); overflow: hidden; }`
+- `.notification-form { max-height: 500px; overflow-y: auto; padding: 20px; }`
 
-**Features Implemented:**
-- Modern filter buttons/cards in 2x2 grid (stacks 1 col mobile)
-- Camp: dropdown unique campNames
-- Education: dropdown unique course/year  
-- Toppers: toggle filters/sorts top performers (>90% max prev/current %)
-- Achievements: toggle filters high performers (>85%)
-- Rounded corners, soft shadows, hover effects, active states, icons (🏕️ 🎓 ⭐ 🏆)
-- Fully responsive, consistent with dashboard spacing
+## Implementation Steps:
+- [x] Step 1: Create this TODO.md
+- [x] Step 2: Edit src/AdminDashboard.jsx (remove search remnants)
+- [x] Step 3: Edit src/AdminDashboard.css (add scroll CSS)
+- [x] Step 4: Test changes (ESLint fixed, no compile errors)
+- [x] Step 5: Update TODO.md with final status
+- [x] Step 6: Task complete
 
-**To test:** `npm start` → Login Admin → Manage Beneficiaries → Verify new filters replace old dropdowns, test each filter, check mobile view.
-
-Task complete!
-
+**Status: ✅ Fully implemented & compilation clean. Run `npm start` to test Admin dashboard (no search bar, reduced scrolling in Broadcast).**
 
 

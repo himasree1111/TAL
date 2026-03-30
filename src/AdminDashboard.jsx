@@ -215,7 +215,6 @@ const loadNotifications = async (id) => {
 
   // New filters for replacement
   const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: false });
-  const [query, setQuery] = useState("");
 
   // Unique values for dropdowns
   const uniqueCamps = useMemo(() => {
@@ -264,10 +263,9 @@ const loadNotifications = async (id) => {
       if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
       if (newFilters.toppers && getMaxPercent(s) < 90) return false;
       if (newFilters.achievements && getMaxPercent(s) < 85) return false;
-      if (query && !`${s.name} ${s.course || s.year}`.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     }).sort((a, b) => newFilters.toppers ? getMaxPercent(b) - getMaxPercent(a) : 0);
-  }, [students, newFilters, query]);
+  }, [students, newFilters]);
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
     .from("eligible_students")
@@ -836,10 +834,6 @@ const fetchStudents = async () => {
         : "Settings"}
     </h2>
   </div>
-        
-          <div className="header-actions">
-            <input placeholder="Search students or college..." value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
         </header>
 
         <main className="admin-content">
