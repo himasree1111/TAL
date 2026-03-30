@@ -1020,10 +1020,12 @@ const fetchStudents = async () => {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Education</th>
-                
-                      {/* <th>Fee Status</th> */}
-                      <th>Contact</th>         {/* NEW column (stream) */}
-                      <th>Camp</th>           {/* NEW column (campName / campDate) */}
+                      <th>Contact</th>
+                      <th>Camp</th>
+                      <th>GPA</th> {/* Academic performance */}
+                      <th>Income Level</th> {/* Financial need */}
+                      <th>Achievements</th> {/* Extracurricular achievements */}
+                      <th>Eligibility</th> {/* Scholarship eligibility */}
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -1033,8 +1035,6 @@ const fetchStudents = async () => {
                         <td>{s.name}</td>
                         <td>{s.email}</td>
                         <td>{s.year}</td>
-                    
-                        {/* <td>{s.feeStatus}</td> */}
                         <td>{s.contact}</td>
                         <td>
                           <div style={{whiteSpace: 'nowrap'}}>
@@ -1042,6 +1042,10 @@ const fetchStudents = async () => {
                             <div style={{fontSize: '0.85em', color: '#666'}}>{s.campDate}</div>
                           </div>
                         </td>
+                        <td>{s.gpa}</td> {/* Display GPA */}
+                        <td>{s.incomeLevel}</td> {/* Display income level */}
+                        <td>{s.achievements}</td> {/* Display achievements */}
+                        <td>{s.eligibility ? 'Eligible' : 'Not Eligible'}</td> {/* Display eligibility */}
                         <td>
                           <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
                             <div className="tooltip">
@@ -1050,11 +1054,11 @@ const fetchStudents = async () => {
                             </div>
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => handleApprove(s)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
-                              <span className="tooltiptext">Approved</span>
+                              <span className="tooltiptext">Approve</span>
                             </div>
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => handleNotApprove(s)} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
-                              <span className="tooltiptext">Not Approved</span>
+                              <span className="tooltiptext">Not Approve</span>
                             </div>
                           </div>
                         </td>
@@ -1168,7 +1172,7 @@ const fetchStudents = async () => {
                       <th>Total Fee</th>
                       <th>Paid Amount</th>
                       <th>Due Date</th>
-                      <th>Paid Date</th> // NEW *
+                      <th>Paid Date</th> <!-- NEW column -->
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -1180,7 +1184,7 @@ const fetchStudents = async () => {
                         <td>₹5,000</td>
                         <td>₹{s.feeStatus === 'Paid' ? '5,000' : s.feeStatus === 'Partial' ? '2,500' : '0'}</td>
                         <td>Nov 30, 2025</td>
-                        <td>{s.paidDate ? s.paidDate : "-"}</td> // show paidDate 
+                        <td>{s.paidDate ? s.paidDate : "-"}</td> <!-- show paidDate -->
                         <td>
                           <span className={`status-badge ${s.feeStatus.toLowerCase()}`}>
                             {s.feeStatus}
@@ -1632,7 +1636,7 @@ const fetchStudents = async () => {
         <p><strong>Paid Date:</strong> {viewStudent.paidDate}</p> */}
 
         {/* DONOR */}
-        <p><strong>Donor / Volunteer:</strong> {viewStudent.donor}</p>
+        <p><strong>Volunteer:</strong> {viewStudent.volunteer_name}</p>
 
         {/* CREATED AT */}
         <p><strong>Record Created:</strong> 
