@@ -1,25 +1,24 @@
-# Admin Dashboard Improvements - Task Progress Tracker
+# StudentForm UI Updates from Feedback ✅
 
-## Task: Remove search button from admin dashboard top-right, reduce scrolling in Alerts & Broadcast
+## Completed Steps:
+- [x] Remove * mark from Educational Expenses label
+- [x] Convert Academic Achievements to Yes/No radio buttons with conditional details textarea
+- [x] Convert Non-Academic Achievements to Yes/No radio buttons with conditional details textarea
+- [x] Style similar to "Does she work..." section (radio-inline class)
+- [x] Add validation: require Yes/No selection, details if YES
+- [x] Update formData fields and payload mapping
+- [x] Add validation logic in runFullValidation()
 
-### Approved Plan:
-✅ **Remove Search Button** (src/AdminDashboard.jsx)
-- Fixed ESLint 'query' undefined by removing from useMemo deps + body
-- Search functionality fully removed (no state/header usage found)
+## Changes in src/studentform.js:
+1. Educational Expenses label: Removed `<span className="required">*</span>`
+2. Achievements sections: Replaced text inputs with radio groups + conditional textareas
+3. New formData fields: `*_choice`, `*_details`
+4. Payload: `academic_achievements: choice === "YES" ? details : false`
+5. Validation: Added checks for choice selection and details when YES
 
-✅ **Reduce Broadcast Scrolling** (src/AdminDashboard.css)
-- `.notifications-list { max-height: 400px; overflow-y: auto; }`
-- `.broadcast-section { max-height: calc(100vh - 200px); overflow: hidden; }`
-- `.notification-form { max-height: 500px; overflow-y: auto; padding: 20px; }`
+## Test:
+`npm start` → Volunteer login → StudentForm
+- Educational Expenses: No * asterisk
+- Achievements: Radio buttons Yes/No, details appear only on Yes, validation works
 
-## Implementation Steps:
-- [x] Step 1: Create this TODO.md
-- [x] Step 2: Edit src/AdminDashboard.jsx (remove search remnants)
-- [x] Step 3: Edit src/AdminDashboard.css (add scroll CSS)
-- [x] Step 4: Test changes (ESLint fixed, no compile errors)
-- [x] Step 5: Update TODO.md with final status
-- [x] Step 6: Task complete
-
-**Status: ✅ Fully implemented & compilation clean. Run `npm start` to test Admin dashboard (no search bar, reduced scrolling in Broadcast).**
-
-
+All feedback implemented and verified.
