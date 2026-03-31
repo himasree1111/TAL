@@ -1,11 +1,11 @@
-<<<<<<< HEAD
 # StudentForm UI Updates from Feedback ✅
 
 ## Completed Steps:
 - [x] Remove * mark from Educational Expenses label
 - [x] Convert Academic Achievements to Yes/No radio buttons with conditional details textarea
 - [x] Convert Non-Academic Achievements to Yes/No radio buttons with conditional details textarea
-- [x] Style similar to "Does she work..." section (radio-inline class)
+- [x] Style similar to "Does she work..." section (rad
+io-inline class)
 - [x] Add validation: require Yes/No selection, details if YES
 - [x] Update formData fields and payload mapping
 - [x] Add validation logic in runFullValidation()
@@ -23,8 +23,6 @@
 - Achievements: Radio buttons Yes/No, details appear only on Yes, validation works
 
 All feedback implemented and verified.
-=======
->>>>>>> 931e694 (Resolved merge conflict)
 # Student Dashboard "My Profile" UI Redesign
 
 **Current Status:** Initial CSS improvements applied. Now redesigning for label-left/value-right layout + modern cards.
