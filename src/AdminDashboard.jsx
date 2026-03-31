@@ -59,6 +59,7 @@ export default function AdminDashboard() {
     donation_date: new Date().toISOString().slice(0, 16), // Today in local time
   });
   const [submittingDonor, setSubmittingDonor] = useState(false);
+  const [loadingDonors, setLoadingDonors] = useState(false);
 
   // Notification state
   const [notificationTitle, setNotificationTitle] = useState("");
@@ -113,25 +114,29 @@ export default function AdminDashboard() {
 
 
   const fetchDonors = async () => {
-    const { data: donorDetails, error } = await supabase
-      .from('donor_details')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('Error fetching donors:', error);
-    } else {
-      // Map to match existing UI
-      const mappedDonors = (donorDetails || []).map(d => ({
-        id: d.id,
-        name: d.full_name,
-        amount: d.amount,
-        years: d.donation_type ? d.donation_type.replace('-time', '') : '',
-        email: d.email,
-        donor_type: d.donor_type,
-        donation_date: d.donation_date,
-        ...d  // all fields
-      }));
-      setDonors(mappedDonors);
+    setLoadingDonors(true);
+    try {
+      const { data: donorDetails, error } = await supabase
+        .from('donor_details')
+        .select('*')
+        .order('donation_date', { ascending: false });
+      if (error) {
+        console.error('Error fetching donors:', error);
+      } else {
+        const mappedDonors = (donorDetails || []).map(d => ({
+          ...d,
+          name: d.full_name,
+          formattedAmount: new Intl.NumberFormat('en-IN', { 
+            style: 'currency', 
+            currency: 'INR',
+            maximumFractionDigits: 0 
+          }).format(d.amount || 0),
+          formattedDate: d.donation_date ? formatToIST(d.donation_date) : '—'
+        }));
+        setDonors(mappedDonors);
+      }
+    } finally {
+      setLoadingDonors(false);
     }
   };
 
@@ -638,11 +643,29 @@ const fetchStudents = async () => {
   };
 */
 
-  const handleContactDonor = (donor) => {
-    const email = window.prompt('Enter email to contact ' + donor.name, 'donor@example.org');
-    if (!email) return;
-    window.location.href = `mailto:${email}?subject=Regarding%20support`;
+  // Edit donor state
+  const [editingDonor, setEditingDonor] = useState(null);
+  
+  const handleEditDonor = (donor) => {
+    setEditingDonor({...donor, donation_date: donor.donation_date ? donor.donation_date.slice(0,16) : ''});
   };
+  
+  const handleDeleteDonor = async (donor) => {
+    if (!window.confirm(`Delete donor ${donor.full_name}?`)) return;
+    
+    const { error } = await supabase
+      .from('donor_details')
+      .delete()
+      .eq('id', donor.id);
+    
+    if (error) {
+      alert('❌ Delete failed: ' + error.message);
+    } else {
+      await fetchDonors();
+      alert('✅ Donor deleted');
+    }
+  };
+
 
   const handleExportDonorReport = () => {
     const rows = ['id,full_name,email,phone,donor_type,amount,payment_method,transaction_id,donation_type,donation_date,created_at', 
@@ -680,14 +703,20 @@ const fetchStudents = async () => {
 
   const validateDonorForm = (form) => {
     if (!form.full_name.trim()) return 'Full name is required';
+    if (form.phone && !/^\d{10}$/.test(form.phone.replace(/[^0-9]/g, ''))) return 'Phone must be valid 10-digit number';
     if (!form.email.trim()) return 'Email is required';
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(form.email)) return 'Invalid email format';
-    if (!form.amount || isNaN(form.amount) || parseFloat(form.amount) <= 0) return 'Amount must be a positive number';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Invalid email format';
+    if (form.gender && !['Male', 'Female', 'Other'].includes(form.gender)) return 'Select Male, Female, or Other';
     if (!form.donor_type) return 'Donor type is required';
+    if (form.donor_type === 'Organization' && !form.organization_name.trim()) return 'Organization name is required';
+    if (!form.amount || isNaN(form.amount) || parseFloat(form.amount) <= 0) return 'Valid positive amount is required';
     if (!form.payment_method) return 'Payment method is required';
+    if (!form.transaction_id.trim()) return 'Transaction ID is required';
     if (!form.donation_type) return 'Donation type is required';
+    if (!form.donation_date) return 'Donation date is required';
     return null;
   };
+
 
   const handleSubmitNewDonor = async (e) => {
     e.preventDefault();
@@ -703,15 +732,17 @@ const fetchStudents = async () => {
         full_name: newDonorForm.full_name.trim(),
         gender: newDonorForm.gender.trim() || null,
         phone: newDonorForm.phone.trim() || null,
-        email: newDonorForm.email.trim(),
+        email: newDonorForm.email.trim().toLowerCase(),  // normalize email
         donor_type: newDonorForm.donor_type,
         organization_name: newDonorForm.organization_name.trim() || null,
         amount: parseFloat(newDonorForm.amount),
         payment_method: newDonorForm.payment_method,
-        transaction_id: newDonorForm.transaction_id.trim() || null,
+        transaction_id: newDonorForm.transaction_id.trim() || `TXN_${Date.now()}`,
         donation_type: newDonorForm.donation_type,
         donation_date: newDonorForm.donation_date ? new Date(newDonorForm.donation_date).toISOString() : new Date().toISOString(),
+        created_at: new Date().toISOString()
       };
+
 
       const { data, error } = await supabase
         .from('donor_details')
@@ -740,7 +771,18 @@ const fetchStudents = async () => {
 
   const handleDonorFormChange = (e) => {
     const { name, value } = e.target;
+    // Allow only letters, spaces, and common name characters for full_name
+    if (name === 'full_name') {
+      const cleanedValue = value.replace(/[^a-zA-Z\s.'\-]/g, '');
+      setNewDonorForm(prev => ({ ...prev, [name]: cleanedValue }));
+      return;
+    }
     setNewDonorForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    setNewDonorForm(prev => ({ ...prev, phone: value }));
   };
 /*
   const handleSendReminders = () => {
@@ -1183,19 +1225,19 @@ const fetchStudents = async () => {
             </section>
           )}
 
-          {activeSection === "mapping" && (
+{activeSection === "mapping" && (
             <section className="donor-details-section">
               <div className="section-header">
                 <h3>Donor Details</h3>
                 <div className="section-actions">
-                  <button className="btn primary" onClick={handleOpenAddDonor}>Add New Donor</button>
+                  <button className="btn primary" onClick={handleOpenAddDonor}>Add Donor</button>
                   <button className="btn primary" onClick={handleExportDonorReport}>Export Report</button>
                 </div>
               </div>
 
               <div className="mapping-stats">
                 <div className="stat-box">
-                  <div className="value">₹{donors.reduce((s,d) => s + d.amount, 0)}</div>
+                  <div className="value">₹{donors.reduce((s,d) => s + (d.amount || 0), 0)}</div>
                   <div className="label">Total Funds Available</div>
                 </div>
                 <div className="stat-box">
@@ -1208,31 +1250,176 @@ const fetchStudents = async () => {
                 </div>
               </div>
 
-              <div className="mapping-grid">
-                {donors.map(d => (
-                  <div key={d.id} className="map-card">
-                    <div className="map-name">{d.name}</div>
-                    <div className="map-stats">
-                      <div className="map-stat">
-                        <div className="label">Total Amount</div>
-                        <div className="value">₹{d.amount}</div>
+              {loadingDonors ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  Loading donors...
+                </div>
+              ) : donors.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>
+                  <h4>No donors found</h4>
+                  <p>Add your first donor using the button above.</p>
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Donor Type</th>
+                        <th>Amount</th>
+                        <th>Payment Method</th>
+                        <th>Donation Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {donors.map(d => (
+                        <tr key={d.id}>
+                          <td>{d.full_name || d.name || '—'}</td>
+                          <td>{d.email || '—'}</td>
+                          <td>{d.phone || '—'}</td>
+                          <td>{d.donor_type || '—'}</td>
+                          <td>{d.formattedAmount}</td>
+                          <td>{d.payment_method || '—'}</td>
+                          <td>{d.formattedDate}</td>
+                          <td>
+                            <div style={{display: 'flex', gap: '8px'}}>
+                              <button className="btn small primary" onClick={() => handleEditDonor(d)}>Edit</button>
+                              <button className="btn small danger" onClick={() => handleDeleteDonor(d)}>Delete</button>
+                            </div>
+                          </td>
+
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {showAddDonorModal && (
+                <div className="modal-overlay" onClick={handleCancelAddDonor}>
+<div className="modal donor-modal-wide" onClick={(e) => e.stopPropagation()}>
+                    <h3>Add New Donor</h3>
+                    <form className="donor-form-grid" onSubmit={handleSubmitNewDonor}>
+                      <label>
+                        Full Name *
+                        <input 
+                          name="full_name" 
+                          value={newDonorForm.full_name} 
+                          onChange={handleDonorFormChange}
+                          required 
+                        />
+                      </label>
+
+                      <label>
+                        Gender
+                        <select name="gender" value={newDonorForm.gender} onChange={handleDonorFormChange}>
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </label>
+                      <label>
+                        Phone
+                        <input 
+                          type="tel" 
+                          name="phone" 
+                          value={newDonorForm.phone} 
+                          onChange={handlePhoneChange} 
+                          maxLength={10}
+                          placeholder="Enter 10-digit phone number"
+                        />
+                      </label>
+                      <label>
+                        Email *
+                        <input 
+                          type="email" 
+                          name="email" 
+                          value={newDonorForm.email} 
+                          onChange={handleDonorFormChange}
+                          required 
+                        />
+                      </label>
+
+                      <label>
+                        Donor Type *
+                        <select name="donor_type" value={newDonorForm.donor_type} onChange={handleDonorFormChange} required>
+                          <option value="Individual">Individual</option>
+                          <option value="Organization">Organization</option>
+                        </select>
+                      </label>
+                      {newDonorForm.donor_type === 'Organization' && (
+                        <label>
+                          Organization Name
+                          <input 
+                            name="organization_name" 
+                            value={newDonorForm.organization_name} 
+                            onChange={handleDonorFormChange} 
+                          />
+                        </label>
+                      )}
+                      <label>
+                        Donation Amount *
+                        <input 
+                          type="number" 
+                          name="amount" 
+                          value={newDonorForm.amount} 
+                          onChange={handleDonorFormChange}
+                          min="1" 
+                          required 
+                        />
+
+                      </label>
+                      <label>
+                        Payment Method *
+
+                        <select name="payment_method" value={newDonorForm.payment_method} onChange={handleDonorFormChange} required>
+                          <option value="UPI">UPI</option>
+                          <option value="Net Banking">Net Banking</option>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Cheque">Cheque</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Card">Card</option>
+                        </select>
+
+                      </label>
+                      <label>
+                        Transaction ID
+                        <input name="transaction_id" value={newDonorForm.transaction_id} onChange={handleDonorFormChange} />
+                      </label>
+                      <label>
+                        Donation Type *
+                        <select name="donation_type" value={newDonorForm.donation_type} onChange={handleDonorFormChange} required>
+                          <option value="One-time">One-time</option>
+                          <option value="Monthly">Monthly</option>
+                          <option value="Yearly">Yearly</option>
+                        </select>
+                      </label>
+                      <label>
+                        Donation Date *
+                        <input 
+                          type="datetime-local" 
+                          name="donation_date" 
+                          value={newDonorForm.donation_date} 
+                          onChange={handleDonorFormChange}
+                          required 
+                        />
+                      </label>
+<div style={{display: 'flex', gap: '12px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb'}}>
+                        <button type="submit" className="btn primary" disabled={submittingDonor} style={{flex: 1}}>
+                          {submittingDonor ? 'Adding...' : 'Add Donor'}
+                        </button>
+                        <button type="button" className="btn secondary" onClick={handleCancelAddDonor} disabled={submittingDonor}>
+                          Cancel
+                        </button>
                       </div>
-                      <div className="map-stat">
-                        <div className="label">Duration</div>
-                        <div className="value">{d.years}</div>
-                      </div>
-                      <div className="map-stat">
-                        <div className="label">Students</div>
-                        <div className="value">{Math.floor(Math.random() * 5) + 1}</div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: '12px' }}>
-                      <button className="btn small" onClick={() => setViewDonor(d)}>View Details</button>
-                      <button className="btn small" style={{ marginLeft: '8px' }} onClick={() => handleContactDonor(d)}>Contact</button>
-                    </div>
+                    </form>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -1768,7 +1955,8 @@ const fetchStudents = async () => {
             <p><strong>Duration:</strong> {viewDonor.years}</p>
             <div style={{display:'flex',gap:8,marginTop:12}}>
               <button className="btn" onClick={() => setViewDonor(null)}>Close</button>
-              <button className="btn" onClick={() => handleContactDonor(viewDonor)}>Contact</button>
+              <button className="btn" onClick={() => setViewDonor(null)}>Close</button>
+
             </div>
           </div>
         </div>

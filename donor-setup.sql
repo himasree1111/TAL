@@ -6,7 +6,7 @@ CREATE TABLE donor_details (
   full_name TEXT NOT NULL,
   gender TEXT,  -- optional
   phone TEXT,
-  email TEXT UNIQUE,
+  email TEXT,
   donor_type TEXT CHECK (donor_type IN ('Individual', 'Organization')) NOT NULL,
   organization_name TEXT,
   amount DECIMAL(10,2) NOT NULL,
