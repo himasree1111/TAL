@@ -42,9 +42,23 @@ export default function AdminDashboard() {
   const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
   const [loadingNonEligible, setLoadingNonEligible] = useState(false);
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
-  // const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
-  const [activeReportList, setActiveReportList] = useState(null);
-  const [studentId, setStudentId] = useState(null);
+
+  // Donor add form states
+  const [showAddDonorModal, setShowAddDonorModal] = useState(false);
+  const [newDonorForm, setNewDonorForm] = useState({
+    full_name: '',
+    gender: '',
+    phone: '',
+    email: '',
+    donor_type: 'Individual',
+    organization_name: '',
+    amount: '',
+    payment_method: 'UPI',
+    transaction_id: '',
+    donation_type: 'One-time',
+    donation_date: new Date().toISOString().slice(0, 16), // Today in local time
+  });
+  const [submittingDonor, setSubmittingDonor] = useState(false);
 
   // Notification state
   const [notificationTitle, setNotificationTitle] = useState("");
@@ -98,6 +112,29 @@ export default function AdminDashboard() {
 
 
 
+  const fetchDonors = async () => {
+    const { data: donorDetails, error } = await supabase
+      .from('donor_details')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Error fetching donors:', error);
+    } else {
+      // Map to match existing UI
+      const mappedDonors = (donorDetails || []).map(d => ({
+        id: d.id,
+        name: d.full_name,
+        amount: d.amount,
+        years: d.donation_type ? d.donation_type.replace('-time', '') : '',
+        email: d.email,
+        donor_type: d.donor_type,
+        donation_date: d.donation_date,
+        ...d  // all fields
+      }));
+      setDonors(mappedDonors);
+    }
+  };
+
   // Fetch user and real data from Supabase
   useEffect(() => {
     const fetchUserData = async () => {
@@ -106,7 +143,6 @@ export default function AdminDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setCurrentUser(session.user);
-            setStudentId(session.user.id); // 👈 ADD THIS
 
           // Initialize settings with current user data
           setAdminName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || "");
@@ -115,14 +151,12 @@ export default function AdminDashboard() {
           navigate('/');
         }
 
-// Fetch ALL students from student_form_submissions (no status filter)
-       const { data: studentData, error: studentError } = await supabase
-  .from('admin_student_info')
-  .select('*')
-   .eq('status', 'Pending')
-  .order('created_at', { ascending: false });
-
-
+        // Fetch ALL students from student_form_submissions (no status filter)
+        const { data: studentData, error: studentError } = await supabase
+          .from('admin_student_info')
+          .select('*')
+          .eq('status', 'Pending')
+          .order('created_at', { ascending: false });
 
         // Save raw fetch result for debugging
         setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
@@ -132,55 +166,39 @@ export default function AdminDashboard() {
         } else {
           console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
-  const transformedStudents = (studentData || []).map((student, index) => {
-  return {
-    id: student.id || index + 1,
-    student_id: student.id,
-
-    name: student.full_name || "",
-    full_name: student.full_name || "",
-
-    year: student.class,
-    fee_status: student.fee || "Not Provided",
-    course: student.educationcategory || "",
-
-    campName: student.camp_name,
-
-    campDate: student.camp_date
-      ? new Date(student.camp_date).toISOString().split("T")[0]
-      : "",
-
-    age: student.age,
-    class: student.class,
-    prev_percent: student.prev_percent,
-    present_percent: student.present_percent,
-
-    email: student.email,
-    contact: student.contact,
-    whatsapp: student.whatsapp,
-    student_contact: student.student_contact,
-
-    scholarship: student.scholarship,
-    has_scholarship: student.has_scholarship,
-    does_work: student.does_work,
-    earning_members: student.earning_members,
-
-    created_at: student.created_at
-  };
-});
-
-     setStudents(transformedStudents);
+          const transformedStudents = (studentData || []).map((student, index) => {
+            return {
+              id: student.id || index + 1,
+              student_id: student.id,
+              name: student.full_name || "",
+              full_name: student.full_name || "",
+              year: student.class,
+              fee_status: student.fee || "Not Provided",
+              course: student.educationcategory || "",
+              campName: student.camp_name,
+              campDate: student.camp_date
+                ? new Date(student.camp_date).toISOString().split("T")[0]
+                : "",
+              age: student.age,
+              class: student.class,
+              prev_percent: student.prev_percent,
+              present_percent: student.present_percent,
+              email: student.email,
+              contact: student.contact,
+              whatsapp: student.whatsapp,
+              student_contact: student.student_contact,
+              scholarship: student.scholarship,
+              has_scholarship: student.has_scholarship,
+              does_work: student.does_work,
+              earning_members: student.earning_members,
+              created_at: student.created_at
+            };
+          });
+          setStudents(transformedStudents);
         }
 
-        // For now, create dummy donors from volunteer emails (you can replace this with real donor data later)
-        const uniqueVolunteers = [...new Set((studentData || []).map(s => s.volunteer_email).filter(Boolean))];
-        const transformedDonors = uniqueVolunteers.map((email, index) => ({
-          id: index + 1,
-          name: email,
-          amount: Math.floor(Math.random() * 10000) + 5000, // Random amount for demo
-          years: "2024-2025"
-        }));
-        setDonors(transformedDonors);
+        // Fetch donors
+        await fetchDonors();
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -189,16 +207,10 @@ export default function AdminDashboard() {
       }
     };
 
-   fetchUserData();
-fetchEligibleCount();
-fetchNonEligibleCount();
-}, [navigate]);
-
-useEffect(() => {  
-  if (!studentId) return;  
-  
-  loadNotifications(studentId); // 🔥 LOAD OLD NOTIFICATIONS  
-}, [studentId]);
+    fetchUserData();
+    fetchEligibleCount();
+    fetchNonEligibleCount();
+  }, [navigate]);
 
 const loadNotifications = async (id) => {
   const { data, error } = await supabase
@@ -631,6 +643,105 @@ const fetchStudents = async () => {
     if (!email) return;
     window.location.href = `mailto:${email}?subject=Regarding%20support`;
   };
+
+  const handleExportDonorReport = () => {
+    const rows = ['id,full_name,email,phone,donor_type,amount,payment_method,transaction_id,donation_type,donation_date,created_at', 
+                  ...donors.map(d => `${d.id},"${d.full_name || d.name}","${d.email}","${d.phone || ''}","${d.donor_type}","${d.amount}","${d.payment_method || ''}","${d.transaction_id || ''}","${d.donation_type}","${d.donation_date}","${d.created_at}"`)];
+    const blob = new Blob([rows.join('\\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'donors.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('Donor report downloaded successfully!');
+  };
+
+  const handleOpenAddDonor = () => {
+    setNewDonorForm({
+      full_name: '',
+      gender: '',
+      phone: '',
+      email: '',
+      donor_type: 'Individual',
+      organization_name: '',
+      amount: '',
+      payment_method: 'UPI',
+      transaction_id: '',
+      donation_type: 'One-time',
+      donation_date: new Date().toISOString().slice(0, 16),
+    });
+    setShowAddDonorModal(true);
+  };
+
+  const handleCancelAddDonor = () => {
+    setShowAddDonorModal(false);
+  };
+
+  const validateDonorForm = (form) => {
+    if (!form.full_name.trim()) return 'Full name is required';
+    if (!form.email.trim()) return 'Email is required';
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(form.email)) return 'Invalid email format';
+    if (!form.amount || isNaN(form.amount) || parseFloat(form.amount) <= 0) return 'Amount must be a positive number';
+    if (!form.donor_type) return 'Donor type is required';
+    if (!form.payment_method) return 'Payment method is required';
+    if (!form.donation_type) return 'Donation type is required';
+    return null;
+  };
+
+  const handleSubmitNewDonor = async (e) => {
+    e.preventDefault();
+    const error = validateDonorForm(newDonorForm);
+    if (error) {
+      alert('❌ ' + error);
+      return;
+    }
+
+    setSubmittingDonor(true);
+    try {
+      const formData = {
+        full_name: newDonorForm.full_name.trim(),
+        gender: newDonorForm.gender.trim() || null,
+        phone: newDonorForm.phone.trim() || null,
+        email: newDonorForm.email.trim(),
+        donor_type: newDonorForm.donor_type,
+        organization_name: newDonorForm.organization_name.trim() || null,
+        amount: parseFloat(newDonorForm.amount),
+        payment_method: newDonorForm.payment_method,
+        transaction_id: newDonorForm.transaction_id.trim() || null,
+        donation_type: newDonorForm.donation_type,
+        donation_date: newDonorForm.donation_date ? new Date(newDonorForm.donation_date).toISOString() : new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from('donor_details')
+        .insert([formData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding donor:', error);
+        alert('❌ Failed to add donor: ' + (error.message || error));
+        return;
+      }
+
+      // Refresh donors list
+      await fetchDonors();
+
+      alert('✅ Donor added successfully!');
+      setShowAddDonorModal(false);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      alert('❌ An unexpected error occurred');
+    } finally {
+      setSubmittingDonor(false);
+    }
+  };
+
+  const handleDonorFormChange = (e) => {
+    const { name, value } = e.target;
+    setNewDonorForm(prev => ({ ...prev, [name]: value }));
+  };
 /*
   const handleSendReminders = () => {
     alert('Reminders sent (demo)');
@@ -791,7 +902,7 @@ const fetchStudents = async () => {
             <ul>
               <li className={activeSection === "overview" ? "active" : ""} onClick={() => setActiveSection("overview")}>Dashboard Overview</li>
               <li className={activeSection === "manage" ? "active" : ""} onClick={() => setActiveSection("manage")}>Manage Beneficiaries</li>
-              <li className={activeSection === "mapping" ? "active" : ""} onClick={() => setActiveSection("mapping")}>Donor Mapping</li>
+<li className={activeSection === "mapping" ? "active" : ""} onClick={() => setActiveSection("mapping")}>Donor Details</li>
               <li className={activeSection === "fees" ? "active" : ""} onClick={() => setActiveSection("fees")}>Fee Tracking</li>
               <li className={activeSection === "broadcast" ? "active" : ""} onClick={() => setActiveSection("broadcast")}>Alerts & Broadcast</li>
               <li className={activeSection === "reports" ? "active" : ""} onClick={() => setActiveSection("reports")}>Reports & Exports</li>
@@ -824,7 +935,7 @@ const fetchStudents = async () => {
         : activeSection === "manage" 
         ? "Manage Beneficiaries" 
         : activeSection === "mapping" 
-        ? "Donor Mapping (Under Construction)" 
+? "Donor Details" 
         : activeSection === "fees" 
         ? "Fee Tracking (Under Construction)" 
         : activeSection === "broadcast" 
@@ -1072,14 +1183,12 @@ const fetchStudents = async () => {
             </section>
           )}
 
-         {/* 
-         // Donor Mapping 
           {activeSection === "mapping" && (
-            <section className="mapping-section">
+            <section className="donor-details-section">
               <div className="section-header">
-                <h3>Donor Mapping</h3>
+                <h3>Donor Details</h3>
                 <div className="section-actions">
-                  <button className="btn primary" onClick={handleAddDonor}>Add New Donor</button>
+                  <button className="btn primary" onClick={handleOpenAddDonor}>Add New Donor</button>
                   <button className="btn primary" onClick={handleExportDonorReport}>Export Report</button>
                 </div>
               </div>
@@ -1090,8 +1199,8 @@ const fetchStudents = async () => {
                   <div className="label">Total Funds Available</div>
                 </div>
                 <div className="stat-box">
-                  <div className="value">{students.length}</div>
-                  <div className="label">Students Supported</div>
+                  <div className="value">{donors.length}</div>
+                  <div className="label">Active Donors</div>
                 </div>
                 <div className="stat-box">
                   <div className="value">85%</div>
@@ -1126,7 +1235,6 @@ const fetchStudents = async () => {
               </div>
             </section>
           )}
-          */}
 
           {/* Fee Tracking 
           {activeSection === "fees" && (
@@ -1368,7 +1476,6 @@ const fetchStudents = async () => {
 <button
   className="btn small"
   onClick={() => {
-    setActiveReportList("eligible");
     fetchEligibleStudents();
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -1394,7 +1501,6 @@ const fetchStudents = async () => {
 <button
   className="btn small"
   onClick={() => {
-    setActiveReportList("nonEligible");
     fetchNonEligibleStudents();
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -1412,7 +1518,7 @@ const fetchStudents = async () => {
               </div>
 
               {/* Eligible Students Table */}
-{activeReportList === "eligible" && (
+{false && (
                 <div className="table-wrap" style={{marginTop: '24px'}}>
                   <h3>Eligible Students List</h3>
                   <table className="data-table">
@@ -1457,7 +1563,7 @@ const fetchStudents = async () => {
               )}
 
               {/* Non-Eligible Students Table */}
-{activeReportList === "nonEligible" && (
+{false && (
                 <div className="table-wrap" style={{marginTop: '24px'}}>
                   <h3>Non-Eligible Students List</h3>
                   <table className="data-table">
