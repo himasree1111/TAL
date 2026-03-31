@@ -105,10 +105,8 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     special_remarks: "",
     volunteer_name: "",
     volunteer_contact: "",
-    academic_achievements_choice: "",
-    academic_achievements_details: "",
-    non_academic_achievements_choice: "",
-    non_academic_achievements_details: "",
+    academic_achievements: "",
+    non_academic_achievements: "",
     is_single_parent: "",
 does_work: "",
 has_scholarship: "",
@@ -524,9 +522,7 @@ has_scholarship: "",
       { key: 'school', label: 'Name of School/College' },
       { key: 'class', label: 'Class' },
       { key: 'prev_percent', label: 'Previous Year Percentage' },
-{ key: 'present_percent', label: 'Present Year Percentage' },
-      { key: 'camp_name', label: 'Camp Name' },
-      { key: 'academic_achievements_choice', label: 'Academic Achievements' },
+      { key: 'present_percent', label: 'Present Year Percentage' },
   
       { key: 'num_earning_members', label: 'Number of Earning Members' },
       { key: 'first_name', label: 'First Name' },
@@ -535,14 +531,14 @@ has_scholarship: "",
       { key: 'contact', label: 'First Parent Contact Number' },
       { key: 'volunteer_name', label: 'Volunteer Name' },
       { key: 'volunteer_contact', label: 'Volunteer Contact Number' },
-      { key: 'camp_date', label: 'Date of Camp' }
+      { key: 'camp_date', label: 'Date of Camp' },
+      { key: 'academic_achievements', label: 'Academic Achievements' }
     ];
 
-    // Educational expenses now optional - removed mandatory check
-// const expenseError = validateField("educational_expenses");
-// if (expenseError) {
-//   newErrors.educational_expenses = expenseError;
-// }
+    const expenseError = validateField("educational_expenses");
+if (expenseError) {
+  newErrors.educational_expenses = expenseError;
+}
     const missing = mandatoryFields.filter(f => {
       const v = (formData[f.key] || '').toString().trim();
       return v === '';
@@ -624,22 +620,6 @@ has_scholarship: "",
 if (formData.has_scholarship === "YES" && !formData.scholarship.trim()) {
   newErrors.scholarship = "Please enter scholarship details.";
 }
-
-    // Academic achievements validation
-    if (!formData.academic_achievements_choice) {
-      newErrors.academic_achievements_choice = "Please select Yes or No for academic achievements.";
-    }
-    if (formData.academic_achievements_choice === "YES" && !formData.academic_achievements_details.trim()) {
-      newErrors.academic_achievements_details = "Please provide academic achievements details.";
-    }
-
-    // Non-academic achievements validation
-    if (!formData.non_academic_achievements_choice) {
-      newErrors.non_academic_achievements_choice = "Please select Yes or No for non-academic achievements.";
-    }
-    if (formData.non_academic_achievements_choice === "YES" && !formData.non_academic_achievements_details.trim()) {
-      newErrors.non_academic_achievements_details = "Please provide non-academic achievements details.";
-    }
 
     // Custom education field validations
     if (formData.educationcategory === "Other" && !formData.educationcategory_custom.trim()) {
@@ -870,8 +850,8 @@ scholarship: hasScholarship ? formData.scholarship : null,
 
 
   aspiration: formData.aspiration || null,
-    academic_achievements: formData.academic_achievements_choice === "YES" ? (formData.academic_achievements_details || null) : false,
-    non_academic_achievements: formData.non_academic_achievements_choice === "YES" ? (formData.non_academic_achievements_details || null) : false,
+  academic_achievements: formData.academic_achievements || null,
+  non_academic_achievements: formData.non_academic_achievements || null,
 
   years_area: formData.years_area || null,
 
@@ -1506,7 +1486,7 @@ has_scholarship: "",
 
           <div className="form-group">
             <label className="full-width">
-            <span className="field-label">Educational Expenses</span>
+              <span className="field-label">Educational Expenses<span className="required">*</span></span>
             </label>
             <div className="educational-expenses-container">
               {renderEducationalExpenseCheckbox("Tuition Fee", "tuition_fee")}
@@ -1634,89 +1614,27 @@ has_scholarship: "",
 
         {/* --- Other Questions --- */}
         <div className="form-group">
-          <label>
-            <span className="field-label">Academic Achievements?<span className="required">*</span></span>
+          <label className="full-width">
+            Academic Achievements<span className="required">*</span>
+            <input
+              type="text"
+              name="academic_achievements"
+              value={formData.academic_achievements}
+              onChange={handleInputChange}
+              className={errors.academic_achievements ? "input-error" : ""}
+            />
+            {errors.academic_achievements && <p className="error-text">{errors.academic_achievements}</p>}
           </label>
-          <div className="radio-inline">
-            <label>
-              <input
-                type="radio"
-                name="academic_achievements_choice"
-                value="YES"
-                checked={formData.academic_achievements_choice === "YES"}
-                onChange={handleInputChange}
-              />
-              Yes
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="academic_achievements_choice"
-                value="NO"
-                checked={formData.academic_achievements_choice === "NO"}
-                onChange={handleInputChange}
-              />
-              No
-            </label>
-          </div>
-          {errors.academic_achievements_choice && <p className="error-text">{errors.academic_achievements_choice}</p>}
 
-          {formData.academic_achievements_choice === "YES" && (
-            <label className="full-width">
-              <span className="field-label">Academic Achievements Details<span className="required">*</span></span>
-              <textarea
-                name="academic_achievements_details"
-                value={formData.academic_achievements_details}
-                onChange={handleInputChange}
-                placeholder="Describe academic achievements..."
-                rows={3}
-                className={errors.academic_achievements_details ? "input-error" : ""}
-              />
-              {errors.academic_achievements_details && <p className="error-text">{errors.academic_achievements_details}</p>}
-            </label>
-          )}
-
-          <label>
-            <span className="field-label">Extracurricular achievements?<span className="required">*</span></span>
+          <label className="full-width">
+            Non-Academic Achievements
+            <input
+              type="text"
+              name="non_academic_achievements"
+              value={formData.non_academic_achievements}
+              onChange={handleInputChange}
+            />
           </label>
-          <div className="radio-inline">
-            <label>
-              <input
-                type="radio"
-                name="non_academic_achievements_choice"
-                value="YES"
-                checked={formData.non_academic_achievements_choice === "YES"}
-                onChange={handleInputChange}
-              />
-              Yes
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="non_academic_achievements_choice"
-                value="NO"
-                checked={formData.non_academic_achievements_choice === "NO"}
-                onChange={handleInputChange}
-              />
-              No
-            </label>
-          </div>
-          {errors.non_academic_achievements_choice && <p className="error-text">{errors.non_academic_achievements_choice}</p>}
-
-          {formData.non_academic_achievements_choice === "YES" && (
-            <label className="full-width">
-              <span className="field-label">Non-Academic Achievements Details<span className="required">*</span></span>
-              <textarea
-                name="non_academic_achievements_details"
-                value={formData.non_academic_achievements_details}
-                onChange={handleInputChange}
-                placeholder="Describe non-academic achievements..."
-                rows={3}
-                className={errors.non_academic_achievements_details ? "input-error" : ""}
-              />
-              {errors.non_academic_achievements_details && <p className="error-text">{errors.non_academic_achievements_details}</p>}
-            </label>
-          )}
 
           <label className="full-width">
             From how long are they living in this area? (Is she a migrant?)
