@@ -1679,8 +1679,8 @@ const totalDocuments = useMemo(() => 0, []);
       <main className="student-main">
         <header className="student-main-header">
           <div>
-            <h1>Welcome back, {profile.name || "Scholar"}</h1>
-            <p className="subtle">Your dashboard for managing scholarship documents and alerts.</p>
+            {/* <h1>Welcome back, {profile.name || "Scholar"}</h1>
+            <p className="subtle">Your dashboard for managing scholarship documents and alerts.</p> */}
           </div>
         </header>
 

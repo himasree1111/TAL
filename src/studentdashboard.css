@@ -112,10 +112,11 @@
 .student-main {
   padding: 28px 34px;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+    display: block !important; 
+  /* flex-direction: column; */
+  width:100%;
   gap: 24px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .student-main-header {
@@ -214,10 +215,9 @@
 }
 
 .settings-panel {
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 22px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 100%;   /* REMOVE center restriction */
+  margin: 0;         /* REMOVE auto centering */
 }
 
 .settings-header h2 {
@@ -239,8 +239,187 @@
 }
 
 .form-row label {
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 500;
+  align-self: start;
+}
+
+/* Profile Grid & Cards */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;   /* increase spacing */
+  width: 100%;
+}
+
+.profile-section {
+  width: 100% !important;
+  max-width: 100%;
+  margin: 0;              /* remove center spacing */
+  padding: 24px 28px;
+}
+
+.profile-section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1d2b4a;
+  margin: 0 0 24px 0;
+  padding-bottom: 16px;
+  border-bottom: 3px solid rgba(127, 199, 74, 0.4);
+}
+
+.profile-tab-container {
+  overflow-x: auto;
+  padding: 20px 0;
+  margin-bottom: 28px;
+  border-bottom: 1px solid #e5e7eb;
+  scrollbar-width: thin;
+}
+
+.profile-tab-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.profile-tab-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.profile-tab-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.profile-tab-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.profile-tabs {
+  display: flex;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.profile-tab {
+  padding: 12px 24px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+.profile-tab:hover {
+  background: #f3f4f6;
+  color: #374151;
+  transform: translateY(-1px);
+}
+
+.profile-tab.active {
+  background: linear-gradient(135deg, #7fc74a, #6bb03e);
+  color: white;
+  box-shadow: 0 4px 16px rgba(127, 199, 74, 0.3);
+}
+
+.profile-tab-content {
+  width: 100% !important;
+}
+.view-value {
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 14px;
+  border: 1px solid rgba(46, 46, 46, 0.1);
+  color: #1d2b4a;
+  font-weight: 500;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.view-value:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.view-value.multiline {
+  min-height: 64px;
+  align-items: flex-start;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.radio-group {
+  margin-bottom: 24px;
+}
+
+.radio-options {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #7fc74a;
+}
+
+.expenses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.expense-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  transition: all 0.2s;
+}
+
+.expense-item.active {
+  background: rgba(127, 199, 74, 0.08);
+  border-color: rgba(127, 199, 74, 0.3);
+}
+
+.expense-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.expense-amount {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
   font-size: 0.9rem;
-  color: #5b6b6d;
+  min-width: 100px;
+}
+
+.family-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .form-row input {
@@ -646,8 +825,12 @@
   }
 
   .student-main {
-    padding: 18px 18px 28px;
-  }
+  padding: 28px 40px;   /* increase side spacing */
+  width: 100%;
+}
+.content-area {
+  width: 100%;
+}
 
   .student-main-header {
     flex-direction: column;
@@ -749,4 +932,9 @@
   color: #15803d;
   font-size: 0.9rem;
   margin-top: 8px;
+}
+.settings-panel {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
 }
