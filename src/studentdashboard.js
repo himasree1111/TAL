@@ -18,9 +18,10 @@ const NAV_ITEMS = [
 ];
 
 const DOCUMENT_CATEGORIES = [
-  { key: "semester", title: "Semester Documents", icon: "📚" },
+  { key: "academic", title: "Academic Documents", icon: "📚" },
   { key: "fee", title: "Fee Receipts", icon: "💰" },
-  { key: "certificates", title: "Certificates", icon: "🎓" },
+  { key: "personal", title: "Personal Documents", icon: "🆔" },
+  { key: "extracurricular", title: "Extracurricular", icon: "🏆" },
 ];
 
 const initialDocumentState = DOCUMENT_CATEGORIES.reduce((acc, curr) => {
@@ -99,6 +100,13 @@ const [errorMessage, setErrorMessage] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [studentId, setStudentId] = useState(null);
+  const [studentFormId, setStudentFormId] = useState(null);
+  const [formIdLoading, setFormIdLoading] = useState(true);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [documentNames, setDocumentNames] = useState(DOCUMENT_CATEGORIES.reduce((acc, cat) => {
+    acc[cat.key] = '';
+    return acc;
+  }, {}));
   const [studentType, setStudentType] = useState(null);
   const { studentEmail, logout: contextLogout } = useStudent();
 
@@ -250,57 +258,146 @@ const [errorMessage, setErrorMessage] = useState("");
     fetchProfileFormData();
   }, [fetchProfileFormData]);
 
+  // Fetch documents when studentFormId changes
+  const fetchDocuments = async () => {
+    if (!studentFormId) return;
+    setLoadingDocuments(true);
+    setError('');
+    try {
+      const { data, error } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('student_id', studentFormId)
+        .order('uploaded_at', { ascending: false });
+      if (error) throw error;
+
+      const grouped = DOCUMENT_CATEGORIES.reduce((acc, cat) => {
+        acc[cat.key] = data.filter(doc => doc.category === cat.key);
+        return acc;
+      }, {});
+      setDocuments(grouped);
+    } catch (err) {
+      setError('Failed to fetch documents: ' + err.message);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [studentFormId]);
+
+  // Delete document
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm('Delete this document?')) return;
+    try {
+      const { data: doc } = await supabase
+        .from('student_documents')
+        .select('file_url, file_name')
+        .eq('id', docId)
+        .single();
+      if (!doc) return;
+
+      // Delete from storage (extract path from public URL)
+      const publicUrl = doc.file_url;
+      const pathMatch = publicUrl.match(/\/student_documents\/(.+)$/);
+      if (pathMatch) {
+        const filePath = pathMatch[1];
+        const { error: storageError } = await supabase.storage
+          .from('student_documents')
+          .remove([filePath]);
+        if (storageError) console.warn('Storage delete failed:', storageError);
+      }
+
+      // Delete from DB
+      const { error: dbError } = await supabase
+        .from('student_documents')
+        .delete()
+        .eq('id', docId);
+      if (dbError) throw dbError;
+
+      // Refetch
+      fetchDocuments();
+    } catch (err) {
+      setError('Delete failed: ' + err.message);
+    }
+  };
+
   useEffect(() => {
     let subscription;
 
     const init = async () => {
-      if (!studentEmail) return;
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from('eligible_students')
-        .select('*')
-        .eq('email', studentEmail)
-        .single();
-      
-      if (profileError || !profileData) {
-        const { data: nonEligibleData, error: nonError } = await supabase
-          .from('non_eligible_students')
-          .select('*')
+  if (!studentEmail) return;
+  
+  const { data: profileData, error: profileError } = await supabase
+    .from('eligible_students')
+    .select('*')
+    .eq('email', studentEmail)
+    .single();
+  
+  if (profileError || !profileData) {
+    const { data: nonEligibleData, error: nonError } = await supabase
+      .from('non_eligible_students')
+      .select('*')
+      .eq('email', studentEmail)
+      .single();
+    if (nonError || !nonEligibleData) return;
+    setProfile(nonEligibleData);
+    setStudentId(nonEligibleData.id);
+  } else {
+    setProfile(profileData);
+    setStudentId(profileData.id);
+  }
+
+    // Fetch student_form_submissions ID for documents (retry logic)
+    const fetchFormId = async (retries = 3) => {
+      for (let i = 0; i < retries; i++) {
+        const { data: formData, error } = await supabase
+          .from('student_form_submissions')
+          .select('id')
           .eq('email', studentEmail)
           .single();
-        if (nonError || !nonEligibleData) return;
-        setProfile(nonEligibleData);
-        setStudentId(nonEligibleData.id);
-      } else {
-        setProfile(profileData);
-        setStudentId(profileData.id);
-      }
-      
-      setSettings({
-        name: profileData?.full_name || '',
-        email: profileData?.email || '',
-        phone: profileData?.phone || ''
-      });
-      
-      const type = await getStudentType(studentId);
-      setStudentType(type);
-      
-      const res = await getStudentNotifications(type);
-      if (res.success) {
-        setNotifications(res.notifications);
-      }
-      
-      subscription = subscribeToNotifications((newData) => {
-        if (!studentType) return;
-        if (filterNotification(newData, studentType)) {
-          setNotifications(prev => {
-            const exists = prev.some(n => n.id === newData.id);
-            if (exists) return prev;
-            return [newData, ...prev];
-          });
+        if (formData) {
+          console.log('[DASHBOARD] Found studentFormId:', formData.id);
+          setStudentFormId(formData.id);
+          setFormIdLoading(false);
+          return;
         }
-      });
+        if (error && i === retries - 1) {
+          console.warn('[DASHBOARD] No student_form_submissions found for', studentEmail);
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      setFormIdLoading(false);
     };
+    await fetchFormId();
+    console.log('[DASHBOARD] Final studentFormId:', studentFormId);
+  
+  setSettings({
+    name: profileData?.full_name || '',
+    email: profileData?.email || '',
+    phone: profileData?.phone || ''
+  });
+  
+  const type = await getStudentType(studentId);
+  setStudentType(type);
+  
+  const res = await getStudentNotifications(type);
+  if (res.success) {
+    setNotifications(res.notifications);
+  }
+  
+  subscription = subscribeToNotifications((newData) => {
+    if (!studentType) return;
+    if (filterNotification(newData, studentType)) {
+      setNotifications(prev => {
+        const exists = prev.some(n => n.id === newData.id);
+        if (exists) return prev;
+        return [newData, ...prev];
+      });
+    }
+  });
+};
 
     init();
 
@@ -353,24 +450,39 @@ const [errorMessage, setErrorMessage] = useState("");
     navigate('/studentlogin');
   };
 
-  const handleUpload = async (category, files) => {
-    setError("");
+  const handleUpload = async (category, files, documentName) => {
+    if (!documentName?.trim()) {
+      setError('Document name is required');
+      return;
+    }
+    if (formIdLoading) {
+      setError('Loading student profile... please wait');
+      return;
+    }
+    if (!studentFormId) {
+      setError('Please complete StudentForm first (ask a Volunteer to submit your form)');
+      console.error('[UPLOAD] Missing studentFormId for email:', studentEmail);
+      return;
+    }
+    setError('');
 
     const tasks = Array.from(files).map(async (file) => {
       const id = `${category}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       setUploadProgress((prev) => ({ ...prev, [id]: { progress: 0, name: file.name } }));
 
-      const safeId = studentId || studentEmail?.replace(/[^a-zA-Z0-9]/g, '_') || 'default';
-      const folder = `student_docs/${safeId}/${category}`;
+      const safeId = studentEmail?.replace(/[^a-zA-Z0-9]/g, '_') || 'default';
+      const folder = `${safeId}/${category}`;
       const fileName = `${Date.now()}_${file.name}`.replace(/\s+/g, "_");
       const filePath = `${folder}/${fileName}`;
 
+      // Upload file
       const { error: uploadError } = await supabase.storage
         .from("student_documents")
         .upload(filePath, file, { cacheControl: "3600", upsert: true });
 
       if (uploadError) {
-        setError("Upload failed. Please try again.");
+        console.error(uploadError);
+        setError(uploadError.message);
         setUploadProgress((prev) => ({ ...prev, [id]: { ...prev[id], progress: 0, error: true } }));
         return null;
       }
@@ -379,25 +491,31 @@ const [errorMessage, setErrorMessage] = useState("");
         .from("student_documents")
         .getPublicUrl(filePath);
 
-      const docEntry = {
-        id,
-        name: file.name,
-        category,
-        uploadedAt: new Date().toISOString(),
-        url: publicData?.publicUrl || null,
-        status: "pending",
-      };
+      // Insert to DB
+      const { error: insertError } = await supabase
+        .from('student_documents')
+        .insert({
+          student_id: studentFormId,
+          category,
+          document_name: documentName,
+          file_name: file.name,
+          file_url: publicData.publicUrl
+        });
 
-      setDocuments((prev) => ({
-        ...prev,
-        [category]: [docEntry, ...(prev[category] || [])],
-      }));
+      if (insertError) {
+        console.error('DB insert failed:', insertError);
+        // Don't delete storage, just warn
+      }
 
       setUploadProgress((prev) => ({ ...prev, [id]: { ...prev[id], progress: 100 } }));
-      return docEntry;
+
+      // Refetch documents
+      fetchDocuments();
     });
 
     await Promise.all(tasks);
+    // Reset name input
+    setDocumentNames(prev => ({ ...prev, [category]: '' }));
   };
 
   const handleRemoveDocument = (category, id) => {
@@ -654,46 +772,58 @@ const totalDocuments = useMemo(() => 0, []);
                 <h3>{category.title}</h3>
                 <p className="doc-subtitle">Upload, preview and manage your files.</p>
               </div>
-              <label className="upload-action">
+              <div className="upload-section">
+                <input
+                  type="text"
+                  placeholder={`Document name for ${category.title} (e.g., 10th Marksheet)`}
+                  value={documentNames[category.key]}
+                  onChange={(e) => setDocumentNames(prev => ({ ...prev, [category.key]: e.target.value }))}
+                  className="doc-input"
+                />
                 <input
                   type="file"
                   multiple
                   onChange={(e) => {
                     if (e.target.files?.length) {
-                      handleUpload(category.key, e.target.files);
+                      handleUpload(category.key, e.target.files, documentNames[category.key]);
                       e.target.value = null;
                     }
                   }}
                 />
-                <span className="upload-btn">Upload</span>
-              </label>
+              </div>
             </div>
 
-            {!docs.length && <div className="empty-state">No files uploaded yet.</div>}
+            {loadingDocuments ? (
+              <div className="loading-state">Loading documents...</div>
+            ) : !docs.length ? (
+              <div className="empty-state">No documents uploaded yet.</div>
+            ) : null}
 
-            {docs.map((doc) => (
+{docs.map((doc) => (
               <div key={doc.id} className="doc-row">
                 <div className="doc-meta">
-                  <div className="doc-name">{doc.name}</div>
+                  {doc.document_name && (
+                    <div className="doc-name bold">{doc.document_name}</div>
+                  )}
                   <div className="doc-subtle">
-                    {doc.status === "approved" ? "Verified" : "Pending"} •{' '}
-                    {new Date(doc.uploadedAt).toLocaleDateString()}
+                    {doc.file_name} • {doc.status || 'pending'} •{' '}
+                    {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
                 <div className="doc-actions">
-                  {doc.url ? (
-                    <a className="link" href={doc.url} target="_blank" rel="noreferrer">
+                  {doc.file_url ? (
+                    <a className="link" href={doc.file_url} target="_blank" rel="noreferrer">
                       View
                     </a>
                   ) : (
-                    <span className="subtle">Processing…</span>
+                    <span className="subtle">No URL</span>
                   )}
                   <button
-                    className="icon-btn"
-                    onClick={() => handleRemoveDocument(category.key, doc.id)}
-                    aria-label="Remove file"
+                    className="icon-btn danger"
+                    onClick={() => handleDeleteDocument(doc.id)}
+                    aria-label="Delete document"
                   >
-                    ✕
+                    🗑️
                   </button>
                 </div>
               </div>
