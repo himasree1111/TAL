@@ -262,9 +262,7 @@ html {
   font-size: 16px;
   font-weight: 600;
   margin-top: 8px;
-}
 
-@media (max-width: 768px) {
   .notification-form {
     padding: 20px 16px;
     margin: 0 -16px;
@@ -821,12 +819,12 @@ html {
 }
 
 .data-table td .btn.danger {
-  background: #dc3545;
+  background: #f27878;
   color: #ffffff;
 }
 
 .data-table td .btn.danger:hover {
-  background: #c82333;
+  background: #bd2635;
 }
 .data-table th{
   background:#f7fafb;
@@ -834,7 +832,8 @@ html {
   font-weight:700;
   white-space:nowrap;
 }
-.data-table tr:last-child td{border-bottom:none}
+
+
 
 .mapping-grid{
   display: grid;

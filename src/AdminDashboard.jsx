@@ -61,6 +61,10 @@ export default function AdminDashboard() {
   const [submittingDonor, setSubmittingDonor] = useState(false);
   const [loadingDonors, setLoadingDonors] = useState(false);
 
+  // Edit donor states
+  const [showEditDonorModal, setShowEditDonorModal] = useState(false);
+  const [editDonorForm, setEditDonorForm] = useState({});
+
   // Notification state
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
@@ -646,8 +650,11 @@ const fetchStudents = async () => {
   // Edit donor state
   const [editingDonor, setEditingDonor] = useState(null);
   
-  const handleEditDonor = (donor) => {
-    setEditingDonor({...donor, donation_date: donor.donation_date ? donor.donation_date.slice(0,16) : ''});
+const handleEditDonor = (donor) => {
+    const editData = {...donor, donation_date: donor.donation_date ? donor.donation_date.slice(0,16) : ''};
+    setEditingDonor(editData);
+    setEditDonorForm(editData);
+    setShowEditDonorModal(true);
   };
   
   const handleDeleteDonor = async (donor) => {
@@ -769,6 +776,21 @@ const fetchStudents = async () => {
     }
   };
 
+  const handleEditDonorFormChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'full_name') {
+      const cleanedValue = value.replace(/[^a-zA-Z\\s.\\'-]/g, '');
+      setEditDonorForm(prev => ({ ...prev, [name]: cleanedValue }));
+      return;
+    }
+    setEditDonorForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditPhoneChange = (e) => {
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    setEditDonorForm(prev => ({ ...prev, phone: value }));
+  };
+
   const handleDonorFormChange = (e) => {
     const { name, value } = e.target;
     // Allow only letters, spaces, and common name characters for full_name
@@ -783,6 +805,58 @@ const fetchStudents = async () => {
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
     setNewDonorForm(prev => ({ ...prev, phone: value }));
+  };
+
+  const handleCancelEditDonor = () => {
+    setShowEditDonorModal(false);
+    setEditingDonor(null);
+    setEditDonorForm({});
+  };
+
+  const handleSubmitEditDonor = async (e) => {
+    e.preventDefault();
+    const error = validateDonorForm(editDonorForm);
+    if (error) {
+      alert('❌ ' + error);
+      return;
+    }
+    setSubmittingDonor(true);
+    try {
+      const formData = {
+        full_name: editDonorForm.full_name.trim(),
+        gender: editDonorForm.gender.trim() || null,
+        phone: editDonorForm.phone.trim() || null,
+        email: editDonorForm.email.trim().toLowerCase(),
+        donor_type: editDonorForm.donor_type,
+        organization_name: editDonorForm.organization_name.trim() || null,
+        amount: parseFloat(editDonorForm.amount),
+        payment_method: editDonorForm.payment_method,
+        transaction_id: editDonorForm.transaction_id.trim(),
+        donation_type: editDonorForm.donation_type,
+        donation_date: editDonorForm.donation_date ? new Date(editDonorForm.donation_date).toISOString() : new Date().toISOString()
+      };
+      const { data, error } = await supabase
+        .from('donor_details')
+        .update(formData)
+        .eq('id', editingDonor.id)
+        .select()
+        .single();
+      if (error) {
+        console.error('Update error:', error);
+        alert('❌ Update failed: ' + error.message);
+        return;
+      }
+      await fetchDonors();
+      alert('✅ Donor updated successfully!');
+      setShowEditDonorModal(false);
+      setEditingDonor(null);
+      setEditDonorForm({});
+    } catch (err) {
+      console.error(err);
+      alert('❌ Unexpected error');
+    } finally {
+      setSubmittingDonor(false);
+    }
   };
 /*
   const handleSendReminders = () => {
@@ -1181,7 +1255,7 @@ const fetchStudents = async () => {
                       <tr key={s.id}>
                         <td>{s.name}</td>
                         <td>{s.email}</td>
-                        <td>{s.year}</td>
+
                         <td>{s.contact}</td>
                         <td>
                           <div style={{whiteSpace: 'nowrap'}}>
@@ -1190,6 +1264,7 @@ const fetchStudents = async () => {
                           </div>
                         </td>
                         <td>{s.gpa}</td> {/* Display GPA */}
+
                         <td>{s.incomeLevel}</td> {/* Display income level */}
                         <td>{s.achievements}</td> {/* Display achievements */}
                         <td>{s.eligibility ? 'Eligible' : 'Not Eligible'}</td> {/* Display eligibility */}
@@ -1285,7 +1360,8 @@ const fetchStudents = async () => {
                           <td>{d.payment_method || '—'}</td>
                           <td>{d.formattedDate}</td>
                           <td>
-                            <div style={{display: 'flex', gap: '8px'}}>
+                            <div style={{display: 'flex', gap: '6px'}}>
+                              <button className="btn small outline" onClick={() => setViewDonor(d)} style={{minWidth: '36px'}}>View</button>
                               <button className="btn small primary" onClick={() => handleEditDonor(d)}>Edit</button>
                               <button className="btn small danger" onClick={() => handleDeleteDonor(d)}>Delete</button>
                             </div>
@@ -1298,7 +1374,7 @@ const fetchStudents = async () => {
                 </div>
               )}
 
-              {showAddDonorModal && (
+{showAddDonorModal && (
                 <div className="modal-overlay" onClick={handleCancelAddDonor}>
 <div className="modal donor-modal-wide" onClick={(e) => e.stopPropagation()}>
                     <h3>Add New Donor</h3>
@@ -1420,8 +1496,133 @@ const fetchStudents = async () => {
                   </div>
                 </div>
               )}
+              {showEditDonorModal && editingDonor && (
+                <div className="modal-overlay" onClick={handleCancelEditDonor}>
+                  <div className="modal donor-modal-wide" onClick={(e) => e.stopPropagation()}>
+                    <h3>Edit Donor - {editingDonor.full_name}</h3>
+                    <form className="donor-form-grid" onSubmit={handleSubmitEditDonor}>
+                      <label>
+                        Full Name *
+                        <input 
+                          name="full_name" 
+                          value={editDonorForm.full_name || ''} 
+                          onChange={handleEditDonorFormChange}
+                          required 
+                        />
+                      </label>
+
+                      <label>
+                        Gender
+                        <select name="gender" value={editDonorForm.gender || ''} onChange={handleEditDonorFormChange}>
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </label>
+                      <label>
+                        Phone
+                        <input 
+                          type="tel" 
+                          name="phone" 
+                          value={editDonorForm.phone || ''} 
+                          onChange={handleEditPhoneChange} 
+                          maxLength={10}
+                          placeholder="Enter 10-digit phone number"
+                        />
+                      </label>
+                      <label>
+                        Email *
+                        <input 
+                          type="email" 
+                          name="email" 
+                          value={editDonorForm.email || ''} 
+                          onChange={handleEditDonorFormChange}
+                          required 
+                        />
+                      </label>
+
+                      <label>
+                        Donor Type *
+                        <select name="donor_type" value={editDonorForm.donor_type || 'Individual'} onChange={handleEditDonorFormChange} required>
+                          <option value="Individual">Individual</option>
+                          <option value="Organization">Organization</option>
+                        </select>
+                      </label>
+                      {editDonorForm.donor_type === 'Organization' && (
+                        <label>
+                          Organization Name
+                          <input 
+                            name="organization_name" 
+                            value={editDonorForm.organization_name || ''} 
+                            onChange={handleEditDonorFormChange} 
+                          />
+                        </label>
+                      )}
+                      <label>
+                        Donation Amount *
+                        <input 
+                          type="number" 
+                          name="amount" 
+                          value={editDonorForm.amount || ''} 
+                          onChange={handleEditDonorFormChange}
+                          min="1" 
+                          required 
+                        />
+                      </label>
+                      <label>
+                        Payment Method *
+                        <select name="payment_method" value={editDonorForm.payment_method || ''} onChange={handleEditDonorFormChange} required>
+                          <option value="UPI">UPI</option>
+                          <option value="Net Banking">Net Banking</option>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Cheque">Cheque</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Card">Card</option>
+                        </select>
+                      </label>
+                      <label>
+                        Transaction ID *
+                        <input 
+                          name="transaction_id" 
+                          value={editDonorForm.transaction_id || ''} 
+                          onChange={handleEditDonorFormChange}
+                          required 
+                        />
+                      </label>
+                      <label>
+                        Donation Type *
+                        <select name="donation_type" value={editDonorForm.donation_type || ''} onChange={handleEditDonorFormChange} required>
+                          <option value="One-time">One-time</option>
+                          <option value="Monthly">Monthly</option>
+                          <option value="Yearly">Yearly</option>
+                        </select>
+                      </label>
+                      <label>
+                        Donation Date *
+                        <input 
+                          type="datetime-local" 
+                          name="donation_date" 
+                          value={editDonorForm.donation_date || ''} 
+                          onChange={handleEditDonorFormChange}
+                          required 
+                        />
+                      </label>
+                      <div style={{display: 'flex', gap: '12px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb'}}>
+                        <button type="submit" className="btn primary" disabled={submittingDonor} style={{flex: 1}}>
+                          {submittingDonor ? 'Updating...' : 'Update Donor'}
+                        </button>
+                        <button type="button" className="btn secondary" onClick={handleCancelEditDonor} disabled={submittingDonor}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </section>
           )}
+
 
           {/* Fee Tracking 
           {activeSection === "fees" && (
