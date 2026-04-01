@@ -1244,9 +1244,7 @@ const handleEditDonor = (donor) => {
                       <th>Contact</th>
                       <th>Camp</th>
                       <th>GPA</th> {/* Academic performance */}
-                      <th>Income Level</th> {/* Financial need */}
-                      <th>Achievements</th> {/* Extracurricular achievements */}
-                      <th>Eligibility</th> {/* Scholarship eligibility */}
+                     
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -1266,10 +1264,10 @@ const handleEditDonor = (donor) => {
                         <td>{s.gpa}</td> {/* Display GPA */}
 
                         <td>{s.incomeLevel}</td> {/* Display income level */}
-                        <td>{s.achievements}</td> {/* Display achievements */}
-                        <td>{s.eligibility ? 'Eligible' : 'Not Eligible'}</td> {/* Display eligibility */}
                         <td>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+
+                          <div style={{display: 'flex', flexDirection: 'row', gap: '6px', alignItems: 'center'}}>
+
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => setViewStudent(s)} style={{backgroundColor: '#e3f2fd', color: '#1976d2', borderColor: '#1976d2'}}>👁️</button>
                               <span className="tooltiptext">View</span>
