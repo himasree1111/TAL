@@ -339,19 +339,22 @@
 }
 
 .upload-section {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 420px;
 }
 
 .doc-input {
-  flex: 1;
-  padding: 14px 18px;
-  border: 2px solid #e5e7eb;
-  border-radius: 14px;
-  font-size: 0.95rem;
+width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
   outline: none;
-  transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .doc-input:focus {
@@ -944,3 +947,13 @@
   max-width: none !important;
   margin: 0 auto;
 }
+
+.success-banner { 
+  background: #d4edda; color: #155724; 
+  padding: 12px; border-radius: 8px; 
+  border: 1px solid #c3e6cb; margin-bottom: 16px; 
+}
+.upload-success { color: #28a745; }
+.upload-progress.success { border-color: #28a745; }
+.upload-progress.error { border-color: #dc3545; }
+

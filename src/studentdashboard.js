@@ -96,7 +96,8 @@ const [settings, setSettings] = useState({
 });
 const [showNewPassword, setShowNewPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [studentId, setStudentId] = useState(null);
@@ -350,28 +351,38 @@ const [errorMessage, setErrorMessage] = useState("");
   }
 
     // Fetch student_form_submissions ID for documents (retry logic)
-    const fetchFormId = async (retries = 3) => {
-      for (let i = 0; i < retries; i++) {
+    const fetchFormId = async () => {
+      console.log('[DASHBOARD] Fetching studentFormId for email:', studentEmail);
+      try {
         const { data: formData, error } = await supabase
           .from('student_form_submissions')
           .select('id')
           .eq('email', studentEmail)
           .single();
-        if (formData) {
-          console.log('[DASHBOARD] Found studentFormId:', formData.id);
-          setStudentFormId(formData.id);
+        console.log("studentEmail:", studentEmail);
+console.log("formData:", formData);
+console.log("error:", error);
+        if (error) {
+          console.error('[DASHBOARD] Query error:', error);
           setFormIdLoading(false);
           return;
         }
-        if (error && i === retries - 1) {
+        
+        if (formData) {
+          // console.log('[DASHBOARD] Found studentFormId:', formData.id);
+          console.log("Correct ID:", formData.id);
+          setStudentFormId(formData.id);
+        } else {
           console.warn('[DASHBOARD] No student_form_submissions found for', studentEmail);
         }
-        await new Promise(r => setTimeout(r, 1000));
+      } catch (err) {
+        console.error('[DASHBOARD] fetchFormId error:', err);
+      } finally {
+        setFormIdLoading(false);
       }
-      setFormIdLoading(false);
     };
     await fetchFormId();
-    console.log('[DASHBOARD] Final studentFormId:', studentFormId);
+    // console.log('[DASHBOARD] Final studentFormId:', studentFormId);
   
   setSettings({
     name: profileData?.full_name || '',
@@ -450,73 +461,141 @@ const [errorMessage, setErrorMessage] = useState("");
     navigate('/studentlogin');
   };
 
-  const handleUpload = async (category, files, documentName) => {
-    if (!documentName?.trim()) {
-      setError('Document name is required');
-      return;
-    }
-    if (formIdLoading) {
-      setError('Loading student profile... please wait');
-      return;
-    }
-    if (!studentFormId) {
-      setError('Please complete StudentForm first (ask a Volunteer to submit your form)');
-      console.error('[UPLOAD] Missing studentFormId for email:', studentEmail);
-      return;
-    }
-    setError('');
+const handleUpload = async (category, files, documentName) => {
+  console.log('[UPLOAD] Starting upload:', { category, documentName: documentName?.trim(), studentFormId, studentEmail });
+  
+  if (!documentName?.trim()) {
+    setError('Document name is required');
+    return;
+  }
+  if (formIdLoading) {
+    setError('Loading student profile... please wait');
+    return;
+  }
+  if (!studentFormId) {
+    setError('Student profile not found. Please complete student form first.');
+    return;
+  }
 
-    const tasks = Array.from(files).map(async (file) => {
-      const id = `${category}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      setUploadProgress((prev) => ({ ...prev, [id]: { progress: 0, name: file.name } }));
+  // Validate files
+  const validFiles = Array.from(files).filter(file => {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!allowedTypes.includes(file.type)) {
+      setError(`Invalid file type: ${file.name}. Allowed: PDF, JPG, PNG, GIF`);
+      return false;
+    }
+    if (file.size > maxSize) {
+      setError(`File too large: ${file.name} (${(file.size/1024/1024).toFixed(1)}MB). Max 5MB`);
+      return false;
+    }
+    return true;
+  });
 
-      const safeId = studentEmail?.replace(/[^a-zA-Z0-9]/g, '_') || 'default';
-      const folder = `${safeId}/${category}`;
-      const fileName = `${Date.now()}_${file.name}`.replace(/\s+/g, "_");
-      const filePath = `${folder}/${fileName}`;
+  if (validFiles.length === 0) return;
 
-      // Upload file
-      const { error: uploadError } = await supabase.storage
-        .from("student_documents")
-        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+  if (validFiles.length < files.length) {
+    setError(`${files.length - validFiles.length} invalid files skipped`);
+  }
+
+  setError('');
+
+  let successCount = 0;
+  const tasks = validFiles.map(async (file) => {
+    const id = `${category}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setUploadProgress(prev => ({ ...prev, [id]: { progress: 0, name: file.name, status: 'uploading' } }));
+
+    try {
+      // Better sanitization
+      const safeEmail = studentEmail.replace(/[^a-zA-Z0-9@._-]/g, '_');
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const timestamp = Date.now();
+      const filePath = `${safeEmail}/${category}/${timestamp}-${safeName}`;
+
+      console.log('[UPLOAD] File path:', filePath);
+
+      // Upload with progress if possible (Supabase supports it)
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('student_documents')
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: false 
+        });
 
       if (uploadError) {
-        console.error(uploadError);
-        setError(uploadError.message);
-        setUploadProgress((prev) => ({ ...prev, [id]: { ...prev[id], progress: 0, error: true } }));
+        console.error('[UPLOAD]', uploadError);
+        const msg = uploadError.message.includes('policy') ? 'Upload blocked by permissions. Check Supabase policies.' : uploadError.message;
+        setUploadProgress(prev => ({ 
+          ...prev, 
+          [id]: { ...prev[id], progress: 0, error: msg, status: 'error' } 
+        }));
         return null;
       }
 
-      const { data: publicData } = supabase.storage
-        .from("student_documents")
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('student_documents')
         .getPublicUrl(filePath);
 
       // Insert to DB
-      const { error: insertError } = await supabase
+      const { error: insertError, data: insertData } = await supabase
         .from('student_documents')
         .insert({
           student_id: studentFormId,
           category,
           document_name: documentName,
           file_name: file.name,
-          file_url: publicData.publicUrl
-        });
+          file_url: publicUrl,
+          uploaded_at: new Date().toISOString()
+        })
+        .select()
+        .single();
 
       if (insertError) {
-        console.error('DB insert failed:', insertError);
-        // Don't delete storage, just warn
+        console.error('[UPLOAD] DB insert:', insertError);
+        const msg = insertError.message.includes('policy') ? 'Database save blocked. Check table policies.' : insertError.message;
+        setUploadProgress(prev => ({ 
+          ...prev, 
+          [id]: { ...prev[id], progress: 0, error: msg, status: 'error' } 
+        }));
+        // Don't delete storage file if DB fails
+        return null;
       }
 
-      setUploadProgress((prev) => ({ ...prev, [id]: { ...prev[id], progress: 100 } }));
+      successCount++;
+      console.log('[UPLOAD] Success:', insertData.id);
+      setUploadProgress(prev => ({ 
+        ...prev, 
+        [id]: { ...prev[id], progress: 100, status: 'success' } 
+      }));
 
-      // Refetch documents
+      // Optimistic refresh
       fetchDocuments();
-    });
+      return insertData;
+    } catch (err) {
+      console.error('[UPLOAD] Unexpected error:', err);
+      setUploadProgress(prev => ({ 
+        ...prev, 
+        [id]: { ...prev[id], progress: 0, error: err.message, status: 'error' } 
+      }));
+      return null;
+    }
+  });
 
+  try {
     await Promise.all(tasks);
-    // Reset name input
-    setDocumentNames(prev => ({ ...prev, [category]: '' }));
-  };
+    if (successCount > 0) {
+      setSuccessMessage(`${successCount} file(s) uploaded successfully!`);
+      setDocumentNames(prev => ({ ...prev, [category]: '' }));
+      // Clear success after 5s
+      setTimeout(() => setSuccessMessage(''), 5000);
+    }
+    setError('');
+  } catch (err) {
+    setError('Upload process failed');
+  }
+};
 
   const handleRemoveDocument = (category, id) => {
     setDocuments((prev) => ({
@@ -774,7 +853,6 @@ const totalDocuments = useMemo(() => 0, []);
               </div>
               <div className="upload-section">
                 <input
-                  type="text"
                   placeholder={`Document name for ${category.title} (e.g., 10th Marksheet)`}
                   value={documentNames[category.key]}
                   onChange={(e) => setDocumentNames(prev => ({ ...prev, [category.key]: e.target.value }))}
@@ -784,8 +862,14 @@ const totalDocuments = useMemo(() => 0, []);
                   type="file"
                   multiple
                   onChange={(e) => {
+                    const name = documentNames[category.key].trim();
                     if (e.target.files?.length) {
-                      handleUpload(category.key, e.target.files, documentNames[category.key]);
+                      console.log('[UPLOAD UI] Triggered with name:', name || '(empty)');
+                      if (name) {
+                        handleUpload(category.key, e.target.files, name);
+                      } else {
+                        setError('Please enter a document name first');
+                      }
                       e.target.value = null;
                     }
                   }}
@@ -829,26 +913,42 @@ const totalDocuments = useMemo(() => 0, []);
               </div>
             ))}
 
-            {Object.entries(uploadProgress)
+{Object.entries(uploadProgress)
               .filter(([key]) => key.startsWith(category.key))
-              .map(([key, progress]) => (
-                <div key={key} className="upload-progress">
-                  <div className="upload-meta">
-                    <span>{progress.name}</span>
-                    {progress.error ? (
-                      <span className="upload-error">Failed</span>
-                    ) : (
-                      <span className="upload-percent">{progress.progress}%</span>
+              .map(([key, progress]) => {
+                // Auto-clear completed after 10s
+                if (progress.status === 'success' || progress.status === 'error') {
+                  setTimeout(() => {
+                    setUploadProgress(prev => {
+                      const newProgress = { ...prev };
+                      delete newProgress[key];
+                      return newProgress;
+                    });
+                  }, 10000);
+                }
+                
+                return (
+                  <div key={key} className={`upload-progress ${progress.status || ''}`}>
+                    <div className="upload-meta">
+                      <span>{progress.name}</span>
+                      {progress.status === 'uploading' && <span>Uploading...</span>}
+                      {progress.status === 'success' && <span className="upload-success">✅ Success</span>}
+                      {progress.status === 'error' && <span className="upload-error">❌ {progress.error}</span>}
+                      {progress.status !== 'uploading' && progress.status !== 'success' && progress.status !== 'error' && (
+                        <span className="upload-percent">{progress.progress}%</span>
+                      )}
+                    </div>
+                    {(progress.status === 'uploading' || !progress.status) && (
+                      <div className="progress-bar">
+                        <div
+                          className="progress-fill"
+                          style={{ width: `${progress.progress}%` }}
+                        />
+                      </div>
                     )}
                   </div>
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{ width: `${progress.progress}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
           </section>
         );
       })}
@@ -1814,7 +1914,8 @@ const totalDocuments = useMemo(() => 0, []);
           </div>
         </header>
 
-        {error && <div className="error-banner">{error}</div>}
+{error && <div className="error-banner">{error}</div>}
+{successMessage && <div className="success-banner">{successMessage}</div>}
 
         <section className="content-area">{renderMainContent()}</section>
       </main>
