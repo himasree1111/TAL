@@ -269,6 +269,12 @@ const loadNotifications = async (id) => {
   }, [students, donors]);
 
   const getMaxPercent = (s) => Math.max(parseFloat(s.prev_percent || 0), parseFloat(s.present_percent || 0));
+  const getAvgPercentage = (s) => {
+    const prev = parseFloat(s.prev_percent || 0);
+    const pres = parseFloat(s.present_percent || 0);
+    const avg = ((prev + pres) / 2).toFixed(1);
+    return avg > 0 ? avg + '%' : '—';
+  };
 
   // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
@@ -989,12 +995,18 @@ const handleEditDonor = (donor) => {
 
   // Filter Components
   const FilterCard = ({ title, icon, options, value, onChange }) => (
-    <div className="filter-card" style={{position: 'relative'}}>
+    <div className="filter-card" style={{ position: 'relative' }}>
       <div className="filter-icon">{icon}</div>
       <div className="filter-title">{title}</div>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="filter-select">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="filter-select"
+      >
         {options.map((opt, idx) => (
-          <option key={idx} value={opt}>{opt === 'all' ? 'All' : opt}</option>
+          <option key={idx} value={opt}>
+            {opt === 'all' ? 'All' : opt}
+          </option>
         ))}
       </select>
     </div>
@@ -1242,8 +1254,8 @@ const handleEditDonor = (donor) => {
                       <th>Email</th>
                       <th>Education</th>
                       <th>Contact</th>
-                      <th>Camp</th>
-                      <th>GPA</th> {/* Academic performance */}
+                      <th>CampName</th>
+                      <th>Percentage</th> {/* Academic performance */}
                      
                       <th>Actions</th>
                     </tr>
@@ -1253,8 +1265,10 @@ const handleEditDonor = (donor) => {
                       <tr key={s.id}>
                         <td>{s.name}</td>
                         <td>{s.email}</td>
-
+                        <td>{s.education}</td>
                         <td>{s.contact}</td>
+                        <td>{s.campName}</td>
+                        <td>{getAvgPercentage(s)}</td>
                         <td>
                           <div style={{whiteSpace: 'nowrap'}}>
                             <div>{s.campName}</div>

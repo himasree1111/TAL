@@ -262,18 +262,6 @@ html {
   font-size: 16px;
   font-weight: 600;
   margin-top: 8px;
-
-  .notification-form {
-    padding: 20px 16px;
-    margin: 0 -16px;
-    border-radius: 0;
-    box-shadow: none;
-    border-top: 1px solid #e5e7eb;
-  }
-  
-  .notification-form-group {
-    gap: 10px;
-  }
 }
 
 .btn.small {
@@ -640,7 +628,7 @@ html {
 .manage-section .manage-controls{
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 20px;
   background: #fff;
   padding: 20px;
@@ -651,7 +639,7 @@ html {
 
 .new-filters-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   flex: 1;
 }
@@ -673,9 +661,9 @@ html {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 44px;
   justify-content: space-between;
+  gap: 12px;
+  height: 44px;
 }
 
 .filter-card:hover {
@@ -782,7 +770,8 @@ html {
 
 .data-table {
   width: 100%;
-  border-collapse: separate;
+  table-layout: fixed;
+  border-collapse: collapse;
   border-spacing: 0;
   background: #fff;
   box-shadow: 0 6px 18px rgba(20,24,40,0.06);
@@ -790,11 +779,20 @@ html {
 
 .data-table th,
 .data-table td {
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f2f3;
   text-align: left;
   vertical-align: middle;
 }
+
+/* Fixed column widths for Manage Beneficiaries table */
+.data-table th:nth-child(1), .data-table td:nth-child(1) { width: 16%; } /* Name */
+.data-table th:nth-child(2), .data-table td:nth-child(2) { width: 18%; } /* Email */
+.data-table th:nth-child(3), .data-table td:nth-child(3) { width: 12%; } /* Education */
+.data-table th:nth-child(4), .data-table td:nth-child(4) { width: 12%; } /* Contact */
+.data-table th:nth-child(5), .data-table td:nth-child(5) { width: 15%; } /* Camp Name */
+.data-table th:nth-child(6), .data-table td:nth-child(6) { width: 10%; } /* Percentage */
+.data-table th:nth-child(7), .data-table td:nth-child(7) { width: 17%; } /* Actions */
 
 .data-table td:last-child {
   text-align: right;
@@ -1043,6 +1041,18 @@ html {
     visibility: visible;
     opacity: 1;
   }
+
+  .notification-form {
+    padding: 20px 16px;
+    margin: 0 -16px;
+    border-radius: 0;
+    box-shadow: none;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .notification-form-group {
+    gap: 10px;
+  }
 }
 
 .reports-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
@@ -1276,4 +1286,3 @@ html {
     gap: 12px;
   }
 }
-
