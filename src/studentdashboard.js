@@ -354,26 +354,40 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const fetchFormId = async () => {
       console.log('[DASHBOARD] Fetching studentFormId for email:', studentEmail);
       try {
-        const { data: formData, error } = await supabase
+        // 1. Try student_form_submissions (pending forms)
+        let { data: formData, error } = await supabase
           .from('student_form_submissions')
           .select('id')
           .eq('email', studentEmail)
           .single();
-        console.log("studentEmail:", studentEmail);
-console.log("formData:", formData);
-console.log("error:", error);
-        if (error) {
-          console.error('[DASHBOARD] Query error:', error);
-          setFormIdLoading(false);
-          return;
+
+        if (!formData) {
+          console.log('[DASHBOARD] No pending form, checking eligible_students');
+          // 2. Fallback to eligible_students
+          ({ data: formData, error } = await supabase
+            .from('eligible_students')
+            .select('student_id')
+            .eq('email', studentEmail)
+            .single());
+          if (formData) formData.id = formData.student_id;
         }
-        
-        if (formData) {
-          // console.log('[DASHBOARD] Found studentFormId:', formData.id);
-          console.log("Correct ID:", formData.id);
+
+        if (!formData) {
+          console.log('[DASHBOARD] No eligible, checking non_eligible_students');
+          // 3. Fallback to non_eligible_students
+          ({ data: formData, error } = await supabase
+            .from('non_eligible_students')
+            .select('student_id')
+            .eq('email', studentEmail)
+            .single());
+          if (formData) formData.id = formData.student_id;
+        }
+
+        console.log('[DASHBOARD] Final formData:', formData);
+        if (formData?.id) {
           setStudentFormId(formData.id);
         } else {
-          console.warn('[DASHBOARD] No student_form_submissions found for', studentEmail);
+          console.warn('[DASHBOARD] No form found for', studentEmail);
         }
       } catch (err) {
         console.error('[DASHBOARD] fetchFormId error:', err);
@@ -1923,4 +1937,3 @@ const totalDocuments = useMemo(() => 0, []);
   );
 };
 export default StudentDashboard;
-
