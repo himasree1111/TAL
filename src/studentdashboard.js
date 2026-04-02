@@ -288,39 +288,78 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     fetchDocuments();
   }, [studentFormId]);
 
-  // Delete document
   const handleDeleteDocument = async (docId) => {
-    if (!window.confirm('Delete this document?')) return;
+    console.log('🔥 DEBUG DELETE START:', docId);
+if (!window.confirm('DELETE? (Check F12 Console)')) return;
+
     try {
-      const { data: doc } = await supabase
+      // 1. GET DOC
+      const { data: doc, error: getError } = await supabase
         .from('student_documents')
-        .select('file_url, file_name')
+        .select('*, student_id')
         .eq('id', docId)
         .single();
-      if (!doc) return;
-
-      // Delete from storage (extract path from public URL)
-      const publicUrl = doc.file_url;
-      const pathMatch = publicUrl.match(/\/student_documents\/(.+)$/);
-      if (pathMatch) {
-        const filePath = pathMatch[1];
-        const { error: storageError } = await supabase.storage
-          .from('student_documents')
-          .remove([filePath]);
-        if (storageError) console.warn('Storage delete failed:', storageError);
+      console.log('📄 DOC:', doc);
+      console.log('GET ERROR:', getError);
+      if (getError || !doc) {
+        console.log('❌ NO DOC');
+        alert('No document');
+        return;
       }
 
-      // Delete from DB
+      // 2. STUDENT FORM ID MATCH?
+      const { data: form } = await supabase
+        .from('student_form_submissions')
+        .select('id')
+        .eq('email', studentEmail)
+        .single();
+      console.log('STUDENT FORM:', form);
+      console.log('MATCH?', form?.id === doc.student_id);
+
+      // 3. STORAGE DELETE
+      if (doc.file_url) {
+        const path = doc.file_url.split('/student_documents/')[1];
+        if (path) {
+          const { error } = await supabase.storage.from('student_documents').remove([path]);
+          console.log('STORAGE:', path, error);
+        }
+      }
+
+      // 4. DB DELETE with count
+      // 4. DB DELETE - simple no count (count() may fail in some Supabase)
       const { error: dbError } = await supabase
         .from('student_documents')
         .delete()
         .eq('id', docId);
-      if (dbError) throw dbError;
+      console.log('🚫 DB ERROR:', dbError);
+      console.log('FULL DOC BEFORE:', doc);
 
-      // Refetch
-      fetchDocuments();
+      if (dbError) {
+        alert(`DB Error: ${dbError.message}`);
+        return;
+      }
+
+      // Check if actually deleted
+      const { data: check } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('id', docId)
+        .single();
+      console.log('DOC AFTER DELETE:', check);
+
+      if (check) {
+        alert('Delete failed - doc still exists!');
+        return;
+      }
+
+      // Success
+      await fetchDocuments();
+      alert('✅ Document deleted!');
+
+
     } catch (err) {
-      setError('Delete failed: ' + err.message);
+      console.error('💥 TOTAL FAIL:', err);
+      alert('FAILED');
     }
   };
 
