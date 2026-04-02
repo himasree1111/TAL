@@ -176,14 +176,14 @@ export default function AdminDashboard() {
           console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
           const transformedStudents = (studentData || []).map((student, index) => {
-            return {
+            const transformed = {
               id: student.id || index + 1,
               student_id: student.id,
               name: student.full_name || "",
               full_name: student.full_name || "",
-              year: student.class,
+              year: student.class || student.year,
               fee_status: student.fee || "Not Provided",
-              course: student.educationcategory || "",
+              course: student.educationcategory || student.class || student.year || student.course || "—",
               campName: student.camp_name,
               campDate: student.camp_date
                 ? new Date(student.camp_date).toISOString().split("T")[0]
@@ -202,6 +202,7 @@ export default function AdminDashboard() {
               earning_members: student.earning_members,
               created_at: student.created_at
             };
+            return transformed;
           });
           setStudents(transformedStudents);
         }
@@ -1256,32 +1257,20 @@ const handleEditDonor = (donor) => {
                       <th>Contact</th>
                       <th>CampName</th>
                       <th>Percentage</th> {/* Academic performance */}
-                     
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStudents.map(s => (
+{filteredStudents.map(s => (
                       <tr key={s.id}>
                         <td>{s.name}</td>
                         <td>{s.email}</td>
-                        <td>{s.education}</td>
+                        <td>{s.course || '—'}</td>
                         <td>{s.contact}</td>
                         <td>{s.campName}</td>
                         <td>{getAvgPercentage(s)}</td>
                         <td>
-                          <div style={{whiteSpace: 'nowrap'}}>
-                            <div>{s.campName}</div>
-                            <div style={{fontSize: '0.85em', color: '#666'}}>{s.campDate}</div>
-                          </div>
-                        </td>
-                        <td>{s.gpa}</td> {/* Display GPA */}
-
-                        <td>{s.incomeLevel}</td> {/* Display income level */}
-                        <td>
-
-                          <div style={{display: 'flex', flexDirection: 'row', gap: '6px', alignItems: 'center'}}>
-
+                          <div className="actions-flex" style={{justifyContent: 'center', gap: '6px'}}>
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => setViewStudent(s)} style={{backgroundColor: '#e3f2fd', color: '#1976d2', borderColor: '#1976d2'}}>👁️</button>
                               <span className="tooltiptext">View</span>
