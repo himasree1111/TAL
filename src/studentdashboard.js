@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./studentdashboard.css";
 import { useNavigate } from "react-router-dom";
 import supabase from "./supabaseClient";
+import EducationDropdown from "./EducationDropdown";
 import {
   getStudentNotifications,
   subscribeToNotifications,
@@ -108,6 +109,17 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     acc[cat.key] = '';
     return acc;
   }, {}));
+
+  const [academicEducation, setAcademicEducation] = useState({
+    educationcategory: '',
+    educationsubcategory: '',
+    educationyear: '',
+    educationcategory_custom: '',
+    educationsubcategory_custom: '',
+    educationyear_custom: ''
+  });
+
+  const [personalDropdown, setPersonalDropdown] = useState('');
   const [studentType, setStudentType] = useState(null);
   const { studentEmail, logout: contextLogout } = useStudent();
 
@@ -902,15 +914,59 @@ const totalDocuments = useMemo(() => 0, []);
               <div>
                 <div className="doc-tag">{category.icon}</div>
                 <h3>{category.title}</h3>
-                <p className="doc-subtitle">Upload, preview and manage your files.</p>
+                <p className="doc-subtitle">Upload</p>
               </div>
               <div className="upload-section">
-                <input
-                  placeholder={`Document name for ${category.title} (e.g., 10th Marksheet)`}
-                  value={documentNames[category.key]}
-                  onChange={(e) => setDocumentNames(prev => ({ ...prev, [category.key]: e.target.value }))}
-                  className="doc-input"
-                />
+{category.key === 'academic' ? (
+                  <EducationDropdown
+                    educationcategory={academicEducation.educationcategory}
+                    educationsubcategory={academicEducation.educationsubcategory}
+                    educationyear={academicEducation.educationyear}
+                    educationcategory_custom={academicEducation.educationcategory_custom}
+                    educationsubcategory_custom={academicEducation.educationsubcategory_custom}
+                    educationyear_custom={academicEducation.educationyear_custom}
+                    onChange={(e) => {
+                      const { name, value } = e.target;
+                      setAcademicEducation(prev => ({ ...prev, [name]: value }));
+                      
+                      // Generate document name e.g. "ENGINEERING CSE 1st Year"
+                      const newState = { ...academicEducation, [name]: value };
+                      const cat = newState.educationcategory || newState.educationcategory_custom;
+                      const sub = newState.educationsubcategory || newState.educationsubcategory_custom;
+                      const year = newState.educationyear || newState.educationyear_custom;
+                      
+                      if (cat) {
+                        const docName = [cat, sub, year].filter(Boolean).join(' ');
+                        setDocumentNames(prevNames => ({
+                          ...prevNames,
+                          [category.key]: docName
+                        }));
+                      }
+                    }}
+                  />
+                ) : category.key === 'personal' ? (
+                  <select 
+                    value={personalDropdown}
+                    onChange={(e) => {
+                      setPersonalDropdown(e.target.value);
+                      setDocumentNames(prev => ({ ...prev, personal: e.target.value }));
+                    }}
+                    className="doc-input"
+                  >
+                    <option value="">Select Personal Document</option>
+                    <option value="Aadhar Card">Aadhar Card</option>
+                    <option value="Bonified">Bonified</option>
+                    <option value="Income Certificate">Income Certificate</option>
+                  </select>
+                ) : (
+                  <input
+                    placeholder={`Document name for ${category.title} (e.g., 10th Marksheet)`}
+                    value={documentNames[category.key]}
+                    onChange={(e) => setDocumentNames(prev => ({ ...prev, [category.key]: e.target.value }))}
+                    className="doc-input"
+                  />
+                )}
+
                 <input
                   type="file"
                   multiple
