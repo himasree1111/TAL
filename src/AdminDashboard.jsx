@@ -266,22 +266,33 @@ export default function AdminDashboard() {
     return avg > 0 ? avg + '%' : '—';
   };
 
+  const calculatePriority = (s) => {
+    const incomeScore = Math.max(0, 40 - (parseInt(s.earning_members || 1) * 10)); // max 40
+    const academicScore = Math.min(25, getMaxPercent(s)); // max 25  
+    let familyScore = 0;
+    if (s.has_scholarship === false && s.does_work === false && parseInt(s.earning_members || 0) <= 2) {
+      familyScore = 20;
+    } else if (!s.has_scholarship || !s.does_work) {
+      familyScore = 10;
+    }
+    const extraScore = (parseFloat(s.prev_percent || 0) < parseFloat(s.present_percent || 0) ? 10 : 0) + 
+                      (s.does_work === false ? 5 : 0); // max 15
+    return Math.min(100, Math.max(0, incomeScore + academicScore + familyScore + extraScore));
+  };
+
   // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
-      // Old filters (commented out)
-      // if (filters.class && s.year !== filters.class) return false;
-      // if (filters.donor) { ... }
-      // if (filters.feeStatus && s.fee_status !== filters.feeStatus) return false;
-      // if (filters.stream && s.course !== filters.stream) return false;
-
-      // New filters
-      if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
-      if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
-      if (newFilters.toppers && getMaxPercent(s) < 90) return false;
-      if (newFilters.achievements && getMaxPercent(s) < 85) return false;
-      return true;
-    }).sort((a, b) => newFilters.toppers ? getMaxPercent(b) - getMaxPercent(a) : 0);
+    return students
+      .filter((s) => {
+        // New filters
+        if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
+        if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
+        if (newFilters.toppers && getMaxPercent(s) < 90) return false;
+        if (newFilters.achievements && getMaxPercent(s) < 85) return false;
+        return true;
+      })
+      .map(s => ({...s, priority: calculatePriority(s)}))
+      .sort((a, b) => b.priority - a.priority);
   }, [students, newFilters]);
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
@@ -1234,12 +1245,13 @@ const handleEditDonor = (donor) => {
               <div className="table-wrap">
                 <table className="data-table">
                   <thead>
-                    <tr>
+                      <tr>
                       <th>Name</th>
                       <th>Email</th>
                       <th>Education</th>
                       <th>Contact</th>
                       <th>CampName</th>
+                      <th>Priority</th>
                       <th>Percentage</th> {/* Academic performance */}
                       <th>Actions</th>
                     </tr>
@@ -1252,6 +1264,12 @@ const handleEditDonor = (donor) => {
                         <td>{s.course || '—'}</td>
                         <td>{s.contact}</td>
                         <td>{s.campName}</td>
+                        <td className={`priority-cell priority-${s.priority >= 80 ? 'high' : s.priority >= 50 ? 'medium' : 'low'}`}>
+                          <div><strong>{Math.round(s.priority)}</strong>/100</div>
+                          <div className="priority-label">
+                            {s.priority >= 80 ? 'High Need' : s.priority >= 50 ? 'Medium Need' : 'Low Need'}
+                          </div>
+                        </td>
                         <td>{getAvgPercentage(s)}</td>
                         <td>
                           <div className="actions-flex" style={{justifyContent: 'center', gap: '6px'}}>
