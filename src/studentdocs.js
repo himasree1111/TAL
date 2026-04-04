@@ -5,10 +5,61 @@ import React, { useState, useEffect } from "react";
 import "./StudentDocs.css";
 import supabase from "../supabaseClient";
 import { FaCheckCircle, FaPlus } from "react-icons/fa";
-const [documents, setDocuments] = useState([]);
-useEffect(() => {
-  fetchDocuments();
-}, []);
+
+
+
+export default function StudentDocsUpload() {
+
+  const [documents, setDocuments] = useState([]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const [bankAccount, setBankAccount] = useState("");
+  const handleDelete = async (doc) => {
+  try {
+    // 🗑️ 1. Delete files from storage
+    const fileFields = [
+      "school_id",
+      "aadhaar",
+      "income_proof",
+      "marksheet",
+      "passport_photo",
+      "fees_receipt",
+      "volunteer_signature",
+      "student_signature",
+    ];
+
+    for (const field of fileFields) {
+      if (doc[field]) {
+        const path = doc[field].split("/student-docs/")[1]; // extract file path
+
+        if (path) {
+          await supabase.storage
+            .from("student-docs")
+            .remove([path]);
+        }
+      }
+    }
+
+    // 🧹 2. Delete row from DB
+    const { error } = await supabase
+      .from("student_documents")
+      .delete()
+      .eq("id", doc.id);
+
+    if (error) throw error;
+
+    // 🔄 3. Refresh UI
+    await fetchDocuments();
+
+    alert("🗑️ Deleted successfully!");
+  } catch (err) {
+    console.error(err);
+    alert("❌ Delete failed: " + err.message);
+  }
+};
 
 const fetchDocuments = async () => {
   const { data, error } = await supabase
@@ -20,39 +71,39 @@ const fetchDocuments = async () => {
 
   if (data) setDocuments(data);
 };
-export default function StudentDocsUpload() {
-
-  const [documents, setDocuments] = useState([]);
-
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
-  const [bankAccount, setBankAccount] = useState("");
-
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
       setFiles({ ...files, [field]: file });
     }
   };
-  <div style={{ marginTop: "30px" }}>
-  <h3>📂 Uploaded Documents</h3>
+ 
+   documents.map((doc) => (
+  <div key={doc.id} style={{ marginBottom: "15px" }}>
+    <p>Bank: {doc.bank_account}</p>
 
-  {documents.length === 0 ? (
-    <p>No documents found</p>
-  ) : (
-    documents.map((doc) => (
-      <div key={doc.id} style={{ marginBottom: "15px" }}>
-        <p>Bank: {doc.bank_account}</p>
+    <a href={doc.school_id} target="_blank" rel="noreferrer">School ID</a><br/>
+    <a href={doc.aadhaar} target="_blank" rel="noreferrer">Aadhaar</a><br/>
+    <a href={doc.marksheet} target="_blank" rel="noreferrer">Marksheet</a><br/>
 
-        <a href={doc.school_id} target="_blank">School ID</a><br/>
-        <a href={doc.aadhaar} target="_blank">Aadhaar</a><br/>
-        <a href={doc.marksheet} target="_blank">Marksheet</a><br/>
-      </div>
-    ))
-  )}
-</div>
+    {/* ✅ ADD THIS */}
+    <button
+      onClick={() => handleDelete(doc)}
+      style={{
+        marginTop: "8px",
+        background: "red",
+        color: "white",
+        padding: "5px 10px",
+        border: "none",
+        borderRadius: "5px",
+        cursor: "pointer",
+      }}
+    >
+      Delete
+    </button>
+  </div>
+)))
+ 
 
   const uploadFile = async (file, folder) => {
   const filePath = `${folder}/${Date.now()}-${file.name}`;
@@ -87,7 +138,7 @@ export default function StudentDocsUpload() {
     for (const key in files) {
       uploadedUrls[key] = await uploadFile(files[key], key);
     }
-
+await fetchDocuments();
     // save in database
     const { error } = await supabase.from("student_documents").insert([
       {
@@ -104,7 +155,16 @@ export default function StudentDocsUpload() {
     alert("❌ Upload failed: " + err.message);
   }
 };
-
+const [files, setFiles] = useState({
+  school_id: null,
+  aadhaar: null,
+  income_proof: null,
+  marksheet: null,
+  passport_photo: null,
+  fees_receipt: null,
+  volunteer_signature: null,
+  student_signature: null,
+});
   const renderUploadField = (label, field) => (
     <div className="upload-field">
       <span className="label">{label}</span>
@@ -153,23 +213,7 @@ export default function StudentDocsUpload() {
       <button type="submit" className="submit-btn" disabled={!allUploaded}>
         Submit Student Details
       </button>
-      <div style={{ marginTop: "30px" }}>
-  <h3>📂 Uploaded Documents</h3>
-
-  {documents.length === 0 ? (
-    <p>No documents found</p>
-  ) : (
-    documents.map((doc) => (
-      <div key={doc.id} style={{ marginBottom: "15px" }}>
-        <p>Bank: {doc.bank_account}</p>
-
-        <a href={doc.school_id} target="_blank" rel="noreferrer">School ID</a><br/>
-        <a href={doc.aadhaar} target="_blank" rel="noreferrer">Aadhaar</a><br/>
-        <a href={doc.marksheet} target="_blank" rel="noreferrer">Marksheet</a><br/>
-      </div>
-    ))
-  )}
-</div>
+      
     </form>
     
     
