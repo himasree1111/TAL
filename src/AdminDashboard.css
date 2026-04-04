@@ -20,19 +20,16 @@ html {
 }
 
 .admin-sidebar{
-  width: 260px;
-  max-width: 80vw;
+  width: clamp(240px, 25vw, 280px);
+  max-width: 85vw;
   background:#F6F7F6;
-  padding:24px 18px;
+  padding:clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 1.25rem);
   box-shadow:2px 0 12px rgba(13,20,40,0.08);
 
   position: sticky;
   top: 0;
-
-  /* 🔥 CHANGE THIS */
   min-height: 100vh;
   height: auto;
-
   display:flex;
   flex-direction:column;
   justify-content:space-between;
@@ -88,10 +85,11 @@ html {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  width: 0; /* 🔥 THIS FIXES THE BIG GAP ISSUE */
+  width: 100%;
   margin-left: 0;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 
@@ -101,7 +99,7 @@ html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 32px;
+  padding: clamp(1rem, 4vw, 1.25rem) clamp(1.25rem, 5vw, 2rem);
   background: #fff;
   border-bottom: 1px solid rgba(0,0,0,0.08);
   position: sticky;
@@ -130,16 +128,19 @@ html {
 .btn {
   background: #ffffff;
   border: 1px solid #e0e4e8;
-  padding: 8px 16px;
+  padding: clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.25rem);
   border-radius: 8px;
   cursor: pointer;
   color: #1D2B4A;
   font-weight: 500;
   transition: all 0.2s ease;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
+  min-height: 44px;
   min-width: 80px;
-  text-align: center;
+  font-size: clamp(0.875rem, 2vw, 1rem);
 }
 
 .btn:hover {
@@ -312,14 +313,14 @@ html {
 }
 
 .admin-content{
-  padding: 24px 32px;
+  padding: clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 5vw, 2rem);
   flex: 1;
   overflow-y: auto;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  min-height: 0; /* Allows scrolling inside */
+  gap: clamp(1rem, 3vw, 1.5rem);
+  min-height: 0;
 }
 
 /* Override for settings section to allow full expansion */
@@ -780,8 +781,16 @@ html {
   width: 100%;
 }
 
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
 .data-table {
   width: 100%;
+  min-width: 700px;
   table-layout: fixed;
   border-collapse: collapse;
   border-spacing: 0;
@@ -1133,7 +1142,7 @@ html {
 .report-actions { display: flex; gap: 8px; margin-top: 12px; }
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:2000}
-.modal{background:#fff;padding:18px;border-radius:10px;min-width:320px;max-width:680px;box-shadow:0 10px 30px rgba(10,20,40,0.2)}
+.modal{background:#fff;padding:clamp(1rem, 4vw, 1.125rem);border-radius:12px;min-width:90vw;max-width:90vw;max-height:90vh;overflow-y:auto;box-shadow:0 10px 30px rgba(10,20,40,0.2)}
 .donor-modal-wide{max-width:800px !important;min-width:600px !important;padding:24px !important;max-height:90vh !important;overflow-y:auto !important}
 .donor-form-grid{display:grid !important;grid-template-columns:repeat(auto-fit,minmax(280px,1fr)) !important;gap:12px !important}
 .donor-form-grid label{width:100% !important;display:flex !important;flex-direction:column !important;gap:4px !important}
