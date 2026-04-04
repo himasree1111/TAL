@@ -237,7 +237,7 @@ const handleDonate = () => {
         {/* Animated Stats Counter */}
         <div className="stats-container">
           <div className="stat-item fade-in-up" style={{ animationDelay: "0.2s" }}>
-            <div className="stat-number">500+</div>
+            <div className="stat-number">200+</div>
             <div className="stat-label">Students Impacted</div>
           </div>
           <div className="stat-item fade-in-up" style={{ animationDelay: "0.4s" }}>
@@ -266,8 +266,8 @@ const handleDonate = () => {
       {/* Footer Section */}
       <footer className="footer-section">
         <div className="footer-container">
-          <p>Copyright © 2025 Touch a Life, All rights reserved.</p>
-          <p>Designed & Developed by Galaxy Tech Solution</p>
+          <p>Copyright © 2026 Touch a Life, All rights reserved.</p>
+          <p>Designed & Developed by GNITS Students </p>
         </div>
       </footer>
     </div>
