@@ -34,14 +34,15 @@ export default function AdminDashboard() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
   const [systemNotifications, setSystemNotifications] = useState(true);
-  const [defaultLanguage, setDefaultLanguage] = useState("English");
-  const [timeZone, setTimeZone] = useState("IST (UTC+5:30)");
+
   const [eligibleStudents, setEligibleStudents] = useState([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
   const [eligibleCount, setEligibleCount] = useState(0);
   const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
   const [loadingNonEligible, setLoadingNonEligible] = useState(false);
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
+  const [showEligibleTable, setShowEligibleTable] = useState(false);
+  const [showNonEligibleTable, setShowNonEligibleTable] = useState(false);
 
   // Donor add form states
   const [showAddDonorModal, setShowAddDonorModal] = useState(false);
@@ -120,12 +121,12 @@ export default function AdminDashboard() {
   const fetchDonors = async () => {
     setLoadingDonors(true);
     try {
-      const { data: donorDetails, error } = await supabase
+      const { data: donorDetails, error: donorError } = await supabase
         .from('donor_details')
         .select('*')
         .order('donation_date', { ascending: false });
-      if (error) {
-        console.error('Error fetching donors:', error);
+      if (donorError) {
+        console.error('Error fetching donors:', donorError);
       } else {
         const mappedDonors = (donorDetails || []).map(d => ({
           ...d,
@@ -168,7 +169,7 @@ export default function AdminDashboard() {
           .order('created_at', { ascending: false });
 
         // Save raw fetch result for debugging
-        setLastFetch({ data: studentData || null, error: studentError || null, fetchedAt: new Date().toISOString() });
+        setLastFetch({ data: studentData || null, error: studentError, fetchedAt: new Date().toISOString() });
 
         if (studentError) {
           console.error('AdminDashboard: Error fetching student data:', studentError);
@@ -222,18 +223,7 @@ export default function AdminDashboard() {
     fetchNonEligibleCount();
   }, [navigate]);
 
-const loadNotifications = async (id) => {
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", id);
 
-  if (error) {
-    console.error(error);
-  } else {
-    console.log("Notifications:", data);
-  }
-};
 
   // New filters for replacement
   const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: false });
@@ -249,8 +239,7 @@ const loadNotifications = async (id) => {
     return ['all', ...new Set(educations)];
   }, [students]);
 
-  // Old filters (deprecated)
-  const [filters, setFilters] = useState({ class: "", donor: "", feeStatus: "", stream: "" });
+
 
 
   const [activeSection, setActiveSection] = useState("overview");
@@ -416,12 +405,7 @@ setEligibleCount(data?.length || 0);
     setStudents((prev) => prev.filter((p) => p.id !== id));
   };
 */
-  // helpers
-  const uniqueCourses = useMemo(() => {
-    const set = new Set();
-    students.forEach(s => s.course && set.add(s.course));
-    return Array.from(set);
-  }, [students]);
+
 
 const handleApprove = async (student) => {
   try {
@@ -913,8 +897,8 @@ const handleEditDonor = (donor) => {
               email_notifications: emailNotifications,
               sms_alerts: smsAlerts,
               system_notifications: systemNotifications,
-              default_language: defaultLanguage,
-              time_zone: timeZone
+              default_language: "English",
+              time_zone: "IST (UTC+5:30)",
             }
           }
         });
@@ -1843,35 +1827,46 @@ const handleEditDonor = (donor) => {
 
               <div className="reports-grid">
                 <div className="report-card">
-                  <h4>Financial Overview</h4>
-                  <h4>(Under Construction)</h4>
+                  <h4>Financial Overview(DEMO)</h4>
+                  <div className="report-meta">
+                    <p>Total Funds: <strong>₹{donors.reduce((s,d) => s + (d.amount || 0), 0)}</strong></p>
+                  </div>
                   <div className="chart-placeholder">Fund Utilization Chart</div>
-                  <button className="btn small" onClick={() => handleDownloadSpecificReport('financial')}>Download Report</button>
+                  <div className="report-actions">
+                    <button className="btn small" onClick={() => handleDownloadSpecificReport('financial')}>Download Report</button>
+                  </div>
                 </div>
 
                 <div className="report-card">
-                  <h4>Donor Contributions</h4>
-                  <h4>(Under Construction)</h4>
-                  <div className="chart-placeholder">Contribution Analysis </div>
-                  <button className="btn small" onClick={() => handleDownloadSpecificReport('donor')}>Download Report</button>
+                  <h4>Donor Contributions(DEMO)</h4>
+                  <div className="report-meta">
+                    <p>Total Donors: <strong>{donors.length}</strong></p>
+                  </div>
+                  <div className="chart-placeholder">Contribution Analysis</div>
+                  <div className="report-actions">
+                    <button className="btn small" onClick={() => handleDownloadSpecificReport('donor')}>Download Report</button>
+                  </div>
                 </div>
                 {/* Eligible Students Report */}
                 <div className="report-card">
                   <h4>Eligible Students</h4>
                   <div className="report-meta">
-                     <p>Total Eligible: <strong>{eligibleCount}</strong></p>
+                    <p>Total Eligible: <strong>{eligibleCount}</strong></p>
                   </div>
+                  <div className="chart-placeholder">Eligible Students Preview</div>
                   <div className="report-actions">
-<button
-  className="btn small"
-  onClick={() => {
-    fetchEligibleStudents();
-    setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    }, 200);
-  }}
-  disabled={loadingEligible}
->
+                    <button
+                      className="btn small"
+                      onClick={async () => {
+                        setShowNonEligibleTable(false);
+                        if (!showEligibleTable || eligibleStudents.length === 0) {
+                          await fetchEligibleStudents();
+                          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+                        }
+                        setShowEligibleTable(true);
+                      }}
+                      disabled={loadingEligible}
+                    >
                       {loadingEligible ? 'Loading...' : 'View Data'}
                     </button>
                     <button className="btn small" onClick={handleDownloadEligibleReport} disabled={eligibleStudents.length === 0}>
@@ -1884,19 +1879,22 @@ const handleEditDonor = (donor) => {
                 <div className="report-card">
                   <h4>Non-Eligible Students</h4>
                   <div className="report-meta">
-                     <p>Total Non-Eligible: <strong>{nonEligibleCount}</strong></p>
+                    <p>Total Non-Eligible: <strong>{nonEligibleCount}</strong></p>
                   </div>
+                  <div className="chart-placeholder">Non-Eligible Students Preview</div>
                   <div className="report-actions">
-<button
-  className="btn small"
-  onClick={() => {
-    fetchNonEligibleStudents();
-    setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    }, 200);
-  }}
-  disabled={loadingNonEligible}
->
+                    <button
+                      className="btn small"
+                      onClick={async () => {
+                        setShowEligibleTable(false);
+                        if (!showNonEligibleTable || nonEligibleStudents.length === 0) {
+                          await fetchNonEligibleStudents();
+                          window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+                        }
+                        setShowNonEligibleTable(true);
+                      }}
+                      disabled={loadingNonEligible}
+                    >
                       {loadingNonEligible ? 'Loading...' : 'View Data'}
                     </button>
                     <button className="btn small" onClick={handleDownloadNonEligibleReport} disabled={nonEligibleStudents.length === 0}>
@@ -1907,9 +1905,9 @@ const handleEditDonor = (donor) => {
               </div>
 
               {/* Eligible Students Table */}
-{false && (
-                <div className="table-wrap" style={{marginTop: '24px'}}>
-                  <h3>Eligible Students List</h3>
+              {showEligibleTable && (
+<div className="table-wrap" style={{marginTop: '24px'}}>
+                  <h3>Eligible Students List ({eligibleStudents.length})</h3>
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -1926,19 +1924,20 @@ const handleEditDonor = (donor) => {
                       {eligibleStudents.map(s => (
                         <tr key={s.id}>
                           <td>{s.student_name || s.full_name}</td>
-                          <td>{s.email || s.email}</td>
-                          <td>{s.contact || s.contact}</td>
+                          <td>{s.email}</td>
+                          <td>{s.contact}</td>
                           <td>{s.education || s.class}</td>
                           <td>{s.school || s.college || '-'}</td>
                           <td>
                             {s.created_at 
-                              ? new Date(s.created_at).toLocaleDateString() 
+                              ? new Date(s.created_at).toLocaleDateString('en-IN') 
                               : '-'
                             }
                           </td>
                           <td>
                             <button 
-                              className="btn small" 
+                              className="btn small outline" 
+                              style={{minWidth: '44px'}}
                               onClick={() => setViewEligibleStudent(s)}
                             >
                               View
@@ -1952,9 +1951,9 @@ const handleEditDonor = (donor) => {
               )}
 
               {/* Non-Eligible Students Table */}
-{false && (
-                <div className="table-wrap" style={{marginTop: '24px'}}>
-                  <h3>Non-Eligible Students List</h3>
+              {showNonEligibleTable && (
+<div className="table-wrap" style={{marginTop: '24px'}}>
+                  <h3>Non-Eligible Students List ({nonEligibleStudents.length})</h3>
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -1971,13 +1970,13 @@ const handleEditDonor = (donor) => {
                       {nonEligibleStudents.map(s => (
                         <tr key={s.id}>
                           <td>{s.student_name || s.full_name}</td>
-                          <td>{s.email || s.email}</td>
-                          <td>{s.contact || s.contact}</td>
+                          <td>{s.email}</td>
+                          <td>{s.contact}</td>
                           <td>{s.education || s.class}</td>
                           <td>{s.school || s.college || '-'}</td>
                           <td>
                             {s.created_at 
-                              ? new Date(s.created_at).toLocaleDateString() 
+                              ? new Date(s.created_at).toLocaleDateString('en-IN') 
                               : '-'
                             }
                           </td>

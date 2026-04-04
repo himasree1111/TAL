@@ -267,7 +267,19 @@ html {
 .btn.small {
   padding: 6px 12px;
   font-size: 13px;
-  min-width: 60px;
+  min-width: 44px;
+}
+
+.btn.small.outline {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn.small.outline:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+  border-color: #9ca3af;
 }
 
 .btn.primary {

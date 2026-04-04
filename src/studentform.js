@@ -27,6 +27,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   useEffect(() => {
     // fetch logged-in user email (volunteer)
     const getUser = async () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       try {
         const { data, error } = await supabase.auth.getUser();
         if (error) {
@@ -49,7 +50,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       }
     };
     getUser();
-  }, []);
+  }, [volunteer?.name, volunteer?.phone, supabase, setFormData]);
 
   const [formData, setFormData] = useState({
     first_name: "",

@@ -88,12 +88,13 @@ const StudentDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   // notifFilter state removed
   const [documents, setDocuments] = useState(initialDocumentState);
+
   const [uploadProgress, setUploadProgress] = useState({});
-  const [error, setError] = useState("");
-const [settings, setSettings] = useState({
-  newPassword: "",
-  confirmPassword: ""
-});
+  const [error, setError] = useState(""); // Fix: Define missing setError
+  const [settings, setSettings] = useState({
+    newPassword: "",
+    confirmPassword: ""
+  });
 const [showNewPassword, setShowNewPassword] = useState(false);
 const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -257,10 +258,9 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     fetchProfileFormData();
-  }, [fetchProfileFormData]);
+  }, [fetchProfileFormData, studentEmail]);
 
-  // Fetch documents when studentFormId changes
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (!studentFormId) return;
     setLoadingDocuments(true);
     setError('');
@@ -282,11 +282,11 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     } finally {
       setLoadingDocuments(false);
     }
-  };
+  }, [studentFormId]);
 
   useEffect(() => {
     fetchDocuments();
-  }, [studentFormId]);
+  }, [studentFormId, fetchDocuments]);
 
   const handleDeleteDocument = async (docId) => {
     console.log('🔥 DEBUG DELETE START:', docId);
@@ -367,117 +367,117 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
     let subscription;
 
     const init = async () => {
-  if (!studentEmail) return;
-  
-  const { data: profileData, error: profileError } = await supabase
-    .from('eligible_students')
-    .select('*')
-    .eq('email', studentEmail)
-    .single();
-  
-  if (profileError || !profileData) {
-    const { data: nonEligibleData, error: nonError } = await supabase
-      .from('non_eligible_students')
-      .select('*')
-      .eq('email', studentEmail)
-      .single();
-    if (nonError || !nonEligibleData) return;
-    setProfile(nonEligibleData);
-    setStudentId(nonEligibleData.id);
-  } else {
-    setProfile(profileData);
-    setStudentId(profileData.id);
-  }
-
-    // Fetch student_form_submissions ID for documents (retry logic)
-    const fetchFormId = async () => {
-      console.log('[DASHBOARD] Fetching studentFormId for email:', studentEmail);
-      try {
-        // 1. Try student_form_submissions (pending forms)
-        let { data: formData, error } = await supabase
-          .from('student_form_submissions')
-          .select('id')
+      if (!studentEmail) return;
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('eligible_students')
+        .select('*')
+        .eq('email', studentEmail)
+        .single();
+      
+      if (profileError || !profileData) {
+        const { data: nonEligibleData, error: nonError } = await supabase
+          .from('non_eligible_students')
+          .select('*')
           .eq('email', studentEmail)
           .single();
-
-        if (!formData) {
-          console.log('[DASHBOARD] No pending form, checking eligible_students');
-          // 2. Fallback to eligible_students
-          ({ data: formData, error } = await supabase
-            .from('eligible_students')
-            .select('student_id')
-            .eq('email', studentEmail)
-            .single());
-          if (formData) formData.id = formData.student_id;
-        }
-
-        if (!formData) {
-          console.log('[DASHBOARD] No eligible, checking non_eligible_students');
-          // 3. Fallback to non_eligible_students
-          ({ data: formData, error } = await supabase
-            .from('non_eligible_students')
-            .select('student_id')
-            .eq('email', studentEmail)
-            .single());
-          if (formData) formData.id = formData.student_id;
-        }
-
-        console.log('[DASHBOARD] Final formData:', formData);
-        if (formData?.id) {
-          setStudentFormId(formData.id);
-        } else {
-          console.warn('[DASHBOARD] No form found for', studentEmail);
-        }
-      } catch (err) {
-        console.error('[DASHBOARD] fetchFormId error:', err);
-      } finally {
-        setFormIdLoading(false);
+        if (nonError || !nonEligibleData) return;
+        setProfile(nonEligibleData);
+        setStudentId(nonEligibleData.id);
+      } else {
+        setProfile(profileData);
+        setStudentId(profileData.id);
       }
-    };
-    await fetchFormId();
-    // console.log('[DASHBOARD] Final studentFormId:', studentFormId);
-  
-  setSettings({
-    name: profileData?.full_name || '',
-    email: profileData?.email || '',
-    phone: profileData?.phone || ''
-  });
-  
-  const type = await getStudentType(studentId);
-  setStudentType(type);
-  
-  const res = await getStudentNotifications(type);
-  if (res.success) {
-    setNotifications(res.notifications);
-  }
-  
-  subscription = subscribeToNotifications((newData) => {
-    if (!studentType) return;
-    if (filterNotification(newData, studentType)) {
-      setNotifications(prev => {
-        const exists = prev.some(n => n.id === newData.id);
-        if (exists) return prev;
-        return [newData, ...prev];
+
+      // Fetch student_form_submissions ID for documents (retry logic)
+      const fetchFormId = async () => {
+        console.log('[DASHBOARD] Fetching studentFormId for email:', studentEmail);
+        try {
+          // 1. Try student_form_submissions (pending forms)
+          let { data: formData, error } = await supabase
+            .from('student_form_submissions')
+            .select('id')
+            .eq('email', studentEmail)
+            .single();
+
+          if (!formData) {
+            console.log('[DASHBOARD] No pending form, checking eligible_students');
+            // 2. Fallback to eligible_students
+            ({ data: formData, error } = await supabase
+              .from('eligible_students')
+              .select('student_id')
+              .eq('email', studentEmail)
+              .single());
+            if (formData) formData.id = formData.student_id;
+          }
+
+          if (!formData) {
+            console.log('[DASHBOARD] No eligible, checking non_eligible_students');
+            // 3. Fallback to non_eligible_students
+            ({ data: formData, error } = await supabase
+              .from('non_eligible_students')
+              .select('student_id')
+              .eq('email', studentEmail)
+              .single());
+            if (formData) formData.id = formData.student_id;
+          }
+
+          console.log('[DASHBOARD] Final formData:', formData);
+          if (formData?.id) {
+            setStudentFormId(formData.id);
+          } else {
+            console.warn('[DASHBOARD] No form found for', studentEmail);
+          }
+        } catch (err) {
+          console.error('[DASHBOARD] fetchFormId error:', err);
+        } finally {
+          setFormIdLoading(false);
+        }
+      };
+      await fetchFormId();
+
+      setSettings({
+        name: profileData?.full_name || '',
+        email: profileData?.email || '',
+        phone: profileData?.phone || ''
       });
-    }
-  });
-};
+      
+      const type = await getStudentType(studentId);
+      setStudentType(type);
+      
+      const res = await getStudentNotifications(type);
+      if (res.success) {
+        setNotifications(res.notifications);
+      }
+      
+      subscription = subscribeToNotifications((newData) => {
+        if (!studentType) return;
+        if (filterNotification(newData, studentType)) {
+          setNotifications(prev => {
+            const exists = prev.some(n => n.id === newData.id);
+            if (exists) return prev;
+            return [newData, ...prev];
+          });
+        }
+      });
+    };
 
     init();
 
     return () => {
-      if (subscription) supabase.removeChannel(subscription);
+      // Better cleanup - remove realtime subscription properly
+      if (subscription) {
+        supabase.removeChannel(subscription);
+        subscription.unsubscribe();
+      }
     };
-  }, [studentEmail]);
+  }, [studentEmail, supabase, getStudentNotifications, getStudentType, setProfile, setStudentId, setStudentFormId, setFormIdLoading, setSettings, setStudentType, setNotifications]);
 
 
 
 
 
-  const handleSettingsChange = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    setSaveSuccess(false);
-  };
+
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -650,12 +650,7 @@ const handleUpload = async (category, files, documentName) => {
   }
 };
 
-  const handleRemoveDocument = (category, id) => {
-    setDocuments((prev) => ({
-      ...prev,
-      [category]: prev[category].filter((doc) => doc.id !== id),
-    }));
-  };
+
 
 
   // Profile form handlers
@@ -808,7 +803,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
     }
   };
 
-const totalDocuments = useMemo(() => 0, []);
+
 
   const totalNotifications = notifications.length;
 
