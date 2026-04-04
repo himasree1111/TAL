@@ -18,7 +18,69 @@ export default function StudentForm() {
   const { volunteer } = useVolunteer();
   const { id } = useParams();   // student id
   const isEditMode = !!id;
-  const [volunteerEmail, setVolunteerEmail] = useState("");
+const [volunteerEmail, setVolunteerEmail] = useState("");
+const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    middle_name: "",
+    dob: "",
+    age: "",
+    pob: "",
+    camp_name: "",
+    nationality: "",
+    address: "",
+    class: "",
+    educationcategory: "",
+    educationsubcategory: "",
+    educationyear: "",
+    educationcategory_custom: "",
+    educationsubcategory_custom: "",
+    educationyear_custom: "",
+    email: "",
+    contact: "",
+    parent_contact_2: "",
+    whatsapp: "",
+    student_contact: "",
+    school: "",
+    branch: "",
+    prev_percent: "",
+    present_percent: "",
+    fee: "",
+
+    educational_expenses: {
+      tuition_fee: { checked: false, amount: "" },
+      books_study_materials: { checked: false, amount: "" },
+      uniform: { checked: false, amount: "" },
+      transport_fee: { checked: false, amount: "" },
+      examination_fee: { checked: false, amount: "" },
+      hostel_accommodation: { checked: false, amount: "" },
+      food_mess_charges: { checked: false, amount: "" }
+    },
+    job: "",
+    aspiration: "",
+    scholarship: "",
+    certificates: "",
+    years_area: "",
+    num_family_members: "",
+    family_members_details: [],
+    num_earning_members: "",
+    earning_members_details: [],
+    account_no: "",
+    bank_name: "",
+    bank_branch: "",
+    ifsc_code: "",
+    special_remarks: "",
+    volunteer_name: "",
+    volunteer_contact: "",
+    academic_achievements_choice: "",
+    academic_achievements_details: "",
+    non_academic_achievements_choice: "",
+    non_academic_achievements_details: "",
+    is_single_parent: "",
+    does_work: "",
+    has_scholarship: "",
+
+  });
 const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,70 +113,6 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     };
     getUser();
   }, [volunteer?.name, volunteer?.phone, supabase, setFormData]);
-
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    middle_name: "",
-    dob: "",
-    age: "",
-    pob: "",
-    camp_name: "",
-    nationality: "",
-    address: "",
-    class: "",
-    educationcategory: "",
-    educationsubcategory: "",
-    educationyear: "",
-    educationcategory_custom: "",
-    educationsubcategory_custom: "",
-    educationyear_custom: "",
-    email: "",
-    contact: "",
-    parent_contact_2: "",
-    whatsapp: "",
-    student_contact: "",
-    school: "",
-    branch: "",
-    prev_percent: "",
-    present_percent: "",
-    fee: "",
-  
-
-    educational_expenses: {
-      tuition_fee: { checked: false, amount: "" },
-      books_study_materials: { checked: false, amount: "" },
-      uniform: { checked: false, amount: "" },
-      transport_fee: { checked: false, amount: "" },
-      examination_fee: { checked: false, amount: "" },
-      hostel_accommodation: { checked: false, amount: "" },
-      food_mess_charges: { checked: false, amount: "" }
-    },
-    job: "",
-    aspiration: "",
-    scholarship: "",
-    certificates: "",
-    years_area: "",
-    num_family_members: "",  // New field for number of family members
-    family_members_details: [],  // New field to store family members details
-    num_earning_members: "",  // New field for number of earning members
-    earning_members_details: [],  // New field to store earning members details
-    account_no: "",
-    bank_name: "",
-    bank_branch: "",
-    ifsc_code: "",
-    special_remarks: "",
-    volunteer_name: "",
-    volunteer_contact: "",
-    academic_achievements_choice: "",
-    academic_achievements_details: "",
-    non_academic_achievements_choice: "",
-    non_academic_achievements_details: "",
-    is_single_parent: "",
-does_work: "",
-has_scholarship: "",
-
-  });
 
   const [files, setFiles] = useState({
     school_id: null,
@@ -534,8 +532,6 @@ has_scholarship: "",
       { key: 'last_name', label: 'Last Name' },
       { key: 'email', label: 'Email' },
       { key: 'contact', label: 'First Parent Contact Number' },
-      { key: 'volunteer_name', label: 'Volunteer Name' },
-      { key: 'volunteer_contact', label: 'Volunteer Contact Number' },
       { key: 'camp_date', label: 'Date of Camp' }
     ];
 
