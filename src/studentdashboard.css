@@ -1,6 +1,6 @@
 .student-root {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: clamp(240px, 25vw, 280px) 1fr;
   min-height: 100vh;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
   background: #f6f7f6;
@@ -11,10 +11,10 @@
 .student-sidebar {
   background: #fafcfa;
   border-right: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 28px 20px;
+  padding: clamp(1rem, 3vw, 1.75rem) clamp(1.25rem, 3vw, 1.25rem);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: clamp(1rem, 2vw, 1.25rem);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -110,11 +110,11 @@
 
 /* Main Area */
 .student-main {
-  padding: 28px 34px;
+  padding: clamp(1rem, 4vw, 1.75rem) clamp(1.25rem, 5vw, 2.125rem);
   min-height: 100vh;
   display: block !important;
   width: 100%;
-  gap: 24px;
+  gap: clamp(1.5rem, 3vw, 1.5rem);
   overflow: visible;
 }
 
@@ -298,8 +298,8 @@
 /* Documents */
 .documents-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(280px, 40vw, 420px), 1fr));
+  gap: clamp(1.75rem, 3vw, 1.75rem);
 }
 
 .doc-card {
@@ -882,16 +882,16 @@ width: 100%;
     position: static;
     height: auto;
     overflow-x: auto;
-    padding: 16px 20px;
+    padding: clamp(1rem, 4vw, 1rem) clamp(1.25rem, 5vw, 1.25rem);
   }
   
   .student-main {
-    padding: 20px;
+    padding: clamp(1rem, 4vw, 1.25rem);
   }
   
   .profile-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: clamp(1.25rem, 3vw, 1.25rem);
   }
 }
 
