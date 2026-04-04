@@ -202,10 +202,18 @@ const handleDonate = () => {
               </button>
               {isRolesDropdownOpen && (
                 <div className="dropdown-content">
-                  <button className="dropdown-item" onClick={() => handleRoleSelect('Volunteer')}>Volunteer</button>
-                  <button className="dropdown-item" onClick={() => handleRoleSelect('Student')}>Student</button>
-                  <button className="dropdown-item" onClick={() => handleRoleSelect('Donor')}>Donor</button>
-                  <button className="dropdown-item" onClick={() => handleRoleSelect('Admin')}>Admin</button>
+                  <button className="dropdown-item" onClick={() => handleRoleSelect('Volunteer')}>
+                    <span className="role-icon">👥</span> Volunteer
+                  </button>
+                  <button className="dropdown-item" onClick={() => handleRoleSelect('Admin')}>
+                    <span className="role-icon">👨‍💼</span> Admin
+                  </button>
+                  <button className="dropdown-item" onClick={() => handleRoleSelect('Student')}>
+                    <span className="role-icon">🎓</span> Student
+                  </button>
+                  <button className="dropdown-item" onClick={() => handleRoleSelect('Donor')}>
+                    <span className="role-icon">💰</span> Donor
+                  </button>
                 </div>
               )}
             </div>

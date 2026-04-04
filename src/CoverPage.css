@@ -76,19 +76,45 @@ html, body, #root {
 
 /* NAV BUTTONS */
 .nav-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.3);
   color: var(--dark-text);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  padding: 10px 14px;
-  border-radius: 20px;
-  transition: all 0.3s ease;
+  padding: 12px 18px;
+  border-radius: 25px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.6s;
+}
+
+.nav-btn:hover::before {
+  left: 100%;
+}
+
+.nav-btn:hover {
+  background: linear-gradient(135deg, var(--accent-green), #6bb43a);
+  color: white;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(127,199,74,0.4);
 }
 
 .nav-btn:hover {
@@ -120,12 +146,25 @@ html, body, #root {
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
-  min-width: 150px;
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.2);
+  min-width: 160px;
   z-index: 1000;
+  animation: dropdownSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .dropdown-item {
@@ -134,9 +173,32 @@ html, body, #root {
   border: none;
   color: var(--dark-text);
   font-size: 15px;
-  padding: 10px 15px;
+  padding: 14px 18px;
   text-align: left;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background: linear-gradient(135deg, rgba(127,199,74,0.1), rgba(107,180,58,0.1));
+  color: var(--accent-green);
+  padding-left: 22px;
+}
+
+.role-icon {
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(127,199,74,0.2);
+  color: var(--accent-green);
 }
 
 .dropdown-item:hover {
