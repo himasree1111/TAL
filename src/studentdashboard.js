@@ -544,15 +544,33 @@ const handleUpload = async (category, files, documentName) => {
 
   // Validate files
   const validFiles = Array.from(files).filter(file => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = [
+      // Images
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+      // Documents
+      'application/pdf',
+      // CSV
+      'text/csv', 'application/csv',
+      // Excel
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      // JSON
+      'application/json',
+      // Word
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      // PowerPoint
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-powerpoint'
+    ];
+    const maxSize = 10 * 1024 * 1024; // 10MB
     
     if (!allowedTypes.includes(file.type)) {
-      setError(`Invalid file type: ${file.name}. Allowed: PDF, JPG, PNG, GIF`);
+      setError(`Invalid file type: ${file.name}. Allowed: PDF, JPG, PNG, GIF, WebP, CSV (.csv), Excel (.xlsx/.xls), JSON, Word (.docx/.doc), PowerPoint`);
       return false;
     }
     if (file.size > maxSize) {
-      setError(`File too large: ${file.name} (${(file.size/1024/1024).toFixed(1)}MB). Max 5MB`);
+      setError(`File too large: ${file.name} (${(file.size/1024/1024).toFixed(1)}MB). Max 10MB`);
       return false;
     }
     return true;

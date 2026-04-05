@@ -293,7 +293,7 @@ export default function AdminDashboard() {
       })
       .map(s => ({...s, priority: calculatePriority(s)}))
       .sort((a, b) => b.priority - a.priority);
-  }, [students, newFilters]);
+}, [students, newFilters]);
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
     .from("eligible_students")
