@@ -91,7 +91,7 @@ const StudentDashboard = () => {
   const [documents, setDocuments] = useState(initialDocumentState);
 
   const [uploadProgress, setUploadProgress] = useState({});
-  const [error, setError] = useState(""); // Fix: Define missing setError
+  const [error, setError] = useState(""); // _error unused
   const [settings, setSettings] = useState({
     newPassword: "",
     confirmPassword: ""
@@ -298,7 +298,8 @@ console.log(studentId, studentType);
 
   useEffect(() => {
     fetchDocuments();
-  }, [studentFormId, fetchDocuments]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentFormId, fetchDocuments, studentId, studentType]);
 
   const handleDeleteDocument = async (docId) => {
     console.log('🔥 DEBUG DELETE START:', docId);
@@ -602,16 +603,16 @@ const handleUpload = async (category, files, documentName) => {
       console.log('[UPLOAD] File path:', filePath);
 
       // Upload with progress if possible (Supabase supports it)
-      const { error: uploadError } = await supabase.storage
+      const { error: _uploadError } = await supabase.storage
         .from('student_documents')
         .upload(filePath, file, { 
           cacheControl: '3600',
           upsert: false 
         });
 
-      if (uploadError) {
-        console.error('[UPLOAD]', uploadError);
-        const msg = uploadError.message.includes('policy') ? 'Upload blocked by permissions. Check Supabase policies.' : uploadError.message;
+      if (_uploadError) {
+        console.error('[UPLOAD]', _uploadError);
+        const msg = _uploadError.message.includes('policy') ? 'Upload blocked by permissions. Check Supabase policies.' : _uploadError.message;
         setUploadProgress(prev => ({ 
           ...prev, 
           [id]: { ...prev[id], progress: 0, error: msg, status: 'error' } 

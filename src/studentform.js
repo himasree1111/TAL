@@ -112,7 +112,8 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       }
     };
     getUser();
-  }, [volunteer?.name, volunteer?.phone, supabase, setFormData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [volunteer?.name, volunteer?.phone]);
 
   const [files, setFiles] = useState({
     school_id: null,
