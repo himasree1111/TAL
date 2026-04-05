@@ -716,6 +716,19 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
         updatedData.educational_expenses = data.educational_expenses;
       }
 
+      // ✅ Map achievements for edit mode - safe null handling
+      updatedData.academic_achievements_choice = (data.academic_achievements === true || data.academic_achievements === 'true') ? "YES" : "NO";
+      updatedData.academic_achievements_details = data.academic_achievements_details || "";
+      updatedData.non_academic_achievements_choice = (data.non_academic_achievements === true || data.non_academic_achievements === 'true') ? "YES" : "NO";
+      updatedData.non_academic_achievements_details = data.non_academic_achievements_details || "";
+
+      console.log("🎯 Achievements mapping:", {
+        academic_db: data.academic_achievements,
+        academic_choice: updatedData.academic_achievements_choice,
+        non_academic_db: data.non_academic_achievements,
+        non_academic_choice: updatedData.non_academic_achievements_choice
+      });
+
       setFormData(prev => ({
         ...prev,
         ...updatedData

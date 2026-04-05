@@ -1,12 +1,20 @@
-# Fix StudentForm setFormData Initialization Error
+# Task Progress: Fix Student Form Achievements Edit/Save
 
-## Steps:
-- [x] 1. Create TODO.md with plan ✓
-- [x] 2. Edit src/studentform.js: Move [formData, setFormData] useState before first useEffect ✓
-- [ ] 3. Test new form creation from VolunteerDashboard
-- [ ] 4. Test edit form functionality
-- [ ] 5. Verify volunteer auto-fill works
-- [ ] 6. Complete task
+## ✅ Completed Steps:
+- [x] 1. Fix ESLint errors in studentdashboard.js & studentform.js (app compiles)
+- [x] 2. Fix studentdashboard.js upload variable reference (_uploadError → consistent)
 
-Current: Edit applied. React should auto-reload. Test the form opening now.
+## ✅ Completed Steps:
+- [x] 1. Fix ESLint errors in studentdashboard.js & studentform.js (app compiles)
+- [x] 2. Fix studentdashboard.js upload variable reference (_uploadError → consistent)
+- [x] 3. Fix studentform.js achievements edit/save mapping (added DB→form mapping in fetchStudent)
+
+## Next Steps:
+1️⃣ Test: Edit form → achievements load → edit details → save → verify DB  
+2️⃣ Complete task
+
+## Next Steps:
+1️⃣ Apply approved fix to src/studentform.js fetchStudent
+2️⃣ Test: Edit form → achievements load → edit details → save → verify DB
+3️⃣ Complete task
 
