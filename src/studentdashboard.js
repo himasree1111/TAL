@@ -61,27 +61,27 @@ const StatCard = ({ icon, label, value }) => (
   </div>
 );
 
-const getStudentType = async (studentId) => {
-  const { data: eligible } = await supabase
-    .from("eligible_students")
-    .select("id")
-    .eq("id", studentId)
-    .single();
-
-  if (eligible) return "eligible";
-
-  const { data: nonEligible } = await supabase
-    .from("non_eligible_students")
-    .select("id")
-    .eq("id", studentId)
-    .single();
-
-  if (nonEligible) return "non-eligible";
-
-  return "all";
-};
 
 const StudentDashboard = () => {
+  const getStudentType = useCallback(async (studentId) => {
+    const { data: eligible } = await supabase
+      .from("eligible_students")
+      .select("id")
+      .eq("id", studentId)
+      .single();
+  
+    if (eligible) return "eligible";
+  
+    const { data: nonEligible } = await supabase
+      .from("non_eligible_students")
+      .select("id")
+      .eq("id", studentId)
+      .single();
+  
+    if (nonEligible) return "non-eligible";
+  
+    return "all";
+  }, []);
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("dashboard");
 
@@ -189,7 +189,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     { key: 'family', label: 'Family' },
     { key: 'other', label: 'Other Details' }
   ];
-
+console.log(studentId, studentType);
   const fetchProfileFormData = useCallback(async () => {
     if (!studentEmail) return;
 
@@ -379,6 +379,7 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
     let subscription;
 
     const init = async () => {
+      let idToUse = null;
       if (!studentEmail) return;
       
       const { data: profileData, error: profileError } = await supabase
@@ -387,26 +388,30 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
         .eq('email', studentEmail)
         .single();
       
-      if (profileError || !profileData) {
-        const { data: nonEligibleData, error: nonError } = await supabase
-          .from('non_eligible_students')
-          .select('*')
-          .eq('email', studentEmail)
-          .single();
-        if (nonError || !nonEligibleData) return;
-        setProfile(nonEligibleData);
-        setStudentId(nonEligibleData.id);
-      } else {
-        setProfile(profileData);
-        setStudentId(profileData.id);
-      }
+    if (profileError || !profileData) {
+  const { data: nonEligibleData, error: nonError } = await supabase
+    .from('non_eligible_students')
+    .select('*')
+    .eq('email', studentEmail)
+    .single();
+
+  if (nonError || !nonEligibleData) return;
+
+  setProfile(nonEligibleData);
+  setStudentId(nonEligibleData.id);
+  idToUse = nonEligibleData.id;   // ✅ FIX
+} else {
+  setProfile(profileData);
+  setStudentId(profileData.id);
+  idToUse = profileData.id;       // ✅ FIX
+}
 
       // Fetch student_form_submissions ID for documents (retry logic)
       const fetchFormId = async () => {
         console.log('[DASHBOARD] Fetching studentFormId for email:', studentEmail);
         try {
           // 1. Try student_form_submissions (pending forms)
-          let { data: formData, error } = await supabase
+          let { data: formData } = await supabase
             .from('student_form_submissions')
             .select('id')
             .eq('email', studentEmail)
@@ -415,7 +420,7 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
           if (!formData) {
             console.log('[DASHBOARD] No pending form, checking eligible_students');
             // 2. Fallback to eligible_students
-            ({ data: formData, error } = await supabase
+            ({ data: formData } = await supabase
               .from('eligible_students')
               .select('student_id')
               .eq('email', studentEmail)
@@ -426,7 +431,7 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
           if (!formData) {
             console.log('[DASHBOARD] No eligible, checking non_eligible_students');
             // 3. Fallback to non_eligible_students
-            ({ data: formData, error } = await supabase
+            ({ data: formData } = await supabase
               .from('non_eligible_students')
               .select('student_id')
               .eq('email', studentEmail)
@@ -454,8 +459,8 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
         phone: profileData?.phone || ''
       });
       
-      const type = await getStudentType(studentId);
-      setStudentType(type);
+// const type = await getStudentType(idToUse);
+const type = await getStudentType(idToUse);      setStudentType(type);
       
       const res = await getStudentNotifications(type);
       if (res.success) {
@@ -463,9 +468,8 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
       }
       
       subscription = subscribeToNotifications((newData) => {
-        if (!studentType) return;
-        if (filterNotification(newData, studentType)) {
-          setNotifications(prev => {
+        // if (!studentType) return;
+if (filterNotification(newData, type)) {          setNotifications(prev => {
             const exists = prev.some(n => n.id === newData.id);
             if (exists) return prev;
             return [newData, ...prev];
@@ -483,8 +487,7 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
         subscription.unsubscribe();
       }
     };
-  }, [studentEmail, supabase, getStudentNotifications, getStudentType, setProfile, setStudentId, setStudentFormId, setFormIdLoading, setSettings, setStudentType, setNotifications]);
-
+}, [studentEmail, getStudentType]);
 
 
 
@@ -599,7 +602,7 @@ const handleUpload = async (category, files, documentName) => {
       console.log('[UPLOAD] File path:', filePath);
 
       // Upload with progress if possible (Supabase supports it)
-      const { error: uploadError, data: uploadData } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('student_documents')
         .upload(filePath, file, { 
           cacheControl: '3600',

@@ -258,27 +258,35 @@ export default function AdminDashboard() {
     return { totalStudents, feesCollected, pendingFees, activeDonors };
   }, [students, donors]);
 
-  const getMaxPercent = (s) => Math.max(parseFloat(s.prev_percent || 0), parseFloat(s.present_percent || 0));
-  const getAvgPercentage = (s) => {
+const getMaxPercent = React.useCallback((s) => {
+  return Math.max(
+    parseFloat(s.prev_percent || 0),
+    parseFloat(s.present_percent || 0)
+  );
+}, []);  const getAvgPercentage = (s) => {
     const prev = parseFloat(s.prev_percent || 0);
     const pres = parseFloat(s.present_percent || 0);
     const avg = ((prev + pres) / 2).toFixed(1);
     return avg > 0 ? avg + '%' : '—';
   };
 
-  const calculatePriority = (s) => {
-    const incomeScore = Math.max(0, 40 - (parseInt(s.earning_members || 1) * 10)); // max 40
-    const academicScore = Math.min(25, getMaxPercent(s)); // max 25  
-    let familyScore = 0;
-    if (s.has_scholarship === false && s.does_work === false && parseInt(s.earning_members || 0) <= 2) {
-      familyScore = 20;
-    } else if (!s.has_scholarship || !s.does_work) {
-      familyScore = 10;
-    }
-    const extraScore = (parseFloat(s.prev_percent || 0) < parseFloat(s.present_percent || 0) ? 10 : 0) + 
-                      (s.does_work === false ? 5 : 0); // max 15
-    return Math.min(100, Math.max(0, incomeScore + academicScore + familyScore + extraScore));
-  };
+ const calculatePriority = React.useCallback((s) => {
+  const incomeScore = Math.max(0, 40 - (parseInt(s.earning_members || 1) * 10));
+  const academicScore = Math.min(25, getMaxPercent(s));
+
+  let familyScore = 0;
+  if (s.has_scholarship === false && s.does_work === false && parseInt(s.earning_members || 0) <= 2) {
+    familyScore = 20;
+  } else if (!s.has_scholarship || !s.does_work) {
+    familyScore = 10;
+  }
+
+  const extraScore =
+    (parseFloat(s.prev_percent || 0) < parseFloat(s.present_percent || 0) ? 10 : 0) +
+    (s.does_work === false ? 5 : 0);
+
+  return Math.min(100, Math.max(0, incomeScore + academicScore + familyScore + extraScore));
+}, [getMaxPercent]);
 
   // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
@@ -293,7 +301,7 @@ export default function AdminDashboard() {
       })
       .map(s => ({...s, priority: calculatePriority(s)}))
       .sort((a, b) => b.priority - a.priority);
-}, [students, newFilters]);
+}, [students, newFilters,calculatePriority,getMaxPercent]);
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
     .from("eligible_students")
@@ -753,7 +761,7 @@ const handleEditDonor = (donor) => {
       };
 
 
-      const { data, error } = await supabase
+      const {  error } = await supabase
         .from('donor_details')
         .insert([formData])
         .select()
@@ -781,7 +789,7 @@ const handleEditDonor = (donor) => {
   const handleEditDonorFormChange = (e) => {
     const { name, value } = e.target;
     if (name === 'full_name') {
-      const cleanedValue = value.replace(/[^a-zA-Z\\s.\\'-]/g, '');
+      const cleanedValue = value.replace(/[^a-zA-Z\s.'-]/g, '');
       setEditDonorForm(prev => ({ ...prev, [name]: cleanedValue }));
       return;
     }
@@ -797,7 +805,7 @@ const handleEditDonor = (donor) => {
     const { name, value } = e.target;
     // Allow only letters, spaces, and common name characters for full_name
     if (name === 'full_name') {
-      const cleanedValue = value.replace(/[^a-zA-Z\s.'\-]/g, '');
+      const cleanedValue = value.replace(/[^a-zA-Z\s.'-]/g, '');
       setNewDonorForm(prev => ({ ...prev, [name]: cleanedValue }));
       return;
     }
@@ -837,7 +845,7 @@ const handleEditDonor = (donor) => {
         donation_type: editDonorForm.donation_type,
         donation_date: editDonorForm.donation_date ? new Date(editDonorForm.donation_date).toISOString() : new Date().toISOString()
       };
-      const { data, error } = await supabase
+      const {  error } = await supabase
         .from('donor_details')
         .update(formData)
         .eq('id', editingDonor.id)
