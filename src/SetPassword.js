@@ -10,7 +10,7 @@ export default function SetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState([]);
+
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +25,7 @@ export default function SetPassword() {
     }
   }, [email, navigate]);
 
+  // eslint-disable-next-line no-undef
   const validatePassword = (value) => {
     const errors = [];
     if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
@@ -38,9 +39,7 @@ export default function SetPassword() {
   const handlePasswordChange = (e) => {
     const value = e.target.value;
     setPassword(value);
-    if (showErrors) {
-      setPasswordErrors(validatePassword(value));
-    }
+
   };
 
   const handleConfirmPasswordChange = (e) => {
