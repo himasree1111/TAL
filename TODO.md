@@ -1,20 +1,22 @@
-# Task Progress: Fix Student Form Achievements Edit/Save
+# Student Dashboard - Separate Placeholders for Document Upload
 
-## ✅ Completed Steps:
-- [x] 1. Fix ESLint errors in studentdashboard.js & studentform.js (app compiles)
-- [x] 2. Fix studentdashboard.js upload variable reference (_uploadError → consistent)
+## Plan Breakdown (Approved) - ✅ COMPLETED
 
-## ✅ Completed Steps:
-- [x] 1. Fix ESLint errors in studentdashboard.js & studentform.js (app compiles)
-- [x] 2. Fix studentdashboard.js upload variable reference (_uploadError → consistent)
-- [x] 3. Fix studentform.js achievements edit/save mapping (added DB→form mapping in fetchStudent)
+User task: Add separate placeholders in student dashboard document upload sections.
 
-## Next Steps:
-1️⃣ Test: Edit form → achievements load → edit details → save → verify DB  
-2️⃣ Complete task
+**Files:** src/studentdashboard.js
 
-## Next Steps:
-1️⃣ Apply approved fix to src/studentform.js fetchStudent
-2️⃣ Test: Edit form → achievements load → edit details → save → verify DB
-3️⃣ Complete task
+**Steps:**
+- [x] Step 1: Update DOCUMENT_CATEGORIES array to include `placeholder` prop for each category. ✅
+- [x] Step 2: In `renderDocumentUpload()`, use `category.placeholder` in text input. ✅
+- [x] Step 3: Verified in code - placeholders now category-specific (e.g., "e.g. Fee Receipt 2024" for fee).
+- [x] Step 4: Upload logic unchanged, works as before.
+
+**Changes Summary:**
+- DOCUMENT_CATEGORIES now has `placeholder` for each category.
+- Document name input uses `placeholder={category.placeholder}` for fee/extracurricular.
+
+**Test:** Run `npm start`, login as student, go to Documents tab - see separate placeholders per category.
+
+**Task complete!** 🎉
 

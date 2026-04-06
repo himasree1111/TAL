@@ -19,10 +19,10 @@ const NAV_ITEMS = [
 ];
 
 const DOCUMENT_CATEGORIES = [
-  { key: "academic", title: "Academic Documents", icon: "📚" },
-  { key: "fee", title: "Fee Receipts", icon: "💰" },
-  { key: "personal", title: "Personal Documents", icon: "🆔" },
-  { key: "extracurricular", title: "Extracurricular", icon: "🏆" },
+  { key: "academic", title: "Academic Documents", icon: "📚", placeholder: "Auto-generated from dropdown" },
+  { key: "fee", title: "Fee Receipts", icon: "💰", placeholder: "Enter Voucher Number" },
+  { key: "personal", title: "Personal Documents", icon: "🆔", placeholder: "Select document type" },
+  { key: "extracurricular", title: "Extracurricular", icon: "🏆", placeholder: "Enter Activity Name" },
 ];
 
 const initialDocumentState = DOCUMENT_CATEGORIES.reduce((acc, curr) => {
@@ -974,10 +974,11 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                     <option value="Aadhar Card">Aadhar Card</option>
                     <option value="Bonified">Bonified</option>
                     <option value="Income Certificate">Income Certificate</option>
+                    <option value="Other Certificate">Other Certificate</option>
                   </select>
                 ) : (
                   <input
-                    placeholder={`Document name for ${category.title} (e.g., 10th Marksheet)`}
+                    placeholder={category.placeholder}
                     value={documentNames[category.key]}
                     onChange={(e) => setDocumentNames(prev => ({ ...prev, [category.key]: e.target.value }))}
                     className="doc-input"
