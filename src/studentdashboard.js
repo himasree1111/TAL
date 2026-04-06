@@ -1163,6 +1163,8 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
     );
   };
 
+  const getYesNo = (value) => value === 'YES' ? 'Yes' : 'No';
+
   const renderProfile = () => (
     <div className="settings-panel">
       <div className="settings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1803,7 +1805,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                   </>
                 ) : (
                   <div className="view-value">
-                    {profileForm.is_single_parent || 'Not provided'}
+                    {getYesNo(profileForm.is_single_parent)}
                   </div>
                 )}
               </div>
@@ -1837,7 +1839,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                   </>
                 ) : (
                   <div className="view-value">
-                    {profileForm.does_work || 'Not provided'}
+                    {getYesNo(profileForm.does_work)}
                   </div>
                 )}
               </div>
@@ -1889,7 +1891,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                   </>
                 ) : (
                   <div className="view-value">
-                    {profileForm.has_scholarship || 'Not provided'}
+                    {getYesNo(profileForm.has_scholarship)}
                   </div>
                 )}
               </div>
