@@ -125,6 +125,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { studentEmail, logout: contextLogout } = useStudent();
 
   const [profileForm, setProfileForm] = useState({
+    student_public_id: '',
     first_name: '',
     last_name: '',
     middle_name: '',
@@ -210,6 +211,7 @@ console.log(studentId, studentType);
 
       if (formData) {
         const mappedData = {
+          student_public_id: formData.student_public_id || '',
           first_name: formData.first_name || '',
           last_name: formData.last_name || '',
           middle_name: formData.middle_name || '',
@@ -879,6 +881,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
 
   const renderStatsBar = () => (
     <div className="stats-bar">
+      <StatCard icon="🆔" label="Student ID" value={profileForm.student_public_id || 'Pending'} />
       <StatCard icon="🔔" label="Notifications" value={totalNotifications} />
     </div>
   );
@@ -1265,6 +1268,12 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
             <h3 className="profile-section-title">Personal Information</h3>
             
             <div className="profile-grid">
+              <div className="form-row">
+                <label>Student ID</label>
+                <div className="view-value">
+                  {profileForm.student_public_id || 'Not assigned yet'}
+                </div>
+              </div>
               <div className="form-row">
                 <label>First Name</label>
                 {isEditing ? (
