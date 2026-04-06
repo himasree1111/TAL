@@ -2,10 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import supabase from "./supabaseClient";
+import "./studentlogin.css";
 
 export default function SetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,8 +25,37 @@ export default function SetPassword() {
     }
   }, [email, navigate]);
 
+  const validatePassword = (value) => {
+    const errors = [];
+    if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
+    if (!/[A-Z]/.test(value)) errors.push("Must include uppercase letter");
+    if (!/[0-9]/.test(value)) errors.push("Must include number");
+    if (!/[@$!%*?&]/.test(value)) errors.push("Must include special character");
+    if (value.length < 8) errors.push("At least 8 characters");
+    return errors;
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    if (showErrors) {
+      setPasswordErrors(validatePassword(value));
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    setConfirmPassword(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setShowErrors(true);
+
+    const pwdErrors = validatePassword(password);
+    if (pwdErrors.length > 0) {
+      toast.error("Please fix password requirements");
+      return;
+    }
 
     if (!password || !confirmPassword) {
       toast.error("Please fill all fields");
@@ -58,37 +92,77 @@ export default function SetPassword() {
     }
   };
 
+  const currentPasswordErrors = showErrors ? validatePassword(password) : [];
+
   return (
-    <div style={{ padding: "40px", textAlign: "center" }}>
-      <h2>Set Your Password</h2>
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1>Set Your Password</h1>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="password"
-          placeholder="Enter new password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ padding: "10px", margin: "10px", width: "250px" }}
-        />
+        <form onSubmit={handleSubmit}>
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter new password"
+              value={password}
+              onChange={handlePasswordChange}
+className={currentPasswordErrors.length > 0 ? "input-error" : ""}
+              style={{ padding: "10px 42px 10px 10px", margin: "10px 0", width: "250px" }}
+            />
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: "absolute",
+                right: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: "pointer",
+                color: "#555",
+                fontSize: "18px",
+              }}
+            >
+              {showPassword ? "👁" : "👁"}
+            </span>
+          </div>
 
-        <br />
+          {currentPasswordErrors.length > 0 && (
+            <ul className="error-text">
+              {currentPasswordErrors.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          )}
 
-        <input
-          type="password"
-          placeholder="Confirm password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          style={{ padding: "10px", margin: "10px", width: "250px" }}
-        />
+          <div style={{ position: "relative" }}>
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={handleConfirmPasswordChange}
+              className="input-error"
+              style={{ padding: "10px 42px 10px 10px", margin: "10px 0", width: "250px" }}
+            />
+            <span
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={{
+                position: "absolute",
+                right: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: "pointer",
+                color: "#555",
+                fontSize: "18px",
+              }}
+            >
+              {showConfirmPassword ? "👁" : "👁"}
+            </span>
+          </div>
 
-        <br />
+          <button type="submit" style={{ padding: "10px 20px", width: "250px" }}>
+            Set Password
+          </button>
+        </form>
 
-        <button type="submit" style={{ padding: "10px 20px" }}>
-          Set Password
-        </button>
-      </form>
-
-      <ToastContainer />
+        <ToastContainer position="top-center" />
+      </div>
     </div>
   );
 }
