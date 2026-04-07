@@ -44,8 +44,6 @@ export default function AdminDashboard() {
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
   const [showEligibleTable, setShowEligibleTable] = useState(false);
   const [showNonEligibleTable, setShowNonEligibleTable] = useState(false);
-
-  // Donor add form states
   const [showAddDonorModal, setShowAddDonorModal] = useState(false);
   const [newDonorForm, setNewDonorForm] = useState({
     full_name: '',
@@ -198,6 +196,12 @@ export default function AdminDashboard() {
               contact: student.contact,
               whatsapp: student.whatsapp,
               student_contact: student.student_contact,
+              school: student.school,
+              college: student.college,
+              academic_achievements_choice: student.academic_achievements_choice || student.academic_achievements || '',
+              non_academic_achievements_choice: student.non_academic_achievements_choice || student.non_academic_achievements || '',
+              academic_achievements: student.academic_achievements || '',
+              non_academic_achievements: student.non_academic_achievements || '',
               scholarship: student.scholarship,
               has_scholarship: student.has_scholarship,
               does_work: student.does_work,
@@ -228,7 +232,7 @@ export default function AdminDashboard() {
 
 
   // New filters for replacement
-  const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: false });
+  const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: 'all' });
 
   // Unique values for dropdowns
   const uniqueCamps = useMemo(() => {
@@ -241,7 +245,32 @@ export default function AdminDashboard() {
     return ['all', ...new Set(educations)];
   }, [students]);
 
+  const achievementsFilterOptions = [
+    { value: 'all', label: 'All Certificates' },
+    { value: 'both', label: 'Academic + Non-Academic' },
+    { value: 'academic_only', label: 'Academic Only' },
+    { value: 'non_academic_only', label: 'Non-Academic Only' },
+  ];
 
+  const normalizeAchievementFlag = (value) => {
+    if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
+      return true;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return true;
+    }
+    return false;
+  };
+
+  const filterAchievementMatch = (student) => {
+    const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
+    const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
+
+    if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
+    if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
+    if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
+    return true;
+  };
 
 
   const [activeSection, setActiveSection] = useState("overview");
@@ -306,7 +335,7 @@ const getMaxPercent = React.useCallback((s) => {
         if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
         if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
         if (newFilters.toppers && getMaxPercent(s) < 90) return false;
-        if (newFilters.achievements && getMaxPercent(s) < 85) return false;
+        if (!filterAchievementMatch(s)) return false;
         return true;
       })
       .map(s => ({...s, priority: calculatePriority(s)}))
@@ -1127,11 +1156,15 @@ const handleEditDonor = (donor) => {
         onChange={(e) => onChange(e.target.value)}
         className="filter-select"
       >
-        {options.map((opt, idx) => (
-          <option key={idx} value={opt}>
-            {opt === 'all' ? 'All' : opt}
-          </option>
-        ))}
+        {options.map((opt, idx) => {
+          const optionValue = opt.value ?? opt;
+          const optionLabel = opt.label ?? (optionValue === 'all' ? 'All' : optionValue.replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase()));
+          return (
+            <option key={idx} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
       </select>
     </div>
   );
@@ -1360,10 +1393,11 @@ const handleEditDonor = (donor) => {
                     checked={newFilters.toppers} 
                     onChange={(val) => setNewFilters(f => ({...f, toppers: val}))} 
                   />
-                  <FilterToggle 
+                  <FilterCard 
                     title="Achievements" 
                     icon="🏆" 
-                    checked={newFilters.achievements} 
+                    options={achievementsFilterOptions} 
+                    value={newFilters.achievements} 
                     onChange={(val) => setNewFilters(f => ({...f, achievements: val}))} 
                   />
                 </div>
@@ -1393,8 +1427,8 @@ const handleEditDonor = (donor) => {
                         <td>{s.name}</td>
                         <td>{s.email}</td>
                         <td>{s.course || '—'}</td>
-                        <td>{s.contact}</td>
-                        <td>{s.campName}</td>
+                        <td className="nowrap-cell">{s.contact || '—'}</td>
+                        <td>{s.campName || '—'}</td>
                         <td className={`priority-cell priority-${s.priority >= 80 ? 'high' : s.priority >= 50 ? 'medium' : 'low'}`}>
                           <div><strong>{Math.round(s.priority)}</strong>/100</div>
                           <div className="priority-label">
@@ -1981,7 +2015,7 @@ const handleEditDonor = (donor) => {
                 <div className="form-group">
 
                   <label>
-                    <span className="field-label">Notification Title</span>
+                    <span className="field-label">Notification Title <span style={{color: 'red'}}>*</span></span>
                     <input
                       type="text"
                       value={notificationTitle}
@@ -2005,7 +2039,7 @@ const handleEditDonor = (donor) => {
 
                 <div className="form-group">
                   <label className="full-width">
-                    <span className="field-label">Message</span>
+                    <span className="field-label">Message <span style={{color: 'red'}}>*</span></span>
                     <textarea
                       value={notificationMessage}
                       onChange={(e) => setNotificationMessage(e.target.value)}
@@ -2072,7 +2106,9 @@ const handleEditDonor = (donor) => {
                   <div className="report-meta">
                     <p>Total Funds: <strong>₹{donors.reduce((s,d) => s + (d.amount || 0), 0)}</strong></p>
                   </div>
-                  <div className="chart-placeholder">Fund Utilization Chart</div>
+                  <div className="chart-container">
+                    <div className="chart-placeholder">Chart Coming Soon</div>
+                  </div>
                   <div className="report-actions">
                     <button className="btn small" onClick={() => handleDownloadSpecificReport('financial')}>Download Report</button>
                   </div>
@@ -2083,7 +2119,9 @@ const handleEditDonor = (donor) => {
                   <div className="report-meta">
                     <p>Total Donors: <strong>{donors.length}</strong></p>
                   </div>
-                  <div className="chart-placeholder">Contribution Analysis</div>
+                  <div className="chart-container">
+                    <div className="chart-placeholder">Chart Coming Soon</div>
+                  </div>
                   <div className="report-actions">
                     <button className="btn small" onClick={() => handleDownloadSpecificReport('donor')}>Download Report</button>
                   </div>
@@ -2094,10 +2132,12 @@ const handleEditDonor = (donor) => {
                   <div className="report-meta">
                     <p>Total Eligible: <strong>{eligibleCount}</strong></p>
                   </div>
-                  <div className="chart-placeholder">Eligible Students Preview</div>
+                  <div className="chart-container">
+                    <div className="chart-placeholder">Chart Coming Soon</div>
+                  </div>
                   <div className="report-actions">
                     <button
-                      className="btn small"
+                      className="btn small view-btn"
                       onClick={async () => {
                         setShowNonEligibleTable(false);
                         if (!showEligibleTable || eligibleStudents.length === 0) {
@@ -2122,10 +2162,12 @@ const handleEditDonor = (donor) => {
                   <div className="report-meta">
                     <p>Total Non-Eligible: <strong>{nonEligibleCount}</strong></p>
                   </div>
-                  <div className="chart-placeholder">Non-Eligible Students Preview</div>
+                  <div className="chart-container">
+                    <div className="chart-placeholder">Chart Coming Soon</div>
+                  </div>
                   <div className="report-actions">
                     <button
-                      className="btn small"
+                      className="btn small view-btn"
                       onClick={async () => {
                         setShowEligibleTable(false);
                         if (!showNonEligibleTable || nonEligibleStudents.length === 0) {
@@ -2166,7 +2208,7 @@ const handleEditDonor = (donor) => {
                         <tr key={s.id}>
                           <td>{s.student_name || s.full_name}</td>
                           <td>{s.email}</td>
-                          <td>{s.contact}</td>
+                          <td className="nowrap-cell">{s.contact || '-'}</td>
                           <td>{s.education || s.class}</td>
                           <td>{s.school || s.college || '-'}</td>
                           <td>
@@ -2177,7 +2219,7 @@ const handleEditDonor = (donor) => {
                           </td>
                           <td>
                             <button 
-                              className="btn small outline" 
+                              className="btn small outline view-btn" 
                               style={{minWidth: '44px'}}
                               onClick={() => setViewEligibleStudent(s)}
                             >
@@ -2212,7 +2254,7 @@ const handleEditDonor = (donor) => {
                         <tr key={s.id}>
                           <td>{s.student_name || s.full_name}</td>
                           <td>{s.email}</td>
-                          <td>{s.contact}</td>
+                          <td className="nowrap-cell">{s.contact || '-'}</td>
                           <td>{s.education || s.class}</td>
                           <td>{s.school || s.college || '-'}</td>
                           <td>
@@ -2223,7 +2265,7 @@ const handleEditDonor = (donor) => {
                           </td>
                           <td>
                             <button 
-                              className="btn small" 
+                              className="btn small view-btn" 
                               onClick={() => setViewNonEligibleStudent(s)}
                             >
                               View
@@ -2250,7 +2292,7 @@ const handleEditDonor = (donor) => {
 
               <div className="settings-grid">
                 <div className="settings-card">
-                  <h4>Profile Settings</h4>
+                  <h4>👤 Profile Settings</h4>
                   <div className="settings-form">
                     <label>
                       Admin Name
@@ -2286,7 +2328,7 @@ const handleEditDonor = (donor) => {
                 </div>
                 
                 <div className="settings-card">
-                  <h4>Notification Preferences</h4> 
+                  <h4>🔔 Notification Preferences</h4> 
                   <div className="settings-form">
                     <label className="checkbox-label">
                       <input 
@@ -2334,24 +2376,22 @@ const handleEditDonor = (donor) => {
         {/* <p><strong>School / College:</strong> {viewStudent.school}</p> */}
 
         {/* CAMP INFO */}
-        <p><strong>Camp Name:</strong> {viewStudent.camp}</p>
-        <p><strong>Camp Date:</strong> {viewStudent.campDate}</p>
+        <p><strong>Camp Name:</strong> {viewStudent.campName || viewStudent.camp || '—'}</p>
+        <p><strong>Camp Date:</strong> {viewStudent.campDate || '—'}</p>
 
         {/* EDUCATION */}
-        <p><strong>Class / Year:</strong> {viewStudent.class}</p>
-        {/* <p><strong>Branch / Stream:</strong> {viewStudent.branch}</p> */}
-        {/* <p><strong>Course:</strong> {viewStudent.course}</p> */}
-        {/* <p><strong>Certificates:</strong> {viewStudent.certificates}</p> */}
+        <p><strong>Class / Year:</strong> {viewStudent.class || viewStudent.year || '—'}</p>
+        <p><strong>School/College:</strong> {viewStudent.school || viewStudent.college || '—'}</p>
 
         {/* PERCENTAGES */}
-        <p><strong>Previous %:</strong> {viewStudent.prev_percent}</p>
-        <p><strong>Present %:</strong> {viewStudent.present_percent}</p>
+        <p><strong>Previous %:</strong> {viewStudent.prev_percent || '—'}</p>
+        <p><strong>Present %:</strong> {viewStudent.present_percent || '—'}</p>
 
         {/* CONTACT INFO */}
-        <p><strong>Email:</strong> {viewStudent.email}</p>
-        <p><strong>Contact:</strong> {viewStudent.contact}</p>
-        <p><strong>WhatsApp:</strong> {viewStudent.whatsapp}</p>
-        <p><strong>Student Contact:</strong> {viewStudent.student_contact}</p>
+        <p><strong>Email:</strong> {viewStudent.email || '—'}</p>
+        <p className="nowrap-cell"><strong>Contact:</strong> {viewStudent.contact || '—'}</p>
+        <p className="nowrap-cell"><strong>WhatsApp:</strong> {viewStudent.whatsapp || '—'}</p>
+        <p className="nowrap-cell"><strong>Student Contact:</strong> {viewStudent.student_contact || '—'}</p>
 
         {/* SCHOLARSHIP */}
         <p><strong>Scholarship Type:</strong> {viewStudent.scholarship}</p>
