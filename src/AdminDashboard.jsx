@@ -249,6 +249,10 @@ export default function AdminDashboard() {
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [viewNonEligibleStudent, setViewNonEligibleStudent] = useState(null);
+  const [viewDocumentsStudent, setViewDocumentsStudent] = useState(null);
+  const [viewDocumentsCategory, setViewDocumentsCategory] = useState(null);
+  const [studentDocuments, setStudentDocuments] = useState([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
 
   const totals = useMemo(() => {
     const totalStudents = students.length;
@@ -339,14 +343,81 @@ const fetchNonEligibleCount = async () => {
         console.error('Error fetching eligible students:', error);
         alert('Error fetching eligible students: ' + error.message);
       } else {
-setEligibleStudents(data || []);
-setEligibleCount(data?.length || 0);
+        // Fetch document counts for each student using email as link
+        const studentsWithDocs = await Promise.all((data || []).map(async (student) => {
+          // First get the student_form_submissions ID using email
+          const { data: formData } = await supabase
+            .from('student_form_submissions')
+            .select('id')
+            .eq('email', student.email)
+            .single();
+
+          const studentFormId = formData?.id;
+
+          // Then fetch documents using the correct student_id
+          const { data: docs } = await supabase
+            .from('student_documents')
+            .select('category')
+            .eq('student_id', studentFormId);
+
+          const academics = docs?.filter(d => d.category === 'academic')?.length || 0;
+          const personal = docs?.filter(d => d.category === 'personal')?.length || 0;
+          const extracurricular = docs?.filter(d => d.category === 'extracurricular')?.length || 0;
+
+          return {
+            ...student,
+            academic_count: academics,
+            personal_count: personal,
+            extracurricular_count: extracurricular
+          };
+        }));
+
+        setEligibleStudents(studentsWithDocs || []);
+        setEligibleCount(studentsWithDocs?.length || 0);
       }
     } catch (err) {
       console.error('Error:', err);
       alert('Error fetching data');
     } finally {
       setLoadingEligible(false);
+    }
+  };
+
+  const handleViewDocuments = async (student, category) => {
+    setViewDocumentsStudent(student);
+    setViewDocumentsCategory(category);
+    setLoadingDocs(true);
+
+    try {
+      // Get student_form_submissions ID using email
+      const { data: formData } = await supabase
+        .from('student_form_submissions')
+        .select('id')
+        .eq('email', student.email)
+        .single();
+
+      const studentFormId = formData?.id;
+      if (!studentFormId) {
+        alert('Student form not found');
+        setLoadingDocs(false);
+        return;
+      }
+
+      // Fetch documents for this category
+      const { data: docs, error } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('student_id', studentFormId)
+        .eq('category', category)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setStudentDocuments(docs || []);
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+      alert('Error fetching documents: ' + err.message);
+    } finally {
+      setLoadingDocs(false);
     }
   };
 
@@ -1035,6 +1106,7 @@ const handleEditDonor = (donor) => {
               <li className={activeSection === "overview" ? "active" : ""} onClick={() => setActiveSection("overview")}>Dashboard Overview</li>
               <li className={activeSection === "manage" ? "active" : ""} onClick={() => setActiveSection("manage")}>Manage Beneficiaries</li>
 <li className={activeSection === "mapping" ? "active" : ""} onClick={() => setActiveSection("mapping")}>Donor Details</li>
+              <li className={activeSection === "verification" ? "active" : ""} onClick={() => setActiveSection("verification")}>Document Verification</li>
               <li className={activeSection === "fees" ? "active" : ""} onClick={() => setActiveSection("fees")}>Fee Tracking</li>
               <li className={activeSection === "broadcast" ? "active" : ""} onClick={() => setActiveSection("broadcast")}>Alerts & Broadcast</li>
               <li className={activeSection === "reports" ? "active" : ""} onClick={() => setActiveSection("reports")}>Reports & Exports</li>
@@ -1068,6 +1140,8 @@ const handleEditDonor = (donor) => {
         ? "Manage Beneficiaries" 
         : activeSection === "mapping" 
 ? "Donor Details" 
+        : activeSection === "verification" 
+        ? "Document Verification" 
         : activeSection === "fees" 
         ? "Fee Tracking (Under Construction)" 
         : activeSection === "broadcast" 
@@ -1634,6 +1708,83 @@ const handleEditDonor = (donor) => {
             </section>
           )}
 
+          {activeSection === "verification" && (
+            <section className="verification-section">
+              <div className="section-header">
+                <h3>Document Verification</h3>
+                <div className="section-actions">
+                  <button className="btn primary" onClick={() => {
+                    setLoadingEligible(true);
+                    fetchEligibleStudents().then(() => setLoadingEligible(false));
+                  }}>Refresh Documents</button>
+                </div>
+              </div>
+
+              {loadingEligible ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  Loading documents...
+                </div>
+              ) : eligibleStudents.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>
+                  <h4>No Eligible Students</h4>
+                  <p>Documents will appear here once students are marked as eligible.</p>
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Student Name</th>
+                        <th>Email</th>
+                        <th>Education Documents</th>
+                        <th>Personal Documents</th>
+                        <th>Achievements Documents</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eligibleStudents.map((student) => (
+                        <tr key={student.id}>
+                          <td>{student.student_name || student.full_name || '—'}</td>
+                          <td>{student.email || '—'}</td>
+                          <td>
+                            <span 
+                              className="doc-badge" 
+                              style={{backgroundColor: '#e3f2fd', color: '#1976d2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.academic_count > 0 ? 'pointer' : 'default', opacity: student.academic_count > 0 ? 1 : 0.6}}
+                              onClick={() => student.academic_count > 0 && handleViewDocuments(student, 'academic')}
+                            >
+                              {student.academic_count || 0} files
+                            </span>
+                          </td>
+                          <td>
+                            <span 
+                              className="doc-badge" 
+                              style={{backgroundColor: '#f3e5f5', color: '#7b1fa2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.personal_count > 0 ? 'pointer' : 'default', opacity: student.personal_count > 0 ? 1 : 0.6}}
+                              onClick={() => student.personal_count > 0 && handleViewDocuments(student, 'personal')}
+                            >
+                              {student.personal_count || 0} files
+                            </span>
+                          </td>
+                          <td>
+                            <span 
+                              className="doc-badge" 
+                              style={{backgroundColor: '#fff3e0', color: '#e65100', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.extracurricular_count > 0 ? 'pointer' : 'default', opacity: student.extracurricular_count > 0 ? 1 : 0.6}}
+                              onClick={() => student.extracurricular_count > 0 && handleViewDocuments(student, 'extracurricular')}
+                            >
+                              {student.extracurricular_count || 0} files
+                            </span>
+                          </td>
+                          <td>
+                            <button className="btn small" onClick={() => setViewEligibleStudent(student)}>View</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Fee Tracking 
           {activeSection === "fees" && (
@@ -2257,6 +2408,54 @@ const handleEditDonor = (donor) => {
                 <button className="btn" type="button" onClick={() => setBroadcastOpen(false)}>Close</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {viewDocumentsStudent && (
+        <div className="modal-overlay" onClick={() => setViewDocumentsStudent(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto'}}>
+            <h3>
+              {viewDocumentsStudent.student_name || viewDocumentsStudent.full_name} - 
+              {viewDocumentsCategory === 'academic' ? ' Education Documents' : viewDocumentsCategory === 'personal' ? ' Personal Documents' : ' Achievements Documents'}
+            </h3>
+            
+            {loadingDocs ? (
+              <p style={{textAlign: 'center', padding: '2rem'}}>Loading documents...</p>
+            ) : studentDocuments.length === 0 ? (
+              <p style={{textAlign: 'center', padding: '2rem', color: '#666'}}>No documents found</p>
+            ) : (
+              <div style={{padding: '1rem 0'}}>
+                {studentDocuments.map((doc) => (
+                  <div key={doc.id} style={{borderBottom: '1px solid #e5e7eb', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div>
+                      <p style={{margin: '0 0 4px 0', fontWeight: 500}}>{doc.document_name}</p>
+                      <p style={{margin: 0, fontSize: '12px', color: '#666'}}>
+                        Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                    {doc.file_url && (
+                      <a 
+                        href={doc.file_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{backgroundColor: '#2e7d32', color: 'white', padding: '8px 16px', borderRadius: '4px', textDecoration: 'none', fontSize: '12px', whiteSpace: 'nowrap', marginLeft: '12px'}}
+                      >
+                        View/Download
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <button 
+              className="btn primary" 
+              onClick={() => setViewDocumentsStudent(null)}
+              style={{marginTop: '1rem', width: '100%'}}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
