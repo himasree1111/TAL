@@ -125,9 +125,12 @@ className={currentPasswordErrors.length > 0 ? "input-error" : ""}
           </div>
 
           {currentPasswordErrors.length > 0 && (
-            <ul className="error-text">
-              {currentPasswordErrors.map((err, i) => <li key={i}>{err}</li>)}
-            </ul>
+            <div className="password-requirements" aria-live="polite">
+              <p className="password-requirements-title">Password must include</p>
+              <ul className="password-requirements-list">
+                {currentPasswordErrors.map((err, i) => <li key={i}>{err}</li>)}
+              </ul>
+            </div>
           )}
 
           <div style={{ position: "relative" }}>

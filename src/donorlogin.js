@@ -157,11 +157,14 @@ export default function DonorLogin() {
           </div>
 
           {passwordErrors.length > 0 && (
-            <ul className="error-text">
-              {passwordErrors.map((err, i) => (
-                <li key={i}>{err}</li>
-              ))}
-            </ul>
+            <div className="password-requirements" aria-live="polite">
+              <p className="password-requirements-title">Password must include</p>
+              <ul className="password-requirements-list">
+                {passwordErrors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <button type="submit" disabled={loading}>

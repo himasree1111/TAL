@@ -57,6 +57,68 @@ body {
   border-color: #4caf50;
 }
 
+/* Password requirements panel */
+.password-requirements {
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(33, 150, 243, 0.06));
+  border: 1px solid rgba(76, 175, 80, 0.16);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.password-requirements-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #166534;
+}
+
+.password-requirements-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.password-requirements-list li {
+  position: relative;
+  padding: 11px 12px 11px 36px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
+}
+
+.password-requirements-list li::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fb7185, #f97316);
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+}
+
+.password-requirements-list li::after {
+  content: "Required";
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
 /* Button */
 .auth-box button {
   background-color: #4caf50;
@@ -177,5 +239,13 @@ body {
   .auth-box button {
     font-size: 15px;
     padding: 10px;
+  }
+
+  .password-requirements {
+    padding: 12px;
+  }
+
+  .password-requirements-list {
+    grid-template-columns: 1fr;
   }
 }
