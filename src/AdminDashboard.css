@@ -822,22 +822,71 @@ html {
 
 .actions-flex {
   display: flex;
-  flex-direction: row;
   gap: 6px;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  width: auto;
+  white-space: nowrap;
 }
 
 .data-table td .btn {
-  margin: 0 4px;
-  min-width: auto;
+  margin: 0;
+  min-width: 0;
 }
 
 .data-table td .btn.small {
   background: #f8f9fa;
   border: 1px solid #e0e4e8;
   color: #1D2B4A;
+  padding: 0.35rem 0.8rem;
+  min-height: 32px;
+  font-size: 0.82rem;
+  border-radius: 999px;
+  line-height: 1.2;
+  box-shadow: none;
+}
+
+.data-table td .btn.small.view-btn {
+  background: #e8f0fe;
+  border-color: #90b7ff;
+  color: #2f5bb7;
+}
+
+.data-table td .btn.small.verify-btn {
+  background: #e6f4ea;
+  border-color: #7fc74a;
+  color: #166534;
+}
+
+.data-table td .btn.small.verify-btn.verified {
+  background: #d1f0d1;
+  border-color: #4b974b;
+  color: #14532d;
+}
+
+.data-table td .btn.small.icon-only {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.data-table td .btn.small.icon-only:hover {
+  transform: translateY(-1px);
+}
+
+.data-table td .btn.small:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #6b7280;
 }
 
 .data-table td .btn.small.icon-btn {

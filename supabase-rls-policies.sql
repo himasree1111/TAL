@@ -4,6 +4,10 @@
 -- 1. Enable RLS on student_documents table (if not already)
 ALTER TABLE student_documents ENABLE ROW LEVEL SECURITY;
 
+-- 1.a Add verification status column for student documents
+ALTER TABLE student_documents
+  ADD COLUMN IF NOT EXISTS is_checked boolean DEFAULT false;
+
 -- 2. Storage Policies for 'student_documents' bucket
 -- Make bucket public for read
 INSERT INTO storage.buckets (id, name, public) 
@@ -54,6 +58,17 @@ FOR DELETE USING (
       WHERE email = auth.email()
     )
   )
+);
+
+-- Admins can update document verification status
+CREATE POLICY "Admins can update verification status" ON student_documents
+FOR UPDATE USING (
+  auth.role() = 'authenticated'
+  AND auth.jwt() -> 'user_metadata' ->> 'user_type' = 'admin'
+)
+WITH CHECK (
+  auth.role() = 'authenticated'
+  AND auth.jwt() -> 'user_metadata' ->> 'user_type' = 'admin'
 );
 
 -- Verify policies

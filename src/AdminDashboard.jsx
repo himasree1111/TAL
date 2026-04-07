@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [systemNotifications, setSystemNotifications] = useState(true);
 
   const [eligibleStudents, setEligibleStudents] = useState([]);
+  const [eligibleStudentsRaw, setEligibleStudentsRaw] = useState([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
   const [eligibleCount, setEligibleCount] = useState(0);
   const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
@@ -210,6 +211,7 @@ export default function AdminDashboard() {
 
         // Fetch donors
         await fetchDonors();
+        await fetchEligibleStudents();
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -261,6 +263,10 @@ export default function AdminDashboard() {
     const activeDonors = donors.length;
     return { totalStudents, feesCollected, pendingFees, activeDonors };
   }, [students, donors]);
+
+  const verifiedFeeStudents = useMemo(() => {
+    return eligibleStudentsRaw.filter((student) => (student.verified_count || 0) > 0);
+  }, [eligibleStudentsRaw]);
 
 const getMaxPercent = React.useCallback((s) => {
   return Math.max(
@@ -353,27 +359,36 @@ const fetchNonEligibleCount = async () => {
             .single();
 
           const studentFormId = formData?.id;
-
-          // Then fetch documents using the correct student_id
-          const { data: docs } = await supabase
+          const { data: docs } = studentFormId ? await supabase
             .from('student_documents')
-            .select('category')
-            .eq('student_id', studentFormId);
+            .select('category, is_checked')
+            .eq('student_id', studentFormId)
+            : { data: [] };
 
           const academics = docs?.filter(d => d.category === 'academic')?.length || 0;
           const personal = docs?.filter(d => d.category === 'personal')?.length || 0;
           const extracurricular = docs?.filter(d => d.category === 'extracurricular')?.length || 0;
+          const verifiedCount = docs?.filter(d => d.is_checked).length || 0;
+          const totalDocs = docs?.length || 0;
 
           return {
             ...student,
             academic_count: academics,
             personal_count: personal,
-            extracurricular_count: extracurricular
+            extracurricular_count: extracurricular,
+            verified_count: verifiedCount,
+            document_count: totalDocs
           };
         }));
 
-        setEligibleStudents(studentsWithDocs || []);
-        setEligibleCount(studentsWithDocs?.length || 0);
+        const pendingVerificationStudents = (studentsWithDocs || []).filter((student) => {
+          const isFullyVerified = student.document_count > 0 && student.verified_count === student.document_count;
+          return !isFullyVerified;
+        });
+
+        setEligibleStudentsRaw(studentsWithDocs || []);
+        setEligibleStudents(pendingVerificationStudents);
+        setEligibleCount(pendingVerificationStudents?.length || 0);
       }
     } catch (err) {
       console.error('Error:', err);
@@ -418,6 +433,42 @@ const fetchNonEligibleCount = async () => {
       alert('Error fetching documents: ' + err.message);
     } finally {
       setLoadingDocs(false);
+    }
+  };
+
+  const handleVerifyStudentDocuments = async (student) => {
+    setLoadingEligible(true);
+    try {
+      const { data: formData, error: formError } = await supabase
+        .from('student_form_submissions')
+        .select('id')
+        .eq('email', student.email)
+        .single();
+
+      if (formError || !formData?.id) {
+        alert('Unable to verify documents: student form not found');
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('student_documents')
+        .update({ is_checked: true })
+        .eq('student_id', formData.id)
+        .in('category', ['academic', 'personal', 'extracurricular']);
+
+      if (updateError) {
+        console.error('Error verifying documents:', updateError);
+        alert('Unable to mark documents as verified: ' + updateError.message);
+        return;
+      }
+
+      await fetchEligibleStudents();
+      alert('Documents marked verified successfully.');
+    } catch (err) {
+      console.error('Error verifying documents:', err);
+      alert('Error verifying documents: ' + err.message);
+    } finally {
+      setLoadingEligible(false);
     }
   };
 
@@ -939,18 +990,16 @@ const handleEditDonor = (donor) => {
       setSubmittingDonor(false);
     }
   };
-/*
   const handleSendReminders = () => {
     alert('Reminders sent (demo)');
   };
-*/
-/*
+
   const handleDownloadFeeReport = () => {
-    const rows = ['id,name,total,paid,balance,paidDate', ...students.map(s => {
+    const rows = ['id,name,total,paid,balance,paidDate', ...verifiedFeeStudents.map((student) => {
       const total = 5000;
-      const paid = s.feeStatus === 'Paid' ? 5000 : s.feeStatus === 'Partial' ? 2500 : 0;
+      const paid = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
       const balance = total - paid;
-      return `${s.id},"${s.name}",${total},${paid},${balance},${s.paidDate || ""}`;
+      return `${student.id},"${student.student_name || student.full_name || ''}",${total},${paid},${balance},${student.paidDate || ''}`;
     })];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -960,7 +1009,7 @@ const handleEditDonor = (donor) => {
     a.click();
     URL.revokeObjectURL(url);
   };
-*/
+
   const handleGenerateReport = () => {
     alert('Custom report generated (demo)');
   };
@@ -1143,7 +1192,7 @@ const handleEditDonor = (donor) => {
         : activeSection === "verification" 
         ? "Document Verification" 
         : activeSection === "fees" 
-        ? "Fee Tracking (Under Construction)" 
+        ? "Fee Tracking" 
         : activeSection === "broadcast" 
         ? "Alerts & Broadcast" 
         : activeSection === "reports" 
@@ -1774,8 +1823,22 @@ const handleEditDonor = (donor) => {
                               {student.extracurricular_count || 0} files
                             </span>
                           </td>
-                          <td>
-                            <button className="btn small" onClick={() => setViewEligibleStudent(student)}>View</button>
+                          <td className="actions-flex">
+                            <button
+                              className="btn small icon-only view-btn"
+                              aria-label="View documents"
+                              onClick={() => setViewEligibleStudent(student)}
+                            >
+                              👁
+                            </button>
+                            <button
+                              className={`btn small icon-only verify-btn ${student.document_count > 0 && student.verified_count === student.document_count ? 'verified' : ''}`}
+                              aria-label={student.document_count > 0 && student.verified_count === student.document_count ? 'Verified' : 'Mark Verified'}
+                              disabled={student.document_count === 0 || student.verified_count === student.document_count}
+                              onClick={() => handleVerifyStudentDocuments(student)}
+                            >
+                              ✅
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1786,7 +1849,6 @@ const handleEditDonor = (donor) => {
             </section>
           )}
 
-          {/* Fee Tracking 
           {activeSection === "fees" && (
             <section className="fees-section">
               <div className="section-header">
@@ -1799,20 +1861,15 @@ const handleEditDonor = (donor) => {
 
               <div className="fee-summary">
                 <div className="fee-card">
-                  <div className="amount">₹{donors.reduce((s,d) => s + d.amount, 0)}</div>
-                  <div className="label">Total Fees</div>
+                  <div className="amount">{verifiedFeeStudents.length}</div>
+                  <div className="label">Verified Students</div>
                 </div>
                 <div className="fee-card">
-                  <div className="amount">₹18000</div>
-                  <div className="label">Collected</div>
-                </div>
-                <div className="fee-card">
-                  <div className="amount">₹7000</div>
-                  <div className="label">Pending</div>
-                </div>
-                <div className="fee-card">
-                  <div className="amount">72%</div>
-                  <div className="label">Collection Rate</div>
+                  <div className="amount">₹{verifiedFeeStudents.reduce((sum, student) => {
+                    const paid = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
+                    return sum + (5000 - paid);
+                  }, 0)}</div>
+                  <div className="label">Total Fee Due</div>
                 </div>
               </div>
 
@@ -1821,39 +1878,46 @@ const handleEditDonor = (donor) => {
                   <thead>
                     <tr>
                       <th>Student Name</th>
-                      <th>Total Fee</th>
+                      <th>Required Fee</th>
                       <th>Paid Amount</th>
-                      <th>Due Date</th>
-                      <th>Paid Date</th> <!-- NEW column -->
+                      <th>Balance</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map(s => (
-                      <tr key={s.id}>
-                        <td>{s.name}</td>
-                        <td>₹5,000</td>
-                        <td>₹{s.feeStatus === 'Paid' ? '5,000' : s.feeStatus === 'Partial' ? '2,500' : '0'}</td>
-                        <td>Nov 30, 2025</td>
-                        <td>{s.paidDate ? s.paidDate : "-"}</td> <!-- show paidDate -->
-                        <td>
-                          <span className={`status-badge ${s.feeStatus.toLowerCase()}`}>
-                            {s.feeStatus}
-                          </span>
-                        </td>
-                        <td>
-                          <button className="btn small" onClick={() => handleViewHistory(s.id)}>View History</button>
-                          <button className="btn small primary" style={{marginLeft: '8px'}} onClick={() => handleRecordPayment(s.id)}>Record Payment</button>
+                    {verifiedFeeStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>
+                          No verified students found yet. Verify student documents first.
                         </td>
                       </tr>
-                    ))}
+                    ) : verifiedFeeStudents.map((student) => {
+                      const requiredFee = 5000;
+                      const paidAmount = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
+                      const balance = requiredFee - paidAmount;
+                      return (
+                        <tr key={student.id}>
+                          <td>{student.student_name || student.full_name || '—'}</td>
+                          <td>₹{requiredFee.toLocaleString()}</td>
+                          <td>₹{paidAmount.toLocaleString()}</td>
+                          <td>₹{balance.toLocaleString()}</td>
+                          <td>
+                            <span className={`status-badge ${student.fee_status?.toLowerCase() || 'pending'}`}>
+                              {student.fee_status || 'Pending'}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="btn small" onClick={() => setViewEligibleStudent(student)}>View</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </section>
           )}
-*/}
           {/* Broadcast */} 
           {activeSection === "broadcast" && (
             <section className="broadcast-section">
@@ -2004,7 +2068,7 @@ const handleEditDonor = (donor) => {
 
               <div className="reports-grid">
                 <div className="report-card">
-                  <h4>Financial Overview(DEMO)</h4>
+                  <h4>Financial Overview</h4>
                   <div className="report-meta">
                     <p>Total Funds: <strong>₹{donors.reduce((s,d) => s + (d.amount || 0), 0)}</strong></p>
                   </div>
@@ -2015,7 +2079,7 @@ const handleEditDonor = (donor) => {
                 </div>
 
                 <div className="report-card">
-                  <h4>Donor Contributions(DEMO)</h4>
+                  <h4>Donor Contributions</h4>
                   <div className="report-meta">
                     <p>Total Donors: <strong>{donors.length}</strong></p>
                   </div>
