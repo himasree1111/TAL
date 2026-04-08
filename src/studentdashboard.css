@@ -732,6 +732,19 @@ width: 100%;
   white-space: pre-wrap;
 }
 
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.form-row label {
+  font-weight: 500;
+  color: #374151;
+  text-align: left;
+}
+
 .radio-group {
   margin-bottom: 24px;
 }
@@ -741,6 +754,7 @@ width: 100%;
   font-weight: 500;
   color: #374151;
   margin-bottom: 12px;
+  text-align: left;
 }
 
 .radio-options {
