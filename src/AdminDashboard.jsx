@@ -550,19 +550,20 @@ const fetchNonEligibleCount = async () => {
 
 const handleApprove = async (student) => {
   try {
-    // Get full record first from admin_student_info table
-    const { data: record } = await supabase
+    // 1️⃣ Get full record from admin_student_info
+    const { data: record, error: fetchError } = await supabase
       .from('admin_student_info')
       .select('*')
       .eq('id', student.student_id)
       .single();
 
-    if (!record) {
+    if (fetchError || !record) {
+      console.error(fetchError);
       alert("❌ Record not found in admin_student_info");
       return;
     }
 
-    // Upsert to eligible_students with ALL fields mapped
+    // 2️⃣ Move to eligible_students
     const { error: insertError } = await supabase
       .from('eligible_students')
       .upsert({
@@ -601,7 +602,44 @@ const handleApprove = async (student) => {
       return;
     }
 
-    // Delete from admin_student_info
+    // 3️⃣ SEND EMAIL (IMPORTANT 🔥)
+    try {
+     const { data: { session } } = await supabase.auth.getSession();
+
+await fetch("https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${session.access_token}` // ✅ IMPORTANT
+  },
+  body: JSON.stringify({
+    email: record.email,
+    name: record.full_name || "Student",
+  }),
+});
+
+
+      const response = await fetch("https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}` // ✅ IMPORTANT
+        },
+        body: JSON.stringify({
+          email: record.email,
+          name: record.full_name || "Student",
+        }),
+      });
+
+
+      const result = await response.json();
+      console.log("📩 Email response:", result);
+    } catch (emailErr) {
+      console.error("❌ Email sending failed:", emailErr);
+      // Don't stop main flow
+    }
+
+    // 4️⃣ Delete from pending table
     const { error: deleteError } = await supabase
       .from('admin_student_info')
       .delete()
@@ -613,16 +651,18 @@ const handleApprove = async (student) => {
       return;
     }
 
-    // Refresh list
+    // 5️⃣ Update UI
     setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
 
-    alert("✅ Student moved to Eligible successfully!");
+    alert("✅ Student approved & email sent!");
 
   } catch (err) {
     console.error(err);
-    alert("Error: " + err.message);
+    alert("❌ Error: " + err.message);
   }
 };
+
+
 const handleNotApprove = async (student) => {
   try {
     // Get full record first from admin_student_info table
@@ -1188,7 +1228,7 @@ const handleEditDonor = (donor) => {
         : activeSection === "manage" 
         ? "Manage Beneficiaries" 
         : activeSection === "mapping" 
-? "Donor Details" 
+        ? "Donor Details" 
         : activeSection === "verification" 
         ? "Document Verification" 
         : activeSection === "fees" 
