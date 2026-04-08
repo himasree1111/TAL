@@ -144,6 +144,76 @@ export default function AdminDashboard() {
     }
   };
 
+  const attachStudentPublicIds = async (rows = []) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return [];
+    }
+
+    const rowStudentIds = [...new Set(
+      rows
+        .map((row) => row.student_form_id ?? row.student_id)
+        .filter((value) => value !== null && value !== undefined)
+    )];
+
+    const rowEmails = [...new Set(
+      rows
+        .map((row) => (row.email || '').trim())
+        .filter(Boolean)
+    )];
+
+    const idToPublicId = new Map();
+    const emailToPublicId = new Map();
+
+    if (rowStudentIds.length > 0) {
+      const { data: byIdRows, error: byIdError } = await supabase
+        .from('student_form_submissions')
+        .select('id, student_public_id')
+        .in('id', rowStudentIds);
+
+      if (byIdError) {
+        console.error('Error resolving student_public_id by id:', byIdError);
+      } else {
+        (byIdRows || []).forEach((item) => {
+          if (item?.id && item?.student_public_id) {
+            idToPublicId.set(item.id, item.student_public_id);
+          }
+        });
+      }
+    }
+
+    if (rowEmails.length > 0) {
+      const { data: byEmailRows, error: byEmailError } = await supabase
+        .from('student_form_submissions')
+        .select('email, student_public_id, created_at')
+        .in('email', rowEmails)
+        .order('created_at', { ascending: false });
+
+      if (byEmailError) {
+        console.error('Error resolving student_public_id by email:', byEmailError);
+      } else {
+        (byEmailRows || []).forEach((item) => {
+          const emailKey = (item?.email || '').trim();
+          if (emailKey && item?.student_public_id && !emailToPublicId.has(emailKey)) {
+            emailToPublicId.set(emailKey, item.student_public_id);
+          }
+        });
+      }
+    }
+
+    return rows.map((row) => {
+      const emailKey = (row.email || '').trim();
+      const lookupStudentId = row.student_form_id ?? row.student_id;
+      return {
+        ...row,
+        student_public_id:
+          row.student_public_id ||
+          idToPublicId.get(lookupStudentId) ||
+          emailToPublicId.get(emailKey) ||
+          null,
+      };
+    });
+  };
+
   // Fetch user and real data from Supabase
   useEffect(() => {
     const fetchUserData = async () => {
@@ -179,6 +249,8 @@ export default function AdminDashboard() {
             const transformed = {
               id: student.id || index + 1,
               student_id: student.id,
+              student_form_id: student.student_id || null,
+              student_public_id: student.student_public_id || null,
               name: student.full_name || "",
               full_name: student.full_name || "",
               year: student.class || student.year,
@@ -210,7 +282,8 @@ export default function AdminDashboard() {
             };
             return transformed;
           });
-          setStudents(transformedStudents);
+          const studentsWithPublicIds = await attachStudentPublicIds(transformedStudents);
+          setStudents(studentsWithPublicIds);
         }
 
         // Fetch donors
@@ -410,12 +483,14 @@ const fetchNonEligibleCount = async () => {
           };
         }));
 
-        const pendingVerificationStudents = (studentsWithDocs || []).filter((student) => {
+        const studentsWithPublicIds = await attachStudentPublicIds(studentsWithDocs);
+
+        const pendingVerificationStudents = (studentsWithPublicIds || []).filter((student) => {
           const isFullyVerified = student.document_count > 0 && student.verified_count === student.document_count;
           return !isFullyVerified;
         });
 
-        setEligibleStudentsRaw(studentsWithDocs || []);
+        setEligibleStudentsRaw(studentsWithPublicIds || []);
         setEligibleStudents(pendingVerificationStudents);
         setEligibleCount(pendingVerificationStudents?.length || 0);
       }
@@ -513,8 +588,9 @@ const fetchNonEligibleCount = async () => {
         console.error('Error fetching non-eligible students:', error);
         alert('Error fetching non-eligible students: ' + error.message);
       } else {
-        setNonEligibleStudents(data || []);
-        setNonEligibleCount(data?.length || 0);
+        const studentsWithPublicIds = await attachStudentPublicIds(data || []);
+        setNonEligibleStudents(studentsWithPublicIds);
+        setNonEligibleCount(studentsWithPublicIds?.length || 0);
       }
     } catch (err) {
       console.error('Error:', err);
@@ -531,9 +607,9 @@ const fetchNonEligibleCount = async () => {
     }
 
     const rows = [
-      "id,student_name,email,contact,education,year,school,college,created_at",
+      "student_public_id,student_name,email,contact,education,year,school,college,created_at",
       ...eligibleStudents.map(s => 
-        `${s.id},"${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
+        `"${s.student_public_id || ''}","${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
       )
     ];
     
@@ -554,9 +630,9 @@ const fetchNonEligibleCount = async () => {
     }
 
     const rows = [
-      "id,student_name,email,contact,education,year,school,college,created_at",
+      "student_public_id,student_name,email,contact,education,year,school,college,created_at",
       ...nonEligibleStudents.map(s => 
-        `${s.id},"${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
+        `"${s.student_public_id || ''}","${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
       )
     ];
     
@@ -787,6 +863,8 @@ const fetchStudents = async () => {
   const transformedStudents = (data || []).map((student, index) => ({
     id: student.id || index + 1,
     student_id: student.id,
+    student_form_id: student.student_id || null,
+    student_public_id: student.student_public_id || null,
     name: student.student_name || student.full_name || '',
     year: student.year || student.class || '',
     email: student.email,
@@ -796,7 +874,8 @@ const fetchStudents = async () => {
     created_at: student.created_at
   }));
 
-  setStudents(transformedStudents);
+  const studentsWithPublicIds = await attachStudentPublicIds(transformedStudents);
+  setStudents(studentsWithPublicIds);
 };
 
 
@@ -812,8 +891,8 @@ const fetchStudents = async () => {
   const exportCSV = () => {
     // include new fields campName,campDate,course,paidDate
     const rows = [
-      "id,name,college,year,donor,feeStatus,course,campName,campDate,paidDate",
-      ...students.map(s => `${s.id},"${s.name}","${s.college}",${s.year},${s.donor},${s.feeStatus},${s.course || ""},"${s.campName || ""}",${s.campDate || ""},${s.paidDate || ""}`)
+      "student_public_id,name,college,year,donor,feeStatus,course,campName,campDate,paidDate",
+      ...students.map(s => `"${s.student_public_id || ""}","${s.name}","${s.college}",${s.year},${s.donor},${s.feeStatus},${s.course || ""},"${s.campName || ""}",${s.campDate || ""},${s.paidDate || ""}`)
     ];
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -1064,11 +1143,11 @@ const handleEditDonor = (donor) => {
   };
 
   const handleDownloadFeeReport = () => {
-    const rows = ['id,name,total,paid,balance,paidDate', ...verifiedFeeStudents.map((student) => {
+    const rows = ['student_public_id,name,total,paid,balance,paidDate', ...verifiedFeeStudents.map((student) => {
       const total = 5000;
       const paid = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
       const balance = total - paid;
-      return `${student.id},"${student.student_name || student.full_name || ''}",${total},${paid},${balance},${student.paidDate || ''}`;
+      return `"${student.student_public_id || ''}","${student.student_name || student.full_name || ''}",${total},${paid},${balance},${student.paidDate || ''}`;
     })];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -2234,6 +2313,7 @@ const handleEditDonor = (donor) => {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th>Student ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Contact</th>
@@ -2246,6 +2326,7 @@ const handleEditDonor = (donor) => {
                     <tbody>
                       {eligibleStudents.map(s => (
                         <tr key={s.id}>
+                          <td>{s.student_public_id || '-'}</td>
                           <td>{s.student_name || s.full_name}</td>
                           <td>{s.email}</td>
                           <td className="nowrap-cell">{s.contact || '-'}</td>
@@ -2280,6 +2361,7 @@ const handleEditDonor = (donor) => {
                   <table className="data-table">
                     <thead>
                       <tr>
+                        <th>Student ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Contact</th>
@@ -2292,6 +2374,7 @@ const handleEditDonor = (donor) => {
                     <tbody>
                       {nonEligibleStudents.map(s => (
                         <tr key={s.id}>
+                          <td>{s.student_public_id || '-'}</td>
                           <td>{s.student_name || s.full_name}</td>
                           <td>{s.email}</td>
                           <td className="nowrap-cell">{s.contact || '-'}</td>
@@ -2617,9 +2700,7 @@ const handleEditDonor = (donor) => {
               <p><strong>School:</strong> {viewEligibleStudent.school || '-'}</p>
               {/* <p><strong>College:</strong> {viewEligibleStudent.college || '-'}</p> */}
               <p><strong>Date Added:</strong> {formatToIST(viewEligibleStudent.created_at)}</p>
-              {viewEligibleStudent.student_id && (
-                <p><strong>Student ID:</strong> {viewEligibleStudent.student_id}</p>
-              )}
+              <p><strong>Student ID:</strong> {viewEligibleStudent.student_public_id || '-'}</p>
               {viewEligibleStudent.reason && (
                 <p><strong>Eligibility Reason:</strong> {viewEligibleStudent.reason}</p>
               )}
@@ -2644,9 +2725,7 @@ const handleEditDonor = (donor) => {
               <p><strong>School:</strong> {viewNonEligibleStudent.school || '-'}</p>
               
               <p><strong>Date Added:</strong> {formatToIST(viewNonEligibleStudent.created_at)}</p>
-              {viewNonEligibleStudent.student_id && (
-                <p><strong>Student ID:</strong> {viewNonEligibleStudent.student_id}</p>
-              )}
+              <p><strong>Student ID:</strong> {viewNonEligibleStudent.student_public_id || '-'}</p>
             </div>
             <div style={{display:'flex',gap:8,marginTop:12}}>
               <button className="btn primary" onClick={() => setViewNonEligibleStudent(null)}>Close</button>
