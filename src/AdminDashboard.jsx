@@ -711,17 +711,6 @@ const handleApprove = async (student) => {
     try {
      const { data: { session } } = await supabase.auth.getSession();
 
-await fetch("https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${session.access_token}` // ✅ IMPORTANT
-  },
-  body: JSON.stringify({
-    email: record.email,
-    name: record.full_name || "Student",
-  }),
-});
 
 
       const response = await fetch("https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email", {
