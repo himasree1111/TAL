@@ -107,7 +107,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formIdLoading, setFormIdLoading] = useState(true);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [documentNames, setDocumentNames] = useState(DOCUMENT_CATEGORIES.reduce((acc, cat) => {
-    acc[cat.key] = '';
+    acc[cat.key] = cat.key === 'fee' ? 'Voucher Upload' : '';
     return acc;
   }, {}));
 
@@ -175,6 +175,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     does_work: '',
     has_scholarship: ''
   });
+  const [feeInfo, setFeeInfo] = useState({});
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -262,6 +263,16 @@ console.log(studentId, studentType);
         };
         setProfileForm(mappedData);
         setOriginalFormData(mappedData);
+
+        const { data: feeData, error: feeError } = await supabase
+          .from('fee_tracking')
+          .select('*')
+          .eq('student_form_id', formData.id)
+          .maybeSingle();
+
+        if (!feeError) {
+          setFeeInfo(feeData || {});
+        }
       }
     } catch (err) {
       console.error('Error in fetchProfileFormData:', err);
@@ -534,8 +545,9 @@ if (filterNotification(newData, type)) {          setNotifications(prev => {
 
 const handleUpload = async (category, files, documentName) => {
   console.log('[UPLOAD] Starting upload:', { category, documentName: documentName?.trim(), studentFormId, studentEmail });
-  
-  if (!documentName?.trim()) {
+  const finalDocumentName = documentName?.trim() || (category === 'fee' ? 'Voucher Upload' : '');
+
+  if (!finalDocumentName) {
     setError('Document name is required');
     return;
   }
@@ -633,7 +645,7 @@ const handleUpload = async (category, files, documentName) => {
         .insert({
           student_id: studentFormId,
           category,
-          document_name: documentName,
+          document_name: finalDocumentName,
           file_name: file.name,
           file_url: publicUrl,
           uploaded_at: new Date().toISOString()
@@ -882,7 +894,9 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
   const renderStatsBar = () => (
     <div className="stats-bar">
       <StatCard icon="🆔" label="Student ID" value={profileForm.student_public_id || 'Pending'} />
-      <StatCard icon="🔔" label="Notifications" value={totalNotifications} />
+      <StatCard icon="�" label="Fee Status" value={feeInfo.fee_status || 'Pending'} />
+      <StatCard icon="📄" label="Voucher" value={feeInfo.voucher_url ? 'Uploaded' : 'Not uploaded'} />
+      <StatCard icon="�🔔" label="Notifications" value={totalNotifications} />
     </div>
   );
 
@@ -935,6 +949,23 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                 <div className="doc-tag">{category.icon}</div>
                 <h3>{category.title}</h3>
                 <p className="doc-subtitle">Upload</p>
+                {category.key === 'fee' && (
+                  <div style={{ marginTop: '10px', fontSize: '0.92rem', color: '#374151' }}>
+                    <div><strong>Fee Status:</strong> {feeInfo.fee_status || 'Pending'}</div>
+                    <div><strong>Paid by TAL:</strong> ₹{feeInfo.fee_paid_by_tal?.toLocaleString() || '0'}</div>
+                    <div>
+                      <strong>Voucher:</strong>{' '}
+                      {feeInfo.voucher_url ? (
+                        <a href={feeInfo.voucher_url} target="_blank" rel="noreferrer">View uploaded voucher</a>
+                      ) : (
+                        'Not uploaded yet'
+                      )}
+                    </div>
+                    <div style={{ marginTop: '8px', color: '#475569' }}>
+                      Upload your fee voucher here so the admin can verify payment and update your student dashboard status.
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="upload-section">
 {category.key === 'academic' ? (
@@ -992,10 +1023,10 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                   type="file"
                   multiple
                   onChange={(e) => {
-                    const name = documentNames[category.key].trim();
+                    const name = documentNames[category.key]?.trim();
                     if (e.target.files?.length) {
                       console.log('[UPLOAD UI] Triggered with name:', name || '(empty)');
-                      if (name) {
+                      if (category.key === 'fee' || name) {
                         handleUpload(category.key, e.target.files, name);
                       } else {
                         setError('Please enter a document name first');

@@ -300,6 +300,8 @@ export default function AdminDashboard() {
     fetchUserData();
     fetchEligibleCount();
     fetchNonEligibleCount();
+    fetchFeeTrackingRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
 
@@ -325,27 +327,6 @@ export default function AdminDashboard() {
     { value: 'non_academic_only', label: 'Non-Academic Only' },
   ];
 
-  const normalizeAchievementFlag = (value) => {
-    if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
-      return true;
-    }
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return true;
-    }
-    return false;
-  };
-
-  const filterAchievementMatch = (student) => {
-    const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
-    const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
-
-    if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
-    if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
-    if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
-    return true;
-  };
-
-
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
@@ -358,6 +339,14 @@ export default function AdminDashboard() {
   const [studentDocuments, setStudentDocuments] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
+  const [feeSectionTab, setFeeSectionTab] = useState('tracking');
+  const [feeTrackingRecords, setFeeTrackingRecords] = useState([]);
+  const [loadingFeeTracking, setLoadingFeeTracking] = useState(false);
+  const [savingFeeRecord, setSavingFeeRecord] = useState(false);
+  const [uploadingVoucherFor, setUploadingVoucherFor] = useState(null);
+  const [feePaidInput, setFeePaidInput] = useState({});
+  const [viewingFeeStudent, setViewingFeeStudent] = useState(null);
+
   const totals = useMemo(() => {
     const totalStudents = students.length;
     const feesCollected = donors.reduce((s, d) => s + d.amount, 0);
@@ -369,6 +358,12 @@ export default function AdminDashboard() {
   const verifiedFeeStudents = useMemo(() => {
     return eligibleStudentsRaw.filter((student) => (student.verified_count || 0) > 0);
   }, [eligibleStudentsRaw]);
+
+  const getFeeTrackingRecord = (student) => {
+    const studentFormId = student.student_form_id || student.student_id || student.id;
+    if (!studentFormId) return null;
+    return feeTrackingRecords.find((record) => record.student_form_id === studentFormId);
+  };
 
 const getMaxPercent = React.useCallback((s) => {
   return Math.max(
@@ -402,6 +397,26 @@ const getMaxPercent = React.useCallback((s) => {
 
   // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
+    const normalizeAchievementFlag = (value) => {
+      if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
+        return true;
+      }
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return true;
+      }
+      return false;
+    };
+
+    const filterAchievementMatch = (student) => {
+      const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
+      const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
+
+      if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
+      if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
+      if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
+      return true;
+    };
+
     return students
       .filter((s) => {
         // New filters
@@ -413,7 +428,7 @@ const getMaxPercent = React.useCallback((s) => {
       })
       .map(s => ({...s, priority: calculatePriority(s)}))
       .sort((a, b) => b.priority - a.priority);
-}, [students, newFilters,calculatePriority,getMaxPercent]);
+}, [students, newFilters, calculatePriority, getMaxPercent]);
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
     .from("eligible_students")
@@ -597,6 +612,178 @@ const fetchNonEligibleCount = async () => {
       alert('Error fetching data');
     } finally {
       setLoadingNonEligible(false);
+    }
+  };
+
+  const fetchFeeTrackingRecords = async () => {
+    setLoadingFeeTracking(true);
+    try {
+      const { data, error } = await supabase
+        .from('fee_tracking')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching fee tracking records:', error);
+        return;
+      }
+      setFeeTrackingRecords(data || []);
+    } catch (err) {
+      console.error('Error fetching fee tracking records:', err);
+    } finally {
+      setLoadingFeeTracking(false);
+    }
+  };
+
+  const handleFeePaidChange = (studentId, value) => {
+    setFeePaidInput((prev) => ({ ...prev, [studentId]: value }));
+  };
+
+  const handleSaveFeeRecord = async (student) => {
+    const studentFormId = student.student_form_id || student.student_id || student.id;
+    if (!studentFormId) {
+      alert('Cannot save fee record: missing student form id');
+      return;
+    }
+
+    const paidValue = parseFloat(feePaidInput[studentFormId] ?? student.fee_paid_by_tal ?? 0) || 0;
+    const feeStatus = paidValue === 0 ? 'Pending' : paidValue >= 5000 ? 'Paid' : 'Partial';
+    const payload = {
+      student_form_id: studentFormId,
+      student_public_id: student.student_public_id || student.student_public_id,
+      email: student.email,
+      full_name: student.student_name || student.full_name || student.name,
+      class: student.class || student.year || student.course,
+      educationcategory: student.educationcategory || student.course,
+      educationyear: student.educationyear || student.year,
+      contact: student.contact,
+      required_fee: 5000,
+      fee_paid_by_tal: paidValue,
+      fee_status: feeStatus,
+      updated_at: new Date().toISOString(),
+    };
+
+    setSavingFeeRecord(true);
+    try {
+      const { data: existing, error: findError } = await supabase
+        .from('fee_tracking')
+        .select('id')
+        .eq('student_form_id', studentFormId)
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Error locating fee tracking record:', findError);
+        alert('Unable to save fee record.');
+        return;
+      }
+
+      if (existing?.id) {
+        const { error: updateError } = await supabase
+          .from('fee_tracking')
+          .update(payload)
+          .eq('id', existing.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('fee_tracking')
+          .insert(payload);
+
+        if (insertError) {
+          throw insertError;
+        }
+      }
+
+      await fetchFeeTrackingRecords();
+      alert('Fee record saved successfully.');
+    } catch (err) {
+      console.error('Error saving fee record:', err);
+      alert('Unable to save fee record: ' + err.message);
+    } finally {
+      setSavingFeeRecord(false);
+    }
+  };
+
+  const handleUploadVoucher = async (student, file) => {
+    const studentFormId = student.student_form_id || student.student_id || student.id;
+    if (!studentFormId) {
+      alert('Cannot upload voucher: missing student form id');
+      return;
+    }
+
+    const safeEmail = (student.email || 'student').replace(/[^a-zA-Z0-9@._-]/g, '_');
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${safeEmail}/voucher/${Date.now()}-${safeName}`;
+
+    setUploadingVoucherFor(studentFormId);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('student_documents')
+        .upload(filePath, file, { upsert: false });
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('student_documents')
+        .getPublicUrl(filePath);
+
+      const { error: insertError } = await supabase
+        .from('student_documents')
+        .insert({
+          student_id: studentFormId,
+          category: 'fee',
+          document_name: 'Voucher Upload',
+          file_name: file.name,
+          file_url: publicUrl,
+          uploaded_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      const { data: existing, error: findError } = await supabase
+        .from('fee_tracking')
+        .select('id')
+        .eq('student_form_id', studentFormId)
+        .maybeSingle();
+
+      if (findError) {
+        throw findError;
+      }
+
+      const updatePayload = {
+        voucher_url: publicUrl,
+        voucher_uploaded_at: new Date().toISOString(),
+      };
+
+      if (existing?.id) {
+        const { error: updateError } = await supabase
+          .from('fee_tracking')
+          .update(updatePayload)
+          .eq('id', existing.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('fee_tracking')
+          .insert({
+            student_form_id: studentFormId,
+            voucher_url: publicUrl,
+            voucher_uploaded_at: new Date().toISOString(),
+          });
+        if (insertError) throw insertError;
+      }
+
+      await fetchFeeTrackingRecords();
+      alert('Voucher uploaded successfully.');
+    } catch (err) {
+      console.error('Error uploading voucher:', err);
+      alert('Voucher upload failed: ' + err.message);
+    } finally {
+      setUploadingVoucherFor(null);
     }
   };
 
@@ -2001,6 +2188,21 @@ const handleEditDonor = (donor) => {
                 </div>
               </div>
 
+              <div className="fee-tabs" style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                <button
+                  className={`btn ${feeSectionTab === 'tracking' ? 'primary' : ''}`}
+                  onClick={() => setFeeSectionTab('tracking')}
+                >
+                  Fee Tracking
+                </button>
+                <button
+                  className={`btn ${feeSectionTab === 'voucher' ? 'primary' : ''}`}
+                  onClick={() => setFeeSectionTab('voucher')}
+                >
+                  Voucher Uploading
+                </button>
+              </div>
+
               <div className="fee-summary">
                 <div className="fee-card">
                   <div className="amount">{verifiedFeeStudents.length}</div>
@@ -2013,53 +2215,319 @@ const handleEditDonor = (donor) => {
                   }, 0)}</div>
                   <div className="label">Total Fee Due</div>
                 </div>
+                <div className="fee-card">
+                  <div className="amount">{feeTrackingRecords.filter((record) => record.fee_paid_by_tal > 0).length}</div>
+                  <div className="label">Students with Fee Records</div>
+                </div>
               </div>
 
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Student Name</th>
-                      <th>Required Fee</th>
-                      <th>Paid Amount</th>
-                      <th>Balance</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {verifiedFeeStudents.length === 0 ? (
+              {loadingFeeTracking && (
+                <div style={{ textAlign: 'center', padding: '1rem', color: '#555' }}>
+                  Loading fee records...
+                </div>
+              )}
+
+              {feeSectionTab === 'tracking' ? (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>
-                          No verified students found yet. Verify student documents first.
-                        </td>
+                        <th>Student Name</th>
+                        <th>Required Fee</th>
+                        <th>Paid Amount</th>
+                        <th>Balance</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                       </tr>
-                    ) : verifiedFeeStudents.map((student) => {
-                      const requiredFee = 5000;
-                      const paidAmount = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
-                      const balance = requiredFee - paidAmount;
-                      return (
-                        <tr key={student.id}>
-                          <td>{student.student_name || student.full_name || '—'}</td>
-                          <td>₹{requiredFee.toLocaleString()}</td>
-                          <td>₹{paidAmount.toLocaleString()}</td>
-                          <td>₹{balance.toLocaleString()}</td>
+                    </thead>
+                    <tbody>
+                      {verifiedFeeStudents.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>
+                            No verified students found yet. Verify student documents first.
+                          </td>
+                        </tr>
+                      ) : verifiedFeeStudents.map((student) => {
+                        const studentFormId = student.student_form_id || student.student_id || student.id;
+                        const record = getFeeTrackingRecord(student);
+                        const currentPaid = feePaidInput[studentFormId] ?? (record?.fee_paid_by_tal ?? '');
+                        const paidAmount = record?.fee_paid_by_tal || 0;
+                        const requiredFee = 5000;
+                        const balance = requiredFee - paidAmount;
+                        const status = record?.fee_status || 'Pending';
+                        return (
+                          <tr key={studentFormId || student.id}>
+                            <td>{student.student_name || student.full_name || '—'}</td>
+                            <td>₹{requiredFee.toLocaleString()}</td>
+                            <td>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="Enter paid amount"
+                                value={currentPaid}
+                                onChange={(e) => handleFeePaidChange(studentFormId, e.target.value)}
+                                style={{ width: '100px', padding: '6px', borderRadius: '6px', border: '1px solid #ccc' }}
+                              />
+                            </td>
+                            <td>₹{balance.toLocaleString()}</td>
+                            <td>
+                              <span className={`status-badge ${status.toLowerCase()}`}>
+                                {status}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  className="btn small"
+                                  onClick={() => setViewingFeeStudent(student)}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  className="btn small primary"
+                                  onClick={() => handleSaveFeeRecord(student)}
+                                  disabled={savingFeeRecord}
+                                >
+                                  {savingFeeRecord ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Student Name</th>
+                        <th>Email</th>
+                        <th>Paid Amount</th>
+                        <th>Status</th>
+                        <th>Voucher</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feeTrackingRecords.filter((record) => record.fee_paid_by_tal > 0).length === 0 ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '1rem' }}>
+                            No fee records are saved yet. First add fee payment details under Fee Tracking.
+                          </td>
+                        </tr>
+                      ) : feeTrackingRecords.filter((record) => record.fee_paid_by_tal > 0).map((record) => (
+                        <tr key={record.id || record.student_form_id}>
+                          <td>{record.full_name || '—'}</td>
+                          <td>{record.email || '—'}</td>
+                          <td>₹{(record.fee_paid_by_tal || 0).toLocaleString()}</td>
                           <td>
-                            <span className={`status-badge ${student.fee_status?.toLowerCase() || 'pending'}`}>
-                              {student.fee_status || 'Pending'}
+                            <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
+                              {record.fee_status || 'Pending'}
                             </span>
                           </td>
                           <td>
-                            <button className="btn small" onClick={() => setViewEligibleStudent(student)}>View</button>
+                            {record.voucher_url ? (
+                              <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
+                            ) : (
+                              <label className="btn small" style={{ cursor: 'pointer' }}>
+                                {uploadingVoucherFor === record.student_form_id ? 'Uploading...' : 'Upload'}
+                                <input
+                                  type="file"
+                                  accept="application/pdf,image/*"
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handleUploadVoucher(record, file);
+                                    }
+                                    e.target.value = null;
+                                  }}
+                                />
+                              </label>
+                            )}
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           )}
+
+          {/* Fee Student Details Modal */}
+          {viewingFeeStudent && (
+            <div className="modal-overlay" onClick={() => setViewingFeeStudent(null)}>
+              <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>Student Fee Details</h3>
+                  <button className="close-btn" onClick={() => setViewingFeeStudent(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  {(() => {
+                    const student = viewingFeeStudent;
+                    const record = getFeeTrackingRecord(student);
+                    const paidAmount = record?.fee_paid_by_tal || 0;
+                    const requiredFee = 5000;
+                    const balance = requiredFee - paidAmount;
+                    const status = record?.fee_status || 'Pending';
+
+                    return (
+                      <div className="student-details-grid">
+                        <div className="detail-section">
+                          <h4>Personal Information</h4>
+                          <div className="detail-row">
+                            <span className="label">Student ID:</span>
+                            <span className="value">{student.student_public_id || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Full Name:</span>
+                            <span className="value">{student.full_name || student.student_name || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Email:</span>
+                            <span className="value">{student.email || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Contact:</span>
+                            <span className="value">{student.contact || student.student_contact || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">WhatsApp:</span>
+                            <span className="value">{student.whatsapp || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Age:</span>
+                            <span className="value">{student.age || '—'}</span>
+                          </div>
+                        </div>
+
+                        <div className="detail-section">
+                          <h4>Educational Information</h4>
+                          <div className="detail-row">
+                            <span className="label">Education:</span>
+                            <span className="value">{student.educationcategory || student.course || student.class || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Branch:</span>
+                            <span className="value">{student.branch || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Year:</span>
+                            <span className="value">{student.year || student.class || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">School:</span>
+                            <span className="value">{student.school || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">College:</span>
+                            <span className="value">{student.college || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Previous Year %:</span>
+                            <span className="value">{student.prev_percent ? `${student.prev_percent}%` : '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Current Year %:</span>
+                            <span className="value">{student.present_percent ? `${student.present_percent}%` : '—'}</span>
+                          </div>
+                        </div>
+
+                        <div className="detail-section">
+                          <h4>Financial Information</h4>
+                          <div className="detail-row">
+                            <span className="label">Required Fee:</span>
+                            <span className="value">₹{requiredFee.toLocaleString()}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Paid by TAL:</span>
+                            <span className="value">₹{paidAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Balance:</span>
+                            <span className="value">₹{balance.toLocaleString()}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Fee Status:</span>
+                            <span className={`value status-badge ${status.toLowerCase()}`}>{status}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Voucher:</span>
+                            <span className="value">
+                              {record?.voucher_url ? (
+                                <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
+                              ) : (
+                                'Not uploaded'
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="detail-section">
+                          <h4>Family & Scholarship Information</h4>
+                          <div className="detail-row">
+                            <span className="label">Scholarship:</span>
+                            <span className="value">{student.scholarship || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Has Scholarship:</span>
+                            <span className="value">{student.has_scholarship ? 'Yes' : 'No'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Does Work:</span>
+                            <span className="value">{student.does_work ? 'Yes' : 'No'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Earning Members:</span>
+                            <span className="value">{student.earning_members || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Academic Achievements:</span>
+                            <span className="value">{student.academic_achievements_choice || student.academic_achievements || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Non-Academic Achievements:</span>
+                            <span className="value">{student.non_academic_achievements_choice || student.non_academic_achievements || '—'}</span>
+                          </div>
+                        </div>
+
+                        <div className="detail-section">
+                          <h4>Camp Information</h4>
+                          <div className="detail-row">
+                            <span className="label">Camp Name:</span>
+                            <span className="value">{student.camp_name || '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Camp Date:</span>
+                            <span className="value">{student.camp_date ? new Date(student.camp_date).toLocaleDateString() : '—'}</span>
+                          </div>
+                        </div>
+
+                        <div className="detail-section">
+                          <h4>Timestamps</h4>
+                          <div className="detail-row">
+                            <span className="label">Created:</span>
+                            <span className="value">{student.created_at ? formatToIST(student.created_at) : '—'}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Fee Record Updated:</span>
+                            <span className="value">{record?.updated_at ? formatToIST(record.updated_at) : '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn" onClick={() => setViewingFeeStudent(null)}>Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Broadcast */} 
           {activeSection === "broadcast" && (
             <section className="broadcast-section">
