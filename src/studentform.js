@@ -1312,7 +1312,7 @@ has_scholarship: "",
 
           <div className="form-group">
             <label>
-              <span className="field-label">First Parent's Contact Number<span className="required">*</span></span>
+              <span className="field-label">Father/Mother/Guardian Contact Number (Primary)<span className="required">*</span></span>
               <input
                 type="text"
                 name="contact"
@@ -1325,7 +1325,7 @@ has_scholarship: "",
               {errors.contact && <p className="error-text">{errors.contact}</p>}
             </label>
             <label>
-              <span className="field-label">Second Parent's/Guardian's Contact Number</span>
+              <span className="field-label">Father/Mother/Guardian Contact Number (Secondary)</span>
               <input
                 type="text"
                 name="parent_contact_2"

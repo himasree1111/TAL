@@ -4,12 +4,12 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
   // Education dropdown data with hierarchical structure
   const educationData = {
     "SCHOOL": {
-      subcategories: null,
-      years: ["8th Class", "9th Class", "10th Class", "Other"]
+      subcategories: null, 
+      years: ["8th Class", "9th Class", "10th Class", "11th (CBSE / ISE)","12th (CBSE / ISE)","Other"]
     },
-    "INTERMEDIATE": {
+    "INTERMEDIATE (State board)": {
       subcategories: ["MPC", "BiPC", "CEC", "MEC", "HEC", "Vocational", "Other"],
-      years: ["11th", "12th", "Other"]
+      years: ["1st year", "2nd year", "Other"]
     },
     "ENGINEERING (B.Tech / BE)": {
       subcategories: ["CSE", "ECE", "EEE", "Mechanical", "Civil", "IT", "Chemical", "Aeronautical", "Petroleum", "Mining", "AI & ML", "Data Science", "Cyber Security", "Biotechnology", "Other"],
