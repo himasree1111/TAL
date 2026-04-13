@@ -5,6 +5,7 @@
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
   background: #f6f7f6;
   color: #2e2e2e;
+  position: relative;
 }
 
 /* Sidebar */
@@ -498,9 +499,216 @@ width: 100%;
   background: #ffffff;
   border-radius: 20px;
   padding: 32px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
-  max-width: 100%;
-  margin: 0;
+}
+
+/* ===== MOBILE HAMBURGER BUTTON ===== */
+.student-menu-toggle {
+  display: none;
+  font-size: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #2e2e2e;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.student-menu-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Sidebar overlay for mobile */
+.student-sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 999;
+  display: none;
+}
+
+.student-sidebar-overlay.active {
+  display: block;
+}
+
+/* ===== TABLET & MOBILE (768px and below) ===== */
+@media (max-width: 1024px) {
+  .student-root {
+    grid-template-columns: 1fr;
+  }
+
+  .student-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .student-sidebar.open {
+    left: 0;
+  }
+
+  .student-menu-toggle {
+    display: block;
+  }
+
+  .student-main {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* ===== MOBILE PHONES (600px and below) ===== */
+@media (max-width: 600px) {
+  .student-main {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .student-main-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .student-main-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .stat-card {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.3rem;
+  }
+
+  .section-block {
+    padding: 18px;
+    margin-top: 12px;
+    border-radius: 14px;
+  }
+
+  .section-header {
+    margin-bottom: 16px;
+  }
+
+  .section-header h2,
+  .section-header h3 {
+    font-size: 1.25rem;
+  }
+
+  .notification-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-card {
+    padding: 16px;
+  }
+
+  .documents-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .doc-card {
+    padding: 18px;
+  }
+
+  .doc-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+
+  .upload-section {
+    max-width: 100%;
+  }
+
+  .profile-form {
+    gap: 10px;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ===== TABLET (768px - 1024px) ===== */
+@media (max-width: 768px) and (min-width: 601px) {
+  .student-root {
+    grid-template-columns: 1fr;
+  }
+
+  .student-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .student-sidebar.open {
+    left: 0;
+  }
+
+  .student-menu-toggle {
+    display: block;
+  }
+
+  .student-main {
+    width: 100%;
+  }
+
+  .stats-bar {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .documents-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
 }
 
 .settings-header {

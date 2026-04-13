@@ -13,6 +13,7 @@ export default function VolunteerDashboard() {
   const [formsPreviously, setFormsPreviously] = useState(0);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [activeSection, setActiveSection] = useState("forms");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settings, setSettings] = useState({ name: "", email: "", phone: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
@@ -256,8 +257,15 @@ export default function VolunteerDashboard() {
 
   return (
     <div className="volunteer-dashboard">
+      {sidebarOpen && (
+        <div
+          className="volunteer-sidebar-overlay active"
+          onClick={() => setSidebarOpen(false)}
+          role="presentation"
+        />
+      )}
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div>
           <div className="profile-section">
             <div className="profile-avatar">V</div>
@@ -284,13 +292,19 @@ export default function VolunteerDashboard() {
           <nav className="sidebar-nav">
             <button 
               className={`nav-btn ${activeSection === "forms" ? "active" : ""}`} 
-              onClick={() => setActiveSection("forms")}
+              onClick={() => {
+                setActiveSection("forms");
+                setSidebarOpen(false);
+              }}
             >
               Forms
             </button>
             <button 
               className={`nav-btn ${activeSection === "settings" ? "active" : ""}`} 
-              onClick={() => setActiveSection("settings")}
+              onClick={() => {
+                setActiveSection("settings");
+                setSidebarOpen(false);
+              }}
             >
               Settings
             </button>
@@ -307,6 +321,13 @@ export default function VolunteerDashboard() {
         {activeSection === "forms" ? (
           <>
             <div className="main-header">
+              <button
+                className="volunteer-menu-toggle"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Toggle sidebar menu"
+              >
+                ☰
+              </button>
               <div className="tab-buttons">
                 <h1>Student Forms</h1>
               </div>

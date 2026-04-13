@@ -84,6 +84,7 @@ const StudentDashboard = () => {
   }, []);
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [profile, setProfile] = useState({});
   const [notifications, setNotifications] = useState([]);
@@ -858,7 +859,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
   const filteredNotifications = useMemo(() => [...notifications].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)), [notifications]);
 
   const renderSidebar = () => (
-    <aside className="student-sidebar">
+    <aside className={`student-sidebar ${sidebarOpen ? "open" : ""}`}>
       <div className="profile-card">
         <div className="avatar" aria-hidden="true">
           {profile.name ? profile.name.charAt(0).toUpperCase() : "S"}
@@ -875,7 +876,10 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
           <button
             key={item.key}
             className={`nav-item ${activeNav === item.key ? "active" : ""}`}
-            onClick={() => setActiveNav(item.key)}
+            onClick={() => {
+              setActiveNav(item.key);
+              setSidebarOpen(false);
+            }}
           >
             <span className="nav-icon" aria-hidden="true">
               {item.icon}
@@ -2074,9 +2078,23 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
 
   return (
     <div className="student-root">
+      {sidebarOpen && (
+        <div
+          className="student-sidebar-overlay active"
+          onClick={() => setSidebarOpen(false)}
+          role="presentation"
+        />
+      )}
       {renderSidebar()}
       <main className="student-main">
         <header className="student-main-header">
+          <button
+            className="student-menu-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar menu"
+          >
+            ☰
+          </button>
           <div>
             {/* <h1>Welcome back, {profile.name || "Scholar"}</h1>
             <p className="subtle">Your dashboard for managing scholarship documents and alerts.</p> */}

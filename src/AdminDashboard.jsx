@@ -335,7 +335,6 @@ export default function AdminDashboard() {
   const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [viewNonEligibleStudent, setViewNonEligibleStudent] = useState(null);
   const [viewDocumentsStudent, setViewDocumentsStudent] = useState(null);
-  const [viewDocumentsCategory, setViewDocumentsCategory] = useState(null);
   const [studentDocuments, setStudentDocuments] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
@@ -473,7 +472,9 @@ const fetchNonEligibleCount = async () => {
             .from('student_form_submissions')
             .select('id')
             .eq('email', student.email)
-            .single();
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
           const studentFormId = formData?.id;
           const { data: docs } = studentFormId ? await supabase
@@ -519,7 +520,6 @@ const fetchNonEligibleCount = async () => {
 
   const handleViewDocuments = async (student, category) => {
     setViewDocumentsStudent(student);
-    setViewDocumentsCategory(category);
     setLoadingDocs(true);
 
     try {
@@ -528,7 +528,9 @@ const fetchNonEligibleCount = async () => {
         .from('student_form_submissions')
         .select('id')
         .eq('email', student.email)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       const studentFormId = formData?.id;
       if (!studentFormId) {
@@ -2114,6 +2116,7 @@ const handleEditDonor = (donor) => {
                       <tr>
                         <th>Student Name</th>
                         <th>Email</th>
+                        <th>Class</th>
                         <th>Education Documents</th>
                         <th>Personal Documents</th>
                         <th>Achievements Documents</th>
@@ -2125,6 +2128,7 @@ const handleEditDonor = (donor) => {
                         <tr key={student.id}>
                           <td>{student.student_name || student.full_name || '—'}</td>
                           <td>{student.email || '—'}</td>
+                          <td>{student.class || student.year || student.course || '—'}</td>
                           <td>
                             <span 
                               className="doc-badge" 
@@ -3099,11 +3103,12 @@ const handleEditDonor = (donor) => {
       {viewDocumentsStudent && (
         <div className="modal-overlay" onClick={() => setViewDocumentsStudent(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto'}}>
-            <h3>
-              {viewDocumentsStudent.student_name || viewDocumentsStudent.full_name} - 
-              {viewDocumentsCategory === 'academic' ? ' Education Documents' : viewDocumentsCategory === 'personal' ? ' Personal Documents' : ' Achievements Documents'}
-            </h3>
-            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <h3 style={{ margin: 0 }}>
+                {viewDocumentsStudent.student_name || viewDocumentsStudent.full_name}
+              </h3>
+            </div>
+
             {loadingDocs ? (
               <p style={{textAlign: 'center', padding: '2rem'}}>Loading documents...</p>
             ) : studentDocuments.length === 0 ? (
@@ -3111,23 +3116,30 @@ const handleEditDonor = (donor) => {
             ) : (
               <div style={{padding: '1rem 0'}}>
                 {studentDocuments.map((doc) => (
-                  <div key={doc.id} style={{borderBottom: '1px solid #e5e7eb', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                    <div>
-                      <p style={{margin: '0 0 4px 0', fontWeight: 500}}>{doc.document_name}</p>
-                      <p style={{margin: 0, fontSize: '12px', color: '#666'}}>
-                        Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}
-                      </p>
+                  <div key={doc.id} style={{borderBottom: '1px solid #e5e7eb', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap'}}>
+                    <div style={{minWidth: '220px', flex: '1 1 300px'}}>
+                      <p style={{margin: '0 0 4px 0', fontWeight: 600}}>{doc.document_name || doc.file_name || 'Unnamed document'}</p>
+                      <p style={{margin: '0', fontSize: '13px', color: '#444'}}><strong>File:</strong> {doc.file_name || 'N/A'}</p>
+                      <p style={{margin: '4px 0 0 0', fontSize: '12px', color: '#666'}}><strong>Uploaded:</strong> {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}</p>
+                      <p style={{margin: '4px 0 0 0', fontSize: '12px', color: '#666'}}><strong>Status:</strong> {doc.is_checked ? 'Verified' : 'Pending'}</p>
                     </div>
-                    {doc.file_url && (
-                      <a 
-                        href={doc.file_url} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        style={{backgroundColor: '#2e7d32', color: 'white', padding: '8px 16px', borderRadius: '4px', textDecoration: 'none', fontSize: '12px', whiteSpace: 'nowrap', marginLeft: '12px'}}
-                      >
-                        View/Download
-                      </a>
-                    )}
+                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px'}}>
+                      {doc.file_url ? (
+                        <a 
+                          href={doc.file_url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          style={{backgroundColor: '#2e7d32', color: 'white', padding: '8px 16px', borderRadius: '4px', textDecoration: 'none', fontSize: '12px', whiteSpace: 'nowrap'}}
+                        >
+                          View/Download
+                        </a>
+                      ) : (
+                        <span style={{fontSize: '12px', color: '#999'}}>No file URL</span>
+                      )}
+                      <span style={{fontSize: '12px', color: doc.is_checked ? '#2e7d32' : '#e65100', fontWeight: 600}}>
+                        {doc.is_checked ? 'Verified' : 'Not verified'}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
