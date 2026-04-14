@@ -286,6 +286,51 @@ console.log(studentId, studentType);
     fetchProfileFormData();
   }, [fetchProfileFormData, studentEmail]);
 
+  useEffect(() => {
+    if (!studentFormId) return;
+
+    let isMounted = true;
+
+    const syncFeeInfo = async () => {
+      const { data, error } = await supabase
+        .from('fee_tracking')
+        .select('*')
+        .eq('student_form_id', studentFormId)
+        .maybeSingle();
+
+      if (!error && isMounted) {
+        setFeeInfo(data || {});
+      }
+    };
+
+    syncFeeInfo();
+
+    const channel = supabase
+      .channel(`fee_tracking:${studentFormId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'fee_tracking',
+          filter: `student_form_id=eq.${studentFormId}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            setFeeInfo(payload.new);
+          } else {
+            syncFeeInfo();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [studentFormId]);
+
   const fetchDocuments = useCallback(async () => {
     if (!studentFormId) return;
     setLoadingDocuments(true);
@@ -955,6 +1000,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                 <p className="doc-subtitle">Upload</p>
                 {category.key === 'fee' && (
                   <div style={{ marginTop: '10px', fontSize: '0.92rem', color: '#374151' }}>
+                    <div><strong>Required Fee:</strong> ₹{Number(feeInfo.required_fee || 0).toLocaleString()}</div>
                     <div><strong>Fee Status:</strong> {feeInfo.fee_status || 'Pending'}</div>
                     <div><strong>Paid by TAL:</strong> ₹{feeInfo.fee_paid_by_tal?.toLocaleString() || '0'}</div>
                     <div>

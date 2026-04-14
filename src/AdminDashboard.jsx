@@ -21,6 +21,13 @@ const formatToIST = (dateString) => {
   return new Intl.DateTimeFormat('en-IN', istOptions).format(utcDate);
 };
 
+const parseMoney = (value) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const asComparableId = (value) => (value === null || value === undefined ? '' : String(value));
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
@@ -361,8 +368,32 @@ export default function AdminDashboard() {
   const getFeeTrackingRecord = (student) => {
     const studentFormId = student.student_form_id || student.student_id || student.id;
     if (!studentFormId) return null;
-    return feeTrackingRecords.find((record) => record.student_form_id === studentFormId);
+    const comparableStudentId = asComparableId(studentFormId);
+    return feeTrackingRecords.find((record) => asComparableId(record.student_form_id) === comparableStudentId);
   };
+
+  const feeTrackingStudents = useMemo(() => {
+    return verifiedFeeStudents.filter((student) => {
+      const record = getFeeTrackingRecord(student);
+      return parseMoney(record?.fee_paid_by_tal) <= 0;
+    });
+  }, [verifiedFeeStudents, feeTrackingRecords]);
+
+  const paidFeeRecords = useMemo(() => {
+    return feeTrackingRecords.filter((record) => parseMoney(record.fee_paid_by_tal) > 0);
+  }, [feeTrackingRecords]);
+
+  const feeReceiptRecords = useMemo(() => {
+    return paidFeeRecords.filter((record) => Boolean(record.voucher_url));
+  }, [paidFeeRecords]);
+
+  const totalFeeDue = useMemo(() => {
+    return feeTrackingRecords.reduce((sum, record) => {
+      const requiredFee = parseMoney(record.required_fee);
+      const paidAmount = parseMoney(record.fee_paid_by_tal);
+      return sum + Math.max(requiredFee - paidAmount, 0);
+    }, 0);
+  }, [feeTrackingRecords]);
 
 const getMaxPercent = React.useCallback((s) => {
   return Math.max(
@@ -648,18 +679,33 @@ const fetchNonEligibleCount = async () => {
       return;
     }
 
-    const paidValue = parseFloat(feePaidInput[studentFormId] ?? student.fee_paid_by_tal ?? 0) || 0;
-    const feeStatus = paidValue === 0 ? 'Pending' : paidValue >= 5000 ? 'Paid' : 'Partial';
+    const normalizedStudentFormId = Number(studentFormId);
+    const recordStudentFormId = Number.isFinite(normalizedStudentFormId) ? normalizedStudentFormId : studentFormId;
+    const existingRecord = getFeeTrackingRecord(student);
+    const requiredFee = parseMoney(existingRecord?.required_fee ?? student.fee ?? student.required_fee);
+    const paidValue = parseMoney(feePaidInput[studentFormId] ?? existingRecord?.fee_paid_by_tal ?? 0);
+    const feeStatus = paidValue === 0 ? 'Pending' : paidValue >= requiredFee && requiredFee > 0 ? 'Paid' : 'Partial';
+    const studentName = student.student_name || student.full_name || student.name || existingRecord?.student_name;
+    const studentEmail = student.email || existingRecord?.email;
+    const studentPublicId = student.student_public_id || existingRecord?.student_public_id || asComparableId(studentFormId);
+
+    if (!studentName || !studentEmail) {
+      alert('Cannot save fee record: student name and email are required');
+      return;
+    }
+
     const payload = {
-      student_form_id: studentFormId,
-      student_public_id: student.student_public_id || student.student_public_id,
-      email: student.email,
-      full_name: student.student_name || student.full_name || student.name,
-      class: student.class || student.year || student.course,
-      educationcategory: student.educationcategory || student.course,
-      educationyear: student.educationyear || student.year,
-      contact: student.contact,
-      required_fee: 5000,
+      student_form_id: recordStudentFormId,
+      student_public_id: studentPublicId,
+      student_name: studentName,
+      email: studentEmail,
+      whatsapp_number: student.whatsapp_number || student.whatsapp || existingRecord?.whatsapp_number || null,
+      camp_name: student.camp_name || student.campName || existingRecord?.camp_name || null,
+      camp_date: student.camp_date || student.campDate || existingRecord?.camp_date || null,
+      education: student.education || student.course || student.educationcategory || existingRecord?.education || null,
+      school: student.school || existingRecord?.school || null,
+      branch: student.branch || existingRecord?.branch || null,
+      required_fee: requiredFee,
       fee_paid_by_tal: paidValue,
       fee_status: feeStatus,
       updated_at: new Date().toISOString(),
@@ -670,7 +716,7 @@ const fetchNonEligibleCount = async () => {
       const { data: existing, error: findError } = await supabase
         .from('fee_tracking')
         .select('id')
-        .eq('student_form_id', studentFormId)
+        .eq('student_form_id', recordStudentFormId)
         .maybeSingle();
 
       if (findError) {
@@ -749,12 +795,17 @@ const fetchNonEligibleCount = async () => {
 
       const { data: existing, error: findError } = await supabase
         .from('fee_tracking')
-        .select('id')
+        .select('id, student_name, email, student_public_id, fee_paid_by_tal')
         .eq('student_form_id', studentFormId)
         .maybeSingle();
 
       if (findError) {
         throw findError;
+      }
+
+      if (!existing?.id || parseMoney(existing.fee_paid_by_tal) <= 0) {
+        alert('Save the fee record first before uploading a voucher.');
+        return;
       }
 
       const updatePayload = {
@@ -768,15 +819,6 @@ const fetchNonEligibleCount = async () => {
           .update(updatePayload)
           .eq('id', existing.id);
         if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from('fee_tracking')
-          .insert({
-            student_form_id: studentFormId,
-            voucher_url: publicUrl,
-            voucher_uploaded_at: new Date().toISOString(),
-          });
-        if (insertError) throw insertError;
       }
 
       await fetchFeeTrackingRecords();
@@ -1321,12 +1363,61 @@ const handleEditDonor = (donor) => {
   };
 
   const handleDownloadFeeReport = () => {
-    const rows = ['student_public_id,name,total,paid,balance,paidDate', ...verifiedFeeStudents.map((student) => {
-      const total = 5000;
-      const paid = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
-      const balance = total - paid;
-      return `"${student.student_public_id || ''}","${student.student_name || student.full_name || ''}",${total},${paid},${balance},${student.paidDate || ''}`;
-    })];
+    const sourceRows = feeSectionTab === 'tracking'
+      ? feeTrackingStudents.map((student) => {
+          const record = getFeeTrackingRecord(student);
+          const requiredFee = parseMoney(record?.required_fee ?? student.fee);
+          const paidAmount = parseMoney(record?.fee_paid_by_tal);
+          const balance = Math.max(requiredFee - paidAmount, 0);
+          return {
+            student_public_id: student.student_public_id || record?.student_public_id || '',
+            student_name: student.student_name || student.full_name || student.name || record?.student_name || '',
+            email: student.email || record?.email || '',
+            required_fee: requiredFee,
+            paid_amount: paidAmount,
+            balance,
+            fee_status: record?.fee_status || 'Pending',
+          };
+        })
+      : feeSectionTab === 'receipts'
+        ? feeReceiptRecords.map((record) => {
+            const requiredFee = parseMoney(record.required_fee);
+            const paidAmount = parseMoney(record.fee_paid_by_tal);
+            const balance = Math.max(requiredFee - paidAmount, 0);
+            return {
+              student_public_id: record.student_public_id || '',
+              student_name: record.student_name || '',
+              email: record.email || '',
+              required_fee: requiredFee,
+              paid_amount: paidAmount,
+              balance,
+              fee_status: record.fee_status || 'Pending',
+            };
+          })
+        : paidFeeRecords.map((record) => {
+            const requiredFee = parseMoney(record.required_fee);
+            const paidAmount = parseMoney(record.fee_paid_by_tal);
+            const balance = Math.max(requiredFee - paidAmount, 0);
+            return {
+              student_public_id: record.student_public_id || '',
+              student_name: record.student_name || '',
+              email: record.email || '',
+              required_fee: requiredFee,
+              paid_amount: paidAmount,
+              balance,
+              fee_status: record.fee_status || 'Pending',
+            };
+          });
+
+    if (sourceRows.length === 0) {
+      alert('No fee records available to export');
+      return;
+    }
+
+    const rows = [
+      'student_public_id,student_name,email,required_fee,paid_amount,balance,status',
+      ...sourceRows.map((row) => `"${row.student_public_id}","${row.student_name}","${row.email}",${row.required_fee},${row.paid_amount},${row.balance},"${row.fee_status}"`),
+    ];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1338,6 +1429,31 @@ const handleEditDonor = (donor) => {
 
   const handleGenerateReport = () => {
     alert('Custom report generated (demo)');
+  };
+
+  const handleDownloadFeeReceiptsReport = () => {
+    if (feeReceiptRecords.length === 0) {
+      alert('No completed fee receipts found');
+      return;
+    }
+
+    const rows = [
+      'student_public_id,student_name,email,required_fee,paid_amount,balance,status,voucher_uploaded_at',
+      ...feeReceiptRecords.map((record) => {
+        const requiredFee = parseMoney(record.required_fee);
+        const paidAmount = parseMoney(record.fee_paid_by_tal);
+        const balance = Math.max(requiredFee - paidAmount, 0);
+        return `"${record.student_public_id || ''}","${record.student_name || ''}","${record.email || ''}",${requiredFee},${paidAmount},${balance},"${record.fee_status || 'Pending'}","${record.voucher_uploaded_at || ''}"`;
+      }),
+    ];
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fee-receipts-report.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleDownloadSpecificReport = (key) => {
@@ -2205,6 +2321,12 @@ const handleEditDonor = (donor) => {
                 >
                   Voucher Uploading
                 </button>
+                <button
+                  className={`btn ${feeSectionTab === 'receipts' ? 'primary' : ''}`}
+                  onClick={() => setFeeSectionTab('receipts')}
+                >
+                  Fee Receipts
+                </button>
               </div>
 
               <div className="fee-summary">
@@ -2213,14 +2335,11 @@ const handleEditDonor = (donor) => {
                   <div className="label">Verified Students</div>
                 </div>
                 <div className="fee-card">
-                  <div className="amount">₹{verifiedFeeStudents.reduce((sum, student) => {
-                    const paid = student.fee_status === 'Paid' ? 5000 : student.fee_status === 'Partial' ? 2500 : 0;
-                    return sum + (5000 - paid);
-                  }, 0)}</div>
+                  <div className="amount">₹{totalFeeDue.toLocaleString()}</div>
                   <div className="label">Total Fee Due</div>
                 </div>
                 <div className="fee-card">
-                  <div className="amount">{feeTrackingRecords.filter((record) => record.fee_paid_by_tal > 0).length}</div>
+                  <div className="amount">{paidFeeRecords.length}</div>
                   <div className="label">Students with Fee Records</div>
                 </div>
               </div>
@@ -2245,24 +2364,24 @@ const handleEditDonor = (donor) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {verifiedFeeStudents.length === 0 ? (
+                      {feeTrackingStudents.length === 0 ? (
                         <tr>
                           <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>
-                            No verified students found yet. Verify student documents first.
+                            No students are pending fee tracking.
                           </td>
                         </tr>
-                      ) : verifiedFeeStudents.map((student) => {
+                      ) : feeTrackingStudents.map((student) => {
                         const studentFormId = student.student_form_id || student.student_id || student.id;
                         const record = getFeeTrackingRecord(student);
                         const currentPaid = feePaidInput[studentFormId] ?? (record?.fee_paid_by_tal ?? '');
-                        const paidAmount = record?.fee_paid_by_tal || 0;
-                        const requiredFee = 5000;
-                        const balance = requiredFee - paidAmount;
+                        const requiredFee = parseMoney(record?.required_fee ?? student.fee);
+                        const paidAmount = parseMoney(record?.fee_paid_by_tal);
+                        const balance = Math.max(requiredFee - paidAmount, 0);
                         const status = record?.fee_status || 'Pending';
                         return (
                           <tr key={studentFormId || student.id}>
-                            <td>{student.student_name || student.full_name || '—'}</td>
-                            <td>₹{requiredFee.toLocaleString()}</td>
+                            <td>{student.student_name || student.full_name || student.name || '—'}</td>
+                            <td>{requiredFee > 0 ? `₹${requiredFee.toLocaleString()}` : '—'}</td>
                             <td>
                               <input
                                 type="number"
@@ -2302,6 +2421,68 @@ const handleEditDonor = (donor) => {
                     </tbody>
                   </table>
                 </div>
+              ) : feeSectionTab === 'voucher' ? (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Student Name</th>
+                        <th>Email</th>
+                        <th>Required Fee</th>
+                        <th>Paid Amount</th>
+                        <th>Status</th>
+                        <th>Voucher</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paidFeeRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>
+                            No fee records are ready for voucher upload yet.
+                          </td>
+                        </tr>
+                      ) : paidFeeRecords.map((record) => {
+                        const requiredFee = parseMoney(record.required_fee);
+                        const paidAmount = parseMoney(record.fee_paid_by_tal);
+                        const balance = Math.max(requiredFee - paidAmount, 0);
+                        return (
+                          <tr key={record.id || record.student_form_id}>
+                            <td>{record.student_name || '—'}</td>
+                            <td>{record.email || '—'}</td>
+                            <td>₹{requiredFee.toLocaleString()}</td>
+                            <td>₹{paidAmount.toLocaleString()}</td>
+                            <td>
+                              <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
+                                {record.fee_status || 'Pending'}
+                              </span>
+                            </td>
+                            <td>
+                              {record.voucher_url ? (
+                                <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
+                              ) : (
+                                <label className="btn small" style={{ cursor: 'pointer' }}>
+                                  {uploadingVoucherFor === record.student_form_id ? 'Uploading...' : 'Upload'}
+                                  <input
+                                    type="file"
+                                    accept="application/pdf,image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handleUploadVoucher(record, file);
+                                      }
+                                      e.target.value = null;
+                                    }}
+                                  />
+                                </label>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <div className="table-wrap">
                   <table className="data-table">
@@ -2309,51 +2490,45 @@ const handleEditDonor = (donor) => {
                       <tr>
                         <th>Student Name</th>
                         <th>Email</th>
+                        <th>Required Fee</th>
                         <th>Paid Amount</th>
-                        <th>Status</th>
                         <th>Voucher</th>
+                        <th>Uploaded At</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {feeTrackingRecords.filter((record) => record.fee_paid_by_tal > 0).length === 0 ? (
+                      {feeReceiptRecords.length === 0 ? (
                         <tr>
-                          <td colSpan={5} style={{ textAlign: 'center', padding: '1rem' }}>
-                            No fee records are saved yet. First add fee payment details under Fee Tracking.
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '1rem' }}>
+                            No completed fee receipts found yet.
                           </td>
                         </tr>
-                      ) : feeTrackingRecords.filter((record) => record.fee_paid_by_tal > 0).map((record) => (
-                        <tr key={record.id || record.student_form_id}>
-                          <td>{record.full_name || '—'}</td>
-                          <td>{record.email || '—'}</td>
-                          <td>₹{(record.fee_paid_by_tal || 0).toLocaleString()}</td>
-                          <td>
-                            <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
-                              {record.fee_status || 'Pending'}
-                            </span>
-                          </td>
-                          <td>
-                            {record.voucher_url ? (
-                              <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
-                            ) : (
-                              <label className="btn small" style={{ cursor: 'pointer' }}>
-                                {uploadingVoucherFor === record.student_form_id ? 'Uploading...' : 'Upload'}
-                                <input
-                                  type="file"
-                                  accept="application/pdf,image/*"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      handleUploadVoucher(record, file);
-                                    }
-                                    e.target.value = null;
-                                  }}
-                                />
-                              </label>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      ) : feeReceiptRecords.map((record) => {
+                        const requiredFee = parseMoney(record.required_fee);
+                        const paidAmount = parseMoney(record.fee_paid_by_tal);
+                        return (
+                          <tr key={record.id || record.student_form_id}>
+                            <td>{record.student_name || '—'}</td>
+                            <td>{record.email || '—'}</td>
+                            <td>₹{requiredFee.toLocaleString()}</td>
+                            <td>₹{paidAmount.toLocaleString()}</td>
+                            <td>
+                              {record.voucher_url ? (
+                                <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
+                              ) : (
+                                'Not uploaded'
+                              )}
+                            </td>
+                            <td>{record.voucher_uploaded_at ? formatToIST(record.voucher_uploaded_at) : '—'}</td>
+                            <td>
+                              <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
+                                {record.fee_status || 'Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -2373,8 +2548,8 @@ const handleEditDonor = (donor) => {
                   {(() => {
                     const student = viewingFeeStudent;
                     const record = getFeeTrackingRecord(student);
-                    const paidAmount = record?.fee_paid_by_tal || 0;
-                    const requiredFee = 5000;
+                    const paidAmount = parseMoney(record?.fee_paid_by_tal);
+                    const requiredFee = parseMoney(record?.required_fee ?? student.fee);
                     const balance = requiredFee - paidAmount;
                     const status = record?.fee_status || 'Pending';
 
@@ -2388,7 +2563,7 @@ const handleEditDonor = (donor) => {
                           </div>
                           <div className="detail-row">
                             <span className="label">Full Name:</span>
-                            <span className="value">{student.full_name || student.student_name || '—'}</span>
+                            <span className="value">{student.student_name || student.full_name || student.name || record?.student_name || '—'}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Email:</span>
@@ -2444,7 +2619,7 @@ const handleEditDonor = (donor) => {
                           <h4>Financial Information</h4>
                           <div className="detail-row">
                             <span className="label">Required Fee:</span>
-                            <span className="value">₹{requiredFee.toLocaleString()}</span>
+                            <span className="value">{requiredFee > 0 ? `₹${requiredFee.toLocaleString()}` : '—'}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Paid by TAL:</span>
@@ -2452,7 +2627,7 @@ const handleEditDonor = (donor) => {
                           </div>
                           <div className="detail-row">
                             <span className="label">Balance:</span>
-                            <span className="value">₹{balance.toLocaleString()}</span>
+                            <span className="value">₹{Math.max(balance, 0).toLocaleString()}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Fee Status:</span>
@@ -2691,6 +2866,22 @@ const handleEditDonor = (donor) => {
                   </div>
                   <div className="report-actions">
                     <button className="btn small" onClick={() => handleDownloadSpecificReport('financial')}>Download Report</button>
+                  </div>
+                </div>
+
+                <div className="report-card">
+                  <h4>Fee Receipts</h4>
+                  <div className="report-meta">
+                    <p>Completed Receipts: <strong>{feeReceiptRecords.length}</strong></p>
+                  </div>
+                  <div className="chart-container">
+                    <div className="chart-placeholder">Fee receipts completed and ready for export.</div>
+                  </div>
+                  <div className="report-actions">
+                    <button className="btn small view-btn" onClick={() => setActiveSection('fees')}>View Page</button>
+                    <button className="btn small" onClick={handleDownloadFeeReceiptsReport} disabled={feeReceiptRecords.length === 0}>
+                      Download Report
+                    </button>
                   </div>
                 </div>
 
