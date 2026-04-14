@@ -289,6 +289,7 @@ export default function AdminDashboard() {
         // Fetch donors
         await fetchDonors();
         await fetchEligibleStudents();
+        await fetchNonEligibleStudents();
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -303,8 +304,6 @@ export default function AdminDashboard() {
     fetchFeeTrackingRecords();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
-
-
 
   // New filters for replacement
   const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: 'all' });
@@ -328,6 +327,11 @@ export default function AdminDashboard() {
   ];
 
   const [activeSection, setActiveSection] = useState("overview");
+  useEffect(() => {
+    if (activeSection === 'noneligible') {
+      fetchNonEligibleStudents();
+    }
+  }, [activeSection]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
   const [editStudent, setEditStudent] = useState(null);
@@ -428,6 +432,44 @@ const getMaxPercent = React.useCallback((s) => {
       .map(s => ({...s, priority: calculatePriority(s)}))
       .sort((a, b) => b.priority - a.priority);
 }, [students, newFilters, calculatePriority, getMaxPercent]);
+
+// Filtered non-eligible students with same filters
+const filteredNonEligibleStudents = useMemo(() => {
+  const normalizeAchievementFlag = (value) => {
+    if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
+      return true;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return true;
+    }
+    return false;
+  };
+
+  const filterAchievementMatch = (student) => {
+    const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
+    const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
+
+    if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
+    if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
+    if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
+    return true;
+  };
+
+  return nonEligibleStudents
+    .filter((s) => {
+      // New filters
+      const campName = s.camp_name || s.campName;
+      const education = s.education || s.course || s.class || s.year;
+      if (newFilters.camp !== 'all' && campName !== newFilters.camp) return false;
+      if (newFilters.education !== 'all' && education !== newFilters.education) return false;
+      if (newFilters.toppers && getMaxPercent(s) < 90) return false;
+      if (!filterAchievementMatch(s)) return false;
+      return true;
+    })
+    .map(s => ({...s, priority: calculatePriority(s)}))
+    .sort((a, b) => b.priority - a.priority);
+}, [nonEligibleStudents, newFilters, calculatePriority, getMaxPercent]);
+
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
     .from("eligible_students")
@@ -1484,7 +1526,8 @@ const handleEditDonor = (donor) => {
             <ul>
               <li className={activeSection === "overview" ? "active" : ""} onClick={() => setActiveSection("overview")}>Dashboard Overview</li>
               <li className={activeSection === "manage" ? "active" : ""} onClick={() => setActiveSection("manage")}>Manage Beneficiaries</li>
-<li className={activeSection === "mapping" ? "active" : ""} onClick={() => setActiveSection("mapping")}>Donor Details</li>
+              <li className={activeSection === "noneligible" ? "active" : ""} onClick={() => setActiveSection("noneligible")}>Non-Eligible Students</li>
+              <li className={activeSection === "mapping" ? "active" : ""} onClick={() => setActiveSection("mapping")}>Donor Details</li>
               <li className={activeSection === "verification" ? "active" : ""} onClick={() => setActiveSection("verification")}>Document Verification</li>
               <li className={activeSection === "fees" ? "active" : ""} onClick={() => setActiveSection("fees")}>Fee Tracking</li>
               <li className={activeSection === "broadcast" ? "active" : ""} onClick={() => setActiveSection("broadcast")}>Alerts & Broadcast</li>
@@ -1517,6 +1560,8 @@ const handleEditDonor = (donor) => {
         ? "Dashboard Overview" 
         : activeSection === "manage" 
         ? "Manage Beneficiaries" 
+        : activeSection === "noneligible"
+        ? "Non-Eligible Students"
         : activeSection === "mapping" 
         ? "Donor Details" 
         : activeSection === "verification" 
@@ -1758,14 +1803,203 @@ const handleEditDonor = (donor) => {
               {students.length === 0 && lastFetch && (
                 <div className="debug-panel">
                   <h4>No more forms to Review</h4>
-                  
-                  
                 </div>
               )}
             </section>
           )}
 
-{activeSection === "mapping" && (
+          {activeSection === "noneligible" && (
+            <section className="manage-section">
+              <div className="manage-controls">
+                <div className="new-filters-grid">
+                  <FilterCard 
+                    title="Camp" 
+                    icon="🏕️" 
+                    options={['all', ...new Set(nonEligibleStudents.map(s => s.camp_name || s.campName || 'Unknown').filter(Boolean))]} 
+                    value={newFilters.camp} 
+                    onChange={(val) => setNewFilters(f => ({...f, camp: val}))} 
+                  />
+                  <FilterCard 
+                    title="Education" 
+                    icon="🎓" 
+                    options={['all', ...new Set([...nonEligibleStudents.map(s => s.education || s.course).filter(Boolean), ...nonEligibleStudents.map(s => s.class || s.year).filter(Boolean)])]} 
+                    value={newFilters.education} 
+                    onChange={(val) => setNewFilters(f => ({...f, education: val}))} 
+                  />
+                  <FilterToggle 
+                    title="Toppers" 
+                    icon="⭐" 
+                    checked={newFilters.toppers} 
+                    onChange={(val) => setNewFilters(f => ({...f, toppers: val}))} 
+                  />
+                  <FilterCard 
+                    title="Achievements" 
+                    icon="🏆" 
+                    options={achievementsFilterOptions} 
+                    value={newFilters.achievements} 
+                    onChange={(val) => setNewFilters(f => ({...f, achievements: val}))} 
+                  />
+                </div>
+
+                <div className="manage-actions">
+                  <button className="btn primary" onClick={fetchNonEligibleStudents}>Refresh</button>
+                  <button className="btn primary" onClick={handleDownloadNonEligibleReport}>Export CSV</button>
+                </div>
+              </div>
+
+              {loadingNonEligible ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  Loading non-eligible students...
+                </div>
+              ) : nonEligibleStudents.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>
+                  <h4>No non-eligible students found</h4>
+                  <p>Students marked as not eligible will appear here.</p>
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Education</th>
+                        <th>Contact</th>
+                        <th>Camp Name</th>
+                        <th>Priority</th>
+                        <th>Percentage</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredNonEligibleStudents.map((student) => (
+                        <tr key={student.student_id || student.id || student.email || Math.random()}>
+                          <td>{student.student_name || student.full_name || student.name || '—'}</td>
+                          <td>{student.email || '—'}</td>
+                          <td>{student.education || student.class || student.year || student.course || '—'}</td>
+                          <td className="nowrap-cell">{student.contact || student.whatsapp || student.student_contact || '—'}</td>
+                          <td>{student.camp_name || student.campName || '—'}</td>
+                          <td className={`priority-cell priority-${student.priority >= 80 ? 'high' : student.priority >= 50 ? 'medium' : 'low'}`}>
+                            <div><strong>{Math.round(student.priority)}</strong>/100</div>
+                            <div className="priority-label">
+                              {student.priority >= 80 ? 'High Need' : student.priority >= 50 ? 'Medium Need' : 'Low Need'}
+                            </div>
+                          </td>
+                          <td>{getAvgPercentage(student)}</td>
+                          <td>
+                            <div className="actions-flex" style={{justifyContent: 'center', gap: '6px'}}>
+                              <div className="tooltip">
+                                <button className="btn small icon-btn" onClick={() => setViewNonEligibleStudent(student)} style={{backgroundColor: '#e3f2fd', color: '#1976d2', borderColor: '#1976d2'}}>👁️</button>
+                                <span className="tooltiptext">View</span>
+                              </div>
+                              <div className="tooltip">
+                                <button className="btn small icon-btn" onClick={() => handleApprove(student)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
+                                <span className="tooltiptext">Approve</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Non-Eligible Student Detail Modal */}
+              {viewNonEligibleStudent && (
+                <div className="modal-overlay" onClick={() => setViewNonEligibleStudent(null)}>
+                  <div className="modal" style={{maxWidth: '600px'}} onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h3>Non-Eligible Student Details</h3>
+                      <button className="close-btn" onClick={() => setViewNonEligibleStudent(null)}>×</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="detail-grid">
+                        <div className="detail-row">
+                          <span className="label">Full Name:</span>
+                          <span className="value">{viewNonEligibleStudent.student_name || viewNonEligibleStudent.full_name || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Email:</span>
+                          <span className="value">{viewNonEligibleStudent.email || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Contact:</span>
+                          <span className="value">{viewNonEligibleStudent.contact || viewNonEligibleStudent.whatsapp || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Age:</span>
+                          <span className="value">{viewNonEligibleStudent.age || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Education:</span>
+                          <span className="value">{viewNonEligibleStudent.education || viewNonEligibleStudent.class || viewNonEligibleStudent.year || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">School/College:</span>
+                          <span className="value">{viewNonEligibleStudent.school || viewNonEligibleStudent.college || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Previous Percentage:</span>
+                          <span className="value">{viewNonEligibleStudent.prev_percent || '—'}%</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Present Percentage:</span>
+                          <span className="value">{viewNonEligibleStudent.present_percent || '—'}%</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Camp Name:</span>
+                          <span className="value">{viewNonEligibleStudent.camp_name || viewNonEligibleStudent.campName || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Camp Date:</span>
+                          <span className="value">{viewNonEligibleStudent.camp_date ? new Date(viewNonEligibleStudent.camp_date).toLocaleDateString('en-IN') : '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Scholarship Status:</span>
+                          <span className="value">{viewNonEligibleStudent.has_scholarship ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Does Work:</span>
+                          <span className="value">{viewNonEligibleStudent.does_work ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Earning Members:</span>
+                          <span className="value">{viewNonEligibleStudent.earning_members || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Volunteer Name:</span>
+                          <span className="value">{viewNonEligibleStudent.volunteer_name || '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Marked as Non-Eligible on:</span>
+                          <span className="value">{viewNonEligibleStudent.created_at ? new Date(viewNonEligibleStudent.created_at).toLocaleDateString('en-IN') : '—'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">Status:</span>
+                          <span className="value" style={{color: '#d32f2f', fontWeight: 'bold'}}>Not Eligible</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button 
+                        className="btn primary" 
+                        onClick={() => {
+                          handleApprove(viewNonEligibleStudent);
+                          setViewNonEligibleStudent(null);
+                        }}
+                      >
+                        Approve & Move to Eligible
+                      </button>
+                      <button className="btn secondary" onClick={() => setViewNonEligibleStudent(null)}>Close</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeSection === "mapping" && (
             <section className="donor-details-section">
               <div className="section-header">
                 <h3>Donor Details</h3>

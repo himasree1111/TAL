@@ -1396,6 +1396,12 @@ html {
   overflow-y: auto;
 }
 
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .modal-footer {
   margin-top: 24px;
   padding-top: 16px;
