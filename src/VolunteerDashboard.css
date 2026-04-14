@@ -455,14 +455,14 @@ background: #7FC74A;
   background: transparent;
   border: none;
   cursor: pointer;
-  color: white;
+  color: #7FC74A;
   padding: 8px 12px;
   border-radius: 8px;
   transition: background 0.2s ease;
 }
 
 .volunteer-menu-toggle:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(127, 199, 74, 0.1);
 }
 
 .volunteer-sidebar-overlay {

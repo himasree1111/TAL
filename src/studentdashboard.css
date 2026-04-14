@@ -1,6 +1,6 @@
 .student-root {
   display: grid;
-  grid-template-columns: clamp(240px, 25vw, 280px) 1fr;
+  grid-template-columns: clamp(240px, min(25vw, 80vw), 280px) 1fr;
   min-height: 100vh;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
   background: #f6f7f6;
@@ -632,7 +632,7 @@ width: 100%;
 
   .documents-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
   }
 
   .doc-card {
@@ -648,6 +648,16 @@ width: 100%;
 
   .upload-section {
     max-width: 100%;
+    width: 100%;
+  }
+
+  .doc-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 12px;
   }
 
   .profile-form {
@@ -656,10 +666,206 @@ width: 100%;
 
   .form-row {
     flex-direction: column;
+    margin-bottom: 16px;
   }
 
   .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* Improve button touch targets */
+  .btn {
+    min-height: 48px;
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+
+  .icon-btn {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 12px;
+  }
+
+  /* Settings form improvements */
+  .settings-panel {
+    padding: 20px;
+    margin: 0 -8px; /* Extend to edges on mobile */
+  }
+
+  .settings-form {
+    gap: 20px;
+  }
+
+  .input-field {
+    padding: 16px 20px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .password-field {
+    position: relative;
+  }
+
+  .eye-icon {
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 8px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  /* Profile improvements */
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .profile-section {
+    padding: 20px;
+  }
+
+  .profile-section-title {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+  }
+
+  .profile-tab-container {
+    padding: 16px 0;
+    margin-bottom: 20px;
+  }
+
+  .profile-tabs {
+    gap: 8px;
+  }
+
+  .profile-tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .view-value {
+    padding: 14px 16px;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .view-value.multiline {
+    min-height: 64px;
+  }
+
+  /* Document upload improvements */
+  .doc-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+
+  .doc-meta {
+    width: 100%;
+  }
+
+  .doc-actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .doc-actions .link,
+  .doc-actions .icon-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Upload progress improvements */
+  .upload-progress {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+
+  .upload-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  /* Notification improvements */
+  .notification-card {
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .notification-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .notification-actions {
+    align-self: flex-end;
+  }
+
+  /* Expense items for family section */
+  .expenses-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .expense-item {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .expense-label {
+    width: 100%;
+  }
+
+  .expense-amount {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+
+  /* Radio options */
+  .radio-options {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .radio-option {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    width: 100%;
+  }
+
+  /* Error and success banners */
+  .error-banner,
+  .success-banner {
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 16px;
   }
 
   input[type="text"],
@@ -670,6 +876,58 @@ width: 100%;
   select,
   textarea {
     font-size: 16px;
+    padding: 14px 16px;
+    min-height: 48px;
+  }
+
+  textarea {
+    min-height: 80px;
+  }
+}
+
+/* ===== MEDIUM SCREENS (1024px - 1200px) ===== */
+@media (max-width: 1200px) and (min-width: 1025px) {
+  .student-root {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .student-sidebar {
+    width: 240px;
+  }
+
+  .profile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .documents-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+
+  .expenses-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
+
+/* ===== LARGE SCREENS (1200px+) ===== */
+@media (min-width: 1200px) {
+  .student-root {
+    grid-template-columns: 260px 1fr;
+  }
+
+  .student-sidebar {
+    width: 260px;
+  }
+
+  .profile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+
+  .documents-grid {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+
+  .expenses-grid {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   }
 }
 
@@ -708,6 +966,38 @@ width: 100%;
 
   .documents-grid {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  /* Tablet-specific improvements */
+  .profile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .settings-panel {
+    padding: 24px;
+  }
+
+  .doc-card-header {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .upload-section {
+    min-width: 200px;
+  }
+
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .radio-options {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .expenses-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   }
 }
 
