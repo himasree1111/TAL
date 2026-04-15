@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { key: "profile", label: "My Profile", icon: "👤" },
   { key: "notifications", label: "Alerts & Broadcasts", icon: "🔔" },
   { key: "documents", label: "Document Upload", icon: "📄" },
-  { key: "settings", label: "Student Settings", icon: "⚙️" },
+  /*{ key: "settings", label: "Student Settings", icon: "⚙️" },*/
 ];
 
 const DOCUMENT_CATEGORIES = [
@@ -93,22 +93,22 @@ const StudentDashboard = () => {
 
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState(""); // _error unused
-  const [settings, setSettings] = useState({
+  /*const [settings, setSettings] = useState({
     newPassword: "",
     confirmPassword: ""
-  });
-const [showNewPassword, setShowNewPassword] = useState(false);
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  });*/
+/*const [showNewPassword, setShowNewPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);*/
+  /*const [errorMessage, setErrorMessage] = useState("");*/
   const [successMessage, setSuccessMessage] = useState("");
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  /*const [savingSettings, setSavingSettings] = useState(false);*/
+  /*const [saveSuccess, setSaveSuccess] = useState(false);*/
   const [studentId, setStudentId] = useState(null);
   const [studentFormId, setStudentFormId] = useState(null);
   const [formIdLoading, setFormIdLoading] = useState(true);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [documentNames, setDocumentNames] = useState(DOCUMENT_CATEGORIES.reduce((acc, cat) => {
-    acc[cat.key] = cat.key === 'fee' ? 'Voucher Upload' : '';
+    acc[cat.key] = cat.key === 'fee' ? '' : '';
     return acc;
   }, {}));
 
@@ -513,11 +513,11 @@ if (!window.confirm('DELETE? (Check F12 Console)')) return;
       };
       await fetchFormId();
 
-      setSettings({
+      /*setSettings({
         name: profileData?.full_name || '',
         email: profileData?.email || '',
         phone: profileData?.phone || ''
-      });
+      });*/
       
 // const type = await getStudentType(idToUse);
 const type = await getStudentType(idToUse);      setStudentType(type);
@@ -554,7 +554,7 @@ if (filterNotification(newData, type)) {          setNotifications(prev => {
 
 
 
-  const handleSaveSettings = async () => {
+  /*const handleSaveSettings = async () => {
     setSavingSettings(true);
     setError("");
     setSaveSuccess(false);
@@ -582,7 +582,7 @@ if (filterNotification(newData, type)) {          setNotifications(prev => {
     } finally {
       setSavingSettings(false);
     }
-  };
+  };*/
 
   const handleLogout = () => {
     contextLogout();
@@ -591,7 +591,7 @@ if (filterNotification(newData, type)) {          setNotifications(prev => {
 
 const handleUpload = async (category, files, documentName) => {
   console.log('[UPLOAD] Starting upload:', { category, documentName: documentName?.trim(), studentFormId, studentEmail });
-  const finalDocumentName = documentName?.trim() || (category === 'fee' ? 'Voucher Upload' : '');
+  const finalDocumentName = documentName?.trim() || (category === 'fee' ? '' : '');
 
   if (!finalDocumentName) {
     setError('Document name is required');
@@ -1012,7 +1012,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                       )}
                     </div>
                     <div style={{ marginTop: '8px', color: '#475569' }}>
-                      Upload your fee voucher here so the admin can verify payment and update your student dashboard status.
+                      Upload your fee receipt (name it with voucher number) here so the admin can verify payment and update your student dashboard status.
                     </div>
                   </div>
                 )}
@@ -1166,7 +1166,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
     </div>
   );
 
-  const renderSettings = ({
+  /*const renderSettings = ({
     settings,
     setSettings,
     showNewPassword,
@@ -1245,7 +1245,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
         </div>
       </div>
     );
-  };
+  };*/
 
   const getYesNo = (value) => value === 'YES' ? 'Yes' : 'No';
 
@@ -2098,7 +2098,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
       );
     }
 
-    if (activeNav === "settings") {
+   /* if (activeNav === "settings") {
       return renderSettings({
         settings,
         setSettings,
@@ -2113,7 +2113,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
         saveSuccess,
         setSaveSuccess,
       });
-    }
+    }*/
 
     if (activeNav === "profile") {
       return renderProfile();
