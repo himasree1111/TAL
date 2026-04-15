@@ -166,8 +166,8 @@ const handleRoleSelect = (role) => {
     navigate('/volunteerlogin');
   } else if (role === 'Student') {
     navigate('/student-login');
-  } else if (role === 'Donor') {
-    navigate('/donorlogin'); } else if (role === 'Admin') {
+  } /*else if (role === 'Donor') {
+    navigate('/donorlogin'); }*/ else if (role === 'Admin') {
     navigate('/adminlogin');
   }
 };
@@ -211,9 +211,9 @@ const handleDonate = () => {
                   <button className="dropdown-item" onClick={() => handleRoleSelect('Student')}>
                     <span className="role-icon">🎓</span> Student
                   </button>
-                  <button className="dropdown-item" onClick={() => handleRoleSelect('Donor')}>
+                  {/* <button className="dropdown-item" onClick={() => handleRoleSelect('Donor')}>
                     <span className="role-icon">💰</span> Donor
-                  </button>
+                  </button> */}
                 </div>
               )}
             </div>

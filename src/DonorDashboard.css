@@ -1,14 +1,14 @@
-/* ================= GLOBAL LAYOUT ================= */
-.app-container {
+/* /* ================= GLOBAL LAYOUT ================= */
+/*.app-container {
   display: flex;
   min-height: 100vh;
   width: 100%;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
   background: #F6F7F6;
-  box-sizing: border-box;
+  box-sizing: border-box;*/
 
   /* FIX: allow scrolling instead of cutting content */
-  position: relative;
+ /* position: relative;
   overflow-x: hidden;
 }
 
@@ -19,7 +19,7 @@
 }
 
 /* ================= SIDEBAR ================= */
-.sidebar {
+/*.sidebar {
   width: 260px;
   min-width: 220px;
   background-color: #1D2B4A;
@@ -78,10 +78,10 @@
 }
 
 /* ================= MAIN CONTENT ================= */
-.main-content {
+/*.main-content {
   flex: 1;
   padding: 24px;
-  overflow-y: auto; /* FIX: allow vertical scroll */
+  overflow-y: auto; 
   width: 100%;
 }
 
@@ -119,7 +119,7 @@
 }
 
 /* ================= METRICS GRID (RESPONSIVE) ================= */
-.metrics-grid {
+/*.metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
@@ -157,14 +157,14 @@
 }
 
 /* ================= BOTTOM GRID (RESPONSIVE) ================= */
-.bottom-grid {
+/*.bottom-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
 }
 
 /* ================= DASHBOARD CARDS ================= */
-.dashboard-card {
+/*.dashboard-card {
   background-color: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -189,7 +189,7 @@
 }
 
 /* ================= TABLE RESPONSIVE ================= */
-.student-table {
+/*.student-table {
   overflow-x: auto;
 }
 
@@ -210,7 +210,7 @@
 /* ================= RESPONSIVE BREAKPOINTS ================= */
 
 /* Tablets */
-@media (max-width: 1024px) {
+/*@media (max-width: 1024px) {
   .sidebar {
     width: 220px;
     padding: 16px;
@@ -222,7 +222,7 @@
 }
 
 /* Mobile Layout */
-@media (max-width: 768px) {
+/*@media (max-width: 768px) {
   .dashboard-layout {
     flex-direction: column;
   }
@@ -250,7 +250,7 @@
 }
 
 /* Small Phones */
-@media (max-width: 480px) {
+/*@media (max-width: 480px) {
   .card-value {
     font-size: 20px;
   }
@@ -263,3 +263,4 @@
     padding: 12px;
   }
 }
+ */

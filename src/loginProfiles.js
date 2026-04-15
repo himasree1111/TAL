@@ -4,7 +4,7 @@ import "./loginProfiles.css";
 
 const profiles = [
   { role: "Student", description: "Scholarship Approval Access" },
-  { role: "Donor", description: "Support causes and projects" },
+  /*{ role: "Donor", description: "Support causes and projects" },*/
   { role: "Volunteer", description: "Help organize and assist" },
   { role: "Admin", description: "Manage the entire platform" },
 ];
@@ -23,10 +23,10 @@ export default function ProfilesPage() {
       return;
     }
     
-    if (role === 'Donor') {
+    /*if (role === 'Donor') {
       navigate('/donorlogin');
       return;
-    }
+    }*/
     
     // fallback: go to role-specific login (now only for Admin)
     navigate(`/login/${role.toLowerCase()}`);

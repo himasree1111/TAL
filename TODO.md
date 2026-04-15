@@ -1,22 +1,9 @@
-# Student Dashboard - Separate Placeholders for Document Upload
+# Task Progress: Comment out Donor button in CoverPage.js
 
-## Plan Breakdown (Approved) - ✅ COMPLETED
-
-User task: Add separate placeholders in student dashboard document upload sections.
-
-**Files:** src/studentdashboard.js
-
-**Steps:**
-- [x] Step 1: Update DOCUMENT_CATEGORIES array to include `placeholder` prop for each category. ✅
-- [x] Step 2: In `renderDocumentUpload()`, use `category.placeholder` in text input. ✅
-- [x] Step 3: Verified in code - placeholders now category-specific (e.g., "e.g. Fee Receipt 2024" for fee).
-- [x] Step 4: Upload logic unchanged, works as before.
-
-**Changes Summary:**
-- DOCUMENT_CATEGORIES now has `placeholder` for each category.
-- Document name input uses `placeholder={category.placeholder}` for fee/extracurricular.
-
-**Test:** Run `npm start`, login as student, go to Documents tab - see separate placeholders per category.
-
-**Task complete!** 🎉
+## Steps:
+- [x] Create TODO.md with plan steps
+- [x] Edit src/CoverPage.js to comment out Donor button
+- [x] Verify edit with read_file
+- [x] Test in development server (run `npm start` to preview)
+- [x] Mark task complete
 
