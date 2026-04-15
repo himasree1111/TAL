@@ -5,7 +5,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
   const educationData = {
     "SCHOOL": {
       subcategories: null, 
-      years: ["8th Class", "9th Class", "10th Class", "11th (CBSE / ISE)","12th (CBSE / ISE)","Other"]
+      years: ["8th Class", "9th Class", "10th Class", "11th (CBSE / ISC)","12th (CBSE / ISC)","Other"]
     },
     "INTERMEDIATE (State board)": {
       subcategories: ["MPC", "BiPC", "CEC", "MEC", "HEC", "Vocational", "Other"],

@@ -6,6 +6,7 @@
   background: #f6f7f6;
   color: #2e2e2e;
   position: relative;
+  overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -19,6 +20,25 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.student-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.student-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.student-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(127, 199, 74, 0.3);
+  border-radius: 3px;
+}
+
+.student-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 199, 74, 0.5);
 }
 
 .profile-card {
@@ -116,7 +136,8 @@
   display: block !important;
   width: 100%;
   gap: clamp(1.5rem, 3vw, 1.5rem);
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .student-main-header {
@@ -549,6 +570,8 @@ width: 100%;
     z-index: 1000;
     transition: left 0.3s ease;
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .student-sidebar.open {
@@ -565,32 +588,136 @@ width: 100%;
   }
 }
 
+/* ===== SMALL MOBILE PHONES (400px and below) ===== */
+@media (max-width: 400px) {
+  .student-main {
+    padding: 10px 10px;
+  }
+
+  .stats-bar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 10px;
+    flex-direction: row;
+    text-align: left;
+  }
+
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+  }
+
+  .section-block {
+    padding: 14px 12px;
+  }
+
+  .section-header h2,
+  .section-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .profile-card {
+    padding: 12px;
+  }
+
+  .avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 1rem;
+  }
+
+  .profile-meta h3 {
+    font-size: 0.9rem;
+  }
+
+  .nav-item {
+    padding: 10px;
+    font-size: 0.85rem;
+    gap: 10px;
+  }
+
+  .nav-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 0.95rem;
+  }
+
+  .doc-card {
+    padding: 14px;
+  }
+
+  .notification-card {
+    padding: 12px;
+  }
+
+  .settings-panel {
+    padding: 14px 12px;
+  }
+
+  .profile-section {
+    padding: 14px 12px;
+  }
+}
+
 /* ===== MOBILE PHONES (600px and below) ===== */
 @media (max-width: 600px) {
+  .student-root {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+  }
+
   .student-main {
-    padding: 12px 16px;
+    padding: 12px 12px;
     gap: 12px;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   .student-main-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+    padding: 0;
   }
 
   .student-main-header h1 {
     font-size: 1.4rem;
   }
 
+  .student-menu-toggle {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin: -12px -12px 12px -12px;
+    width: calc(100% + 24px);
+  }
+
   .stats-bar {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
     margin-top: 12px;
   }
 
   .stat-card {
-    padding: 14px 12px;
+    padding: 12px 10px;
     gap: 10px;
+    flex-direction: column;
+    text-align: center;
   }
 
   .stat-icon {
@@ -600,43 +727,54 @@ width: 100%;
   }
 
   .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .stat-value {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
 
   .section-block {
-    padding: 18px;
+    padding: 16px 14px;
     margin-top: 12px;
     border-radius: 14px;
   }
 
   .section-header {
     margin-bottom: 16px;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .section-header h2,
   .section-header h3 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
+  }
+
+  .section-note {
+    font-size: 0.85rem;
+  }
+
+  .content-area {
+    gap: 16px;
   }
 
   .notification-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .notification-card {
-    padding: 16px;
+    padding: 14px;
   }
 
   .documents-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
   }
 
   .doc-card {
-    padding: 18px;
+    padding: 16px;
   }
 
   .doc-card-header {
@@ -653,7 +791,7 @@ width: 100%;
 
   .doc-input {
     width: 100%;
-    padding: 12px 16px;
+    padding: 12px 14px;
     font-size: 16px; /* Prevent zoom on iOS */
     border: 2px solid #e5e7eb;
     border-radius: 12px;
@@ -666,7 +804,7 @@ width: 100%;
 
   .form-row {
     flex-direction: column;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   .form-group {
@@ -681,23 +819,24 @@ width: 100%;
   }
 
   .icon-btn {
-    min-width: 48px;
-    min-height: 48px;
-    padding: 12px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
   }
 
   /* Settings form improvements */
   .settings-panel {
-    padding: 20px;
-    margin: 0 -8px; /* Extend to edges on mobile */
+    padding: 18px 14px;
+    margin: 0;
+    border-radius: 14px;
   }
 
   .settings-form {
-    gap: 20px;
+    gap: 18px;
   }
 
   .input-field {
-    padding: 16px 20px;
+    padding: 14px 16px;
     font-size: 16px;
     min-height: 48px;
   }
@@ -707,7 +846,7 @@ width: 100%;
   }
 
   .eye-icon {
-    right: 16px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
     padding: 8px;
@@ -715,7 +854,7 @@ width: 100%;
 
   .form-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .form-actions .btn {
@@ -725,52 +864,53 @@ width: 100%;
   /* Profile improvements */
   .profile-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
   }
 
   .profile-section {
-    padding: 20px;
+    padding: 18px 14px;
+    margin-bottom: 18px;
   }
 
   .profile-section-title {
-    font-size: 1.2rem;
-    margin-bottom: 20px;
+    font-size: 1.15rem;
+    margin-bottom: 18px;
   }
 
   .profile-tab-container {
-    padding: 16px 0;
-    margin-bottom: 20px;
+    padding: 14px 0;
+    margin-bottom: 18px;
   }
 
   .profile-tabs {
-    gap: 8px;
+    gap: 6px;
   }
 
   .profile-tab {
-    padding: 12px 16px;
-    font-size: 14px;
+    padding: 10px 14px;
+    font-size: 13px;
     white-space: nowrap;
   }
 
   .view-value {
-    padding: 14px 16px;
+    padding: 12px 14px;
     min-height: 48px;
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .view-value.multiline {
-    min-height: 64px;
+    min-height: 60px;
   }
 
   /* Document upload improvements */
   .doc-row {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
+    gap: 10px;
+    padding: 14px;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .doc-meta {
@@ -779,14 +919,14 @@ width: 100%;
 
   .doc-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     justify-content: flex-end;
   }
 
   .doc-actions .link,
   .doc-actions .icon-btn {
-    padding: 8px 16px;
+    padding: 8px 14px;
     border-radius: 8px;
     text-decoration: none;
     display: inline-flex;
@@ -796,9 +936,9 @@ width: 100%;
 
   /* Upload progress improvements */
   .upload-progress {
-    padding: 16px;
+    padding: 14px;
     border-radius: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .upload-meta {
@@ -810,14 +950,14 @@ width: 100%;
 
   /* Notification improvements */
   .notification-card {
-    padding: 16px;
-    margin-bottom: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
   }
 
   .notification-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 6px;
   }
 
   .notification-actions {
@@ -827,14 +967,14 @@ width: 100%;
   /* Expense items for family section */
   .expenses-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 
   .expense-item {
-    padding: 16px;
+    padding: 14px;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
   }
 
   .expense-label {
@@ -843,18 +983,18 @@ width: 100%;
 
   .expense-amount {
     width: 100%;
-    padding: 12px 16px;
+    padding: 12px 14px;
     font-size: 16px;
   }
 
   /* Radio options */
   .radio-options {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .radio-option {
-    padding: 12px 16px;
+    padding: 12px 14px;
     border-radius: 12px;
     border: 1px solid #e5e7eb;
     width: 100%;
@@ -863,9 +1003,9 @@ width: 100%;
   /* Error and success banners */
   .error-banner,
   .success-banner {
-    padding: 16px;
-    margin-bottom: 16px;
-    font-size: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
+    font-size: 15px;
   }
 
   input[type="text"],
@@ -876,12 +1016,49 @@ width: 100%;
   select,
   textarea {
     font-size: 16px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     min-height: 48px;
   }
 
   textarea {
     min-height: 80px;
+  }
+
+  /* Profile card in sidebar */
+  .profile-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.1rem;
+  }
+
+  .profile-meta h3 {
+    font-size: 0.95rem;
+  }
+
+  .profile-meta .subtle {
+    font-size: 0.8rem;
+  }
+
+  /* Nav items */
+  .nav-item {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .nav-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 1rem;
+  }
+
+  .logout-btn {
+    padding: 12px;
+    font-size: 0.95rem;
   }
 }
 
@@ -946,6 +1123,8 @@ width: 100%;
     z-index: 1000;
     transition: left 0.3s ease;
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .student-sidebar.open {
@@ -958,6 +1137,7 @@ width: 100%;
 
   .student-main {
     width: 100%;
+    padding: 16px 20px;
   }
 
   .stats-bar {
@@ -998,6 +1178,15 @@ width: 100%;
 
   .expenses-grid {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .section-block {
+    padding: 22px;
+  }
+
+  .section-header h2,
+  .section-header h3 {
+    font-size: 1.35rem;
   }
 }
 
@@ -1377,47 +1566,9 @@ width: 100%;
   gap: 28px;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .student-root {
-    grid-template-columns: 260px 1fr;
-  }
-}
-
-@media (max-width: 800px) {
-  .student-root {
-    grid-template-columns: 1fr;
-  }
-  
-  .student-sidebar {
-    flex-direction: row;
-    position: static;
-    height: auto;
-    overflow-x: auto;
-    padding: clamp(1rem, 4vw, 1rem) clamp(1.25rem, 5vw, 1.25rem);
-  }
-  
-  .student-main {
-    padding: clamp(1rem, 4vw, 1.25rem);
-  }
-  
-  .profile-grid {
-    grid-template-columns: 1fr;
-    gap: clamp(1.25rem, 3vw, 1.25rem);
-  }
-}
-
-@media (max-width: 640px) {
-  .documents-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .stats-bar {
-    grid-template-columns: 1fr;
-  }
-  
-  .notification-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 600px) {
+  .content-area {
+    gap: 16px;
   }
 }
 
