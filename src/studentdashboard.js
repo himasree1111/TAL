@@ -695,8 +695,6 @@ const handleUpload = async (category, files, documentName) => {
           file_name: file.name,
           file_url: publicUrl,
           uploaded_at: new Date().toISOString(),
-          education_year: academicEducation.educationyear || academicEducation.educationyear_custom || 'N/A',
-          academic_year: new Date().getFullYear().toString()
         })
         .select()
         .single();
@@ -1058,6 +1056,8 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                   >
                     <option value="">Select Personal Document</option>
                     <option value="Aadhar Card">Aadhar Card</option>
+<option value="ID Card">ID Card</option>
+                    <option value="Passport size photo">Passport size photo</option>
                     <option value="Bonified">Bonified</option>
                     <option value="Income Certificate">Income Certificate</option>
                     <option value="Other Certificate">Other Certificate</option>
