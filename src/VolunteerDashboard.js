@@ -299,7 +299,8 @@ export default function VolunteerDashboard() {
             >
               Forms
             </button>
-            <button 
+{/* 
+              <button 
               className={`nav-btn ${activeSection === "settings" ? "active" : ""}`} 
               onClick={() => {
                 setActiveSection("settings");
@@ -307,7 +308,9 @@ export default function VolunteerDashboard() {
               }}
             >
               Settings
-            </button>
+            </button> 
+            COMMENETED OUT PER REQUEST
+          */}
           </nav>
         </div>
 
@@ -318,7 +321,7 @@ export default function VolunteerDashboard() {
 
       {/* Main Content */}
       <main className="main-content">
-        {activeSection === "forms" ? (
+{activeSection === "forms" ? (
           <>
             <div className="main-header">
               <button
