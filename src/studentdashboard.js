@@ -694,7 +694,9 @@ const handleUpload = async (category, files, documentName) => {
           document_name: finalDocumentName,
           file_name: file.name,
           file_url: publicUrl,
-          uploaded_at: new Date().toISOString()
+          uploaded_at: new Date().toISOString(),
+          education_year: academicEducation.educationyear || academicEducation.educationyear_custom || 'N/A',
+          academic_year: new Date().getFullYear().toString()
         })
         .select()
         .single();

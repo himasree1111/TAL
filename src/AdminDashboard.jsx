@@ -347,6 +347,8 @@ export default function AdminDashboard() {
   const [viewNonEligibleStudent, setViewNonEligibleStudent] = useState(null);
   const [viewDocumentsStudent, setViewDocumentsStudent] = useState(null);
   const [studentDocuments, setStudentDocuments] = useState([]);
+  const [groupedDocuments, setGroupedDocuments] = useState({});
+  const [sortedYears, setSortedYears] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
   const [feeSectionTab, setFeeSectionTab] = useState('tracking');
@@ -612,7 +614,7 @@ const fetchNonEligibleCount = async () => {
         return;
       }
 
-      // Fetch documents for this category
+      // Fetch ALL documents for this category (not filtered by year)
       const { data: docs, error } = await supabase
         .from('student_documents')
         .select('*')
@@ -621,7 +623,27 @@ const fetchNonEligibleCount = async () => {
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
+      
+      // Group documents by education_year
+      const groupedDocs = {};
+      (docs || []).forEach(doc => {
+        const year = doc.education_year || 'Unknown';
+        if (!groupedDocs[year]) {
+          groupedDocs[year] = [];
+        }
+        groupedDocs[year].push(doc);
+      });
+      
+      // Sort years: most recent first
+      const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
+        if (a === 'Unknown') return 1;
+        if (b === 'Unknown') return -1;
+        return b.localeCompare(a);
+      });
+      
       setStudentDocuments(docs || []);
+      setGroupedDocuments(groupedDocs);
+      setSortedYears(sortedYears);
     } catch (err) {
       console.error('Error fetching documents:', err);
       alert('Error fetching documents: ' + err.message);
@@ -663,6 +685,62 @@ const fetchNonEligibleCount = async () => {
       alert('Error verifying documents: ' + err.message);
     } finally {
       setLoadingEligible(false);
+    }
+  };
+
+  // Verify individual document
+  const handleVerifySingleDocument = async (docId) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('student_documents')
+        .update({ is_checked: true })
+        .eq('id', docId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Refresh the document list
+      if (viewDocumentsStudent) {
+        const { data: formData } = await supabase
+          .from('student_form_submissions')
+          .select('id')
+          .eq('email', viewDocumentsStudent.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (formData?.id) {
+          const { data: docs } = await supabase
+            .from('student_documents')
+            .select('*')
+            .eq('student_id', formData.id)
+            .order('uploaded_at', { ascending: false });
+
+          // Re-group documents
+          const groupedDocs = {};
+          (docs || []).forEach(doc => {
+            const year = doc.education_year || 'Unknown';
+            if (!groupedDocs[year]) {
+              groupedDocs[year] = [];
+            }
+            groupedDocs[year].push(doc);
+          });
+
+          const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
+            if (a === 'Unknown') return 1;
+            if (b === 'Unknown') return -1;
+            return b.localeCompare(a);
+          });
+
+          setStudentDocuments(docs || []);
+          setGroupedDocuments(groupedDocs);
+          setSortedYears(sortedYears);
+        }
+      }
+    } catch (err) {
+      console.error('Error verifying document:', err);
+      alert('Error verifying document: ' + err.message);
     }
   };
 
@@ -3527,11 +3605,14 @@ const handleEditDonor = (donor) => {
 
       {viewDocumentsStudent && (
         <div className="modal-overlay" onClick={() => setViewDocumentsStudent(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto'}}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{maxWidth: '900px', maxHeight: '85vh', overflowY: 'auto'}}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <h3 style={{ margin: 0 }}>
                 {viewDocumentsStudent.student_name || viewDocumentsStudent.full_name}
               </h3>
+              <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                Document Verification - Grouped by Academic Year
+              </p>
             </div>
 
             {loadingDocs ? (
@@ -3540,33 +3621,115 @@ const handleEditDonor = (donor) => {
               <p style={{textAlign: 'center', padding: '2rem', color: '#666'}}>No documents found</p>
             ) : (
               <div style={{padding: '1rem 0'}}>
-                {studentDocuments.map((doc) => (
-                  <div key={doc.id} style={{borderBottom: '1px solid #e5e7eb', padding: '12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap'}}>
-                    <div style={{minWidth: '220px', flex: '1 1 300px'}}>
-                      <p style={{margin: '0 0 4px 0', fontWeight: 600}}>{doc.document_name || doc.file_name || 'Unnamed document'}</p>
-                      <p style={{margin: '0', fontSize: '13px', color: '#444'}}><strong>File:</strong> {doc.file_name || 'N/A'}</p>
-                      <p style={{margin: '4px 0 0 0', fontSize: '12px', color: '#666'}}><strong>Uploaded:</strong> {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}</p>
-                      <p style={{margin: '4px 0 0 0', fontSize: '12px', color: '#666'}}><strong>Status:</strong> {doc.is_checked ? 'Verified' : 'Pending'}</p>
+                {sortedYears.map((year) => {
+                  const yearDocs = groupedDocuments[year];
+                  const allVerified = yearDocs.every(d => d.is_checked);
+                  const anyVerified = yearDocs.some(d => d.is_checked);
+                  
+                  return (
+                    <div key={year} style={{ marginBottom: '24px', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                      {/* Year Header */}
+                      <div style={{
+                        padding: '12px 16px',
+                        backgroundColor: allVerified ? '#e8f5e8' : anyVerified ? '#fff3e0' : '#ffebee',
+                        borderBottom: '1px solid #e5e7eb',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
+                          {year === 'Unknown' ? '📄 Documents Without Year' : `📅 ${year}`}
+                        </h4>
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          backgroundColor: allVerified ? '#2e7d32' : anyVerified ? '#e65100' : '#c62828',
+                          color: 'white'
+                        }}>
+                          {yearDocs.filter(d => d.is_checked).length}/{yearDocs.length} Verified
+                        </span>
+                      </div>
+
+                      {/* Documents List */}
+                      {yearDocs.map((doc) => (
+                        <div key={doc.id} style={{
+                          padding: '16px',
+                          borderBottom: '1px solid #f0f0f0',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '16px',
+                          flexWrap: 'wrap',
+                          backgroundColor: doc.is_checked ? '#f9f9f9' : 'white'
+                        }}>
+                          <div style={{minWidth: '220px', flex: '1 1 300px'}}>
+                            <p style={{margin: '0 0 4px 0', fontWeight: 600, fontSize: '14px'}}>
+                              {doc.document_name || doc.file_name || 'Unnamed document'}
+                            </p>
+                            <p style={{margin: '0', fontSize: '13px', color: '#444'}}>
+                              <strong>File:</strong> {doc.file_name || 'N/A'}
+                            </p>
+                            <p style={{margin: '4px 0 0 0', fontSize: '12px', color: '#666'}}>
+                              <strong>Uploaded:</strong> {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </div>
+                          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px'}}>
+                            {doc.file_url ? (
+                              <a 
+                                href={doc.file_url} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                style={{
+                                  backgroundColor: doc.is_checked ? '#2e7d32' : '#1976d2',
+                                  color: 'white', 
+                                  padding: '8px 16px', 
+                                  borderRadius: '4px', 
+                                  textDecoration: 'none', 
+                                  fontSize: '12px', 
+                                  whiteSpace: 'nowrap',
+                                  fontWeight: 600
+                                }}
+                              >
+                                {doc.is_checked ? '✓ View Verified' : '👁 View & Verify'}
+                              </a>
+                            ) : (
+                              <span style={{fontSize: '12px', color: '#999'}}>No file URL</span>
+                            )}
+                            {!doc.is_checked && (
+                              <button 
+                                onClick={() => handleVerifySingleDocument(doc.id)}
+                                style={{
+                                  backgroundColor: '#2e7d32',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '6px 12px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 600
+                                }}
+                              >
+                                ✅ Mark as Verified
+                              </button>
+                            )}
+                            <span style={{
+                              fontSize: '12px', 
+                              color: doc.is_checked ? '#2e7d32' : '#e65100', 
+                              fontWeight: 600,
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: doc.is_checked ? '#e8f5e8' : '#fff3e0'
+                            }}>
+                              {doc.is_checked ? '✅ Verified' : '⏳ Pending Verification'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px'}}>
-                      {doc.file_url ? (
-                        <a 
-                          href={doc.file_url} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          style={{backgroundColor: '#2e7d32', color: 'white', padding: '8px 16px', borderRadius: '4px', textDecoration: 'none', fontSize: '12px', whiteSpace: 'nowrap'}}
-                        >
-                          View/Download
-                        </a>
-                      ) : (
-                        <span style={{fontSize: '12px', color: '#999'}}>No file URL</span>
-                      )}
-                      <span style={{fontSize: '12px', color: doc.is_checked ? '#2e7d32' : '#e65100', fontWeight: 600}}>
-                        {doc.is_checked ? 'Verified' : 'Not verified'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             
