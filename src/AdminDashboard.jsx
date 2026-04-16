@@ -657,7 +657,7 @@ const fetchNonEligibleCount = async () => {
     try {
       const { data: formData, error: formError } = await supabase
         .from('student_form_submissions')
-        .select('id')
+        .select('*')
         .eq('email', student.email)
         .single();
 
@@ -666,10 +666,12 @@ const fetchNonEligibleCount = async () => {
         return;
       }
 
+      const studentFormId = formData.id;
+
       const { error: updateError } = await supabase
         .from('student_documents')
         .update({ is_checked: true })
-        .eq('student_id', formData.id)
+        .eq('student_id', studentFormId)
         .in('category', ['academic', 'personal', 'extracurricular']);
 
       if (updateError) {
@@ -678,13 +680,161 @@ const fetchNonEligibleCount = async () => {
         return;
       }
 
+      // Increment doc_verification_count in eligible_students
+      const currentCount = student.doc_verification_count || 0;
+      const newCount = currentCount + 1;
+      
+      const { error: countError } = await supabase
+        .from('eligible_students')
+        .update({ doc_verification_count: newCount })
+        .eq('email', student.email);
+
+      if (countError) {
+        console.error('Error updating verification count:', countError);
+      } else {
+        console.log(`Verification count incremented to ${newCount} for ${student.email}`);
+      }
+
+      // After verification, populate/update fee_tracking with latest student data
+      await populateOrUpdateFeeTracking(studentFormId, formData);
+
       await fetchEligibleStudents();
-      alert('Documents marked verified successfully.');
+      alert(`Documents verified successfully! Verification count: ${newCount}. Student updated in Fee Tracking.`);
     } catch (err) {
       console.error('Error verifying documents:', err);
       alert('Error verifying documents: ' + err.message);
     } finally {
       setLoadingEligible(false);
+    }
+  };
+
+  // Populate or update fee_tracking after document verification
+  // This function is called every time doc_verification_count is incremented
+  // ALL fields populated from student_form_submissions - NO NULL values allowed
+  const populateOrUpdateFeeTracking = async (studentFormId, formData) => {
+    try {
+      // Calculate total_educational_expenses from form data
+      let totalEducationalExpenses = 0;
+      
+      // Priority 1: Use total_educational_expenses field directly
+      if (formData.total_educational_expenses) {
+        totalEducationalExpenses = parseFloat(formData.total_educational_expenses) || 0;
+      }
+      
+      // Priority 2: Calculate from educational_expenses JSON
+      if (totalEducationalExpenses === 0 && formData.educational_expenses && typeof formData.educational_expenses === 'object') {
+        totalEducationalExpenses = Object.values(formData.educational_expenses).reduce((sum, expense) => {
+          if (expense && expense.checked && expense.amount) {
+            return sum + parseFloat(expense.amount) || 0;
+          }
+          return sum;
+        }, 0);
+      }
+
+      // Priority 3: Use fee field as fallback
+      if (totalEducationalExpenses === 0 && formData.fee) {
+        totalEducationalExpenses = parseFloat(formData.fee) || 0;
+      }
+
+      // Prepare fee tracking payload with exact table schema
+      // ALL fields must have values - NO NULL values allowed except voucher_url
+      const feePayload = {
+        student_form_id: studentFormId || 0,
+        student_public_id: formData.student_public_id || `STU-${studentFormId}`,
+        student_name: formData.full_name || formData.first_name || formData.last_name || 'Student Name',
+        email: formData.email || 'no-email@example.com',
+        whatsapp_number: formData.whatsapp || formData.contact || 'N/A',
+        camp_name: formData.camp_name || 'N/A',
+        camp_date: formData.camp_date || new Date().toISOString().split('T')[0],
+        education: formData.educationcategory || formData.educationsubcategory || formData.class || formData.educationyear || 'N/A',
+        school: formData.school || 'N/A',
+        branch: formData.branch || 'N/A',
+        total_educational_expenses: totalEducationalExpenses || 0,
+        fee_paid_by_tal: 0,
+        total_paid_by_tal: 0,
+        fee_status: 'Pending',
+        voucher_url: null, // Only field allowed to be null initially
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Log what we're about to insert for debugging
+      console.log('Fee tracking payload:', feePayload);
+
+      // Check if record already exists
+      const { data: existingFeeRecord, error: findError } = await supabase
+        .from('fee_tracking')
+        .select('id, voucher_url, fee_paid_by_tal, total_paid_by_tal')
+        .eq('student_form_id', studentFormId)
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Error checking fee tracking:', findError);
+        return;
+      }
+
+      let error;
+      
+      if (existingFeeRecord?.id) {
+        // UPDATE existing record (preserve voucher_url and payment info)
+        const updatePayload = {
+          ...feePayload,
+          // Preserve existing voucher URL - don't overwrite
+          voucher_url: existingFeeRecord.voucher_url || null,
+          // Preserve payment information if already paid
+          fee_paid_by_tal: existingFeeRecord.fee_paid_by_tal || 0,
+          total_paid_by_tal: existingFeeRecord.total_paid_by_tal || 0,
+          // Update status based on preserved payment
+          fee_status: (existingFeeRecord.fee_paid_by_tal || 0) > 0 
+            ? ((existingFeeRecord.fee_paid_by_tal >= totalEducationalExpenses && totalEducationalExpenses > 0) ? 'Paid' : 'Partial')
+            : 'Pending',
+          updated_at: new Date().toISOString(),
+        };
+        
+        const { error: updateError } = await supabase
+          .from('fee_tracking')
+          .update(updatePayload)
+          .eq('id', existingFeeRecord.id);
+        
+        error = updateError;
+        
+        if (!updateError) {
+          console.log('✅ Fee tracking record UPDATED successfully for:', studentFormId);
+          console.log('Updated fields:', {
+            student_name: updatePayload.student_name,
+            email: updatePayload.email,
+            education: updatePayload.education,
+            school: updatePayload.school,
+            total_educational_expenses: updatePayload.total_educational_expenses,
+            preserved_voucher: !!updatePayload.voucher_url,
+            preserved_payment: updatePayload.fee_paid_by_tal
+          });
+        }
+      } else {
+        // INSERT new record with ALL fields populated
+        const { error: insertError, data: insertedData } = await supabase
+          .from('fee_tracking')
+          .insert(feePayload)
+          .select();
+        
+        error = insertError;
+        
+        if (!insertError) {
+          console.log('✅ Fee tracking record CREATED successfully for:', studentFormId);
+          console.log('Inserted record:', insertedData);
+        }
+      }
+
+      if (error) {
+        console.error('❌ Error updating fee tracking record:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+      } else {
+        // Refresh fee tracking records
+        await fetchFeeTrackingRecords();
+      }
+    } catch (err) {
+      console.error('❌ Error in populateOrUpdateFeeTracking:', err);
+      console.error('Error stack:', err.stack);
     }
   };
 
@@ -815,19 +965,20 @@ const fetchNonEligibleCount = async () => {
     }
 
     const payload = {
-      student_form_id: recordStudentFormId,
-      student_public_id: studentPublicId,
-      student_name: studentName,
-      email: studentEmail,
-      whatsapp_number: student.whatsapp_number || student.whatsapp || existingRecord?.whatsapp_number || null,
-      camp_name: student.camp_name || student.campName || existingRecord?.camp_name || null,
-      camp_date: student.camp_date || student.campDate || existingRecord?.camp_date || null,
-      education: student.education || student.course || student.educationcategory || existingRecord?.education || null,
-      school: student.school || existingRecord?.school || null,
-      branch: student.branch || existingRecord?.branch || null,
-      required_fee: requiredFee,
-      fee_paid_by_tal: paidValue,
-      fee_status: feeStatus,
+      student_form_id: recordStudentFormId || 0,
+      student_public_id: studentPublicId || `STU-${recordStudentFormId}`,
+      student_name: studentName || 'Student Name',
+      email: studentEmail || 'no-email@example.com',
+      whatsapp_number: student.whatsapp_number || student.whatsapp || existingRecord?.whatsapp_number || 'N/A',
+      camp_name: student.camp_name || student.campName || existingRecord?.camp_name || 'N/A',
+      camp_date: student.camp_date || student.campDate || existingRecord?.camp_date || new Date().toISOString().split('T')[0],
+      education: student.education || student.course || student.educationcategory || existingRecord?.education || 'N/A',
+      school: student.school || existingRecord?.school || 'N/A',
+      branch: student.branch || existingRecord?.branch || 'N/A',
+      total_educational_expenses: existingRecord?.total_educational_expenses || student.total_educational_expenses || requiredFee || 0,
+      fee_paid_by_tal: paidValue || 0,
+      total_paid_by_tal: paidValue || 0,
+      fee_status: feeStatus || 'Pending',
       updated_at: new Date().toISOString(),
     };
 
@@ -1048,8 +1199,7 @@ const handleApprove = async (student) => {
         created_at: record.created_at,
         status: 'Eligible',
         address: record.address,
-        camp: record.camp,
-        campdate: record.campdate || record.camp_date || null
+        camp: record.camp
       }, { onConflict: 'email' });
 
     if (insertError) {
@@ -1151,8 +1301,7 @@ const handleNotApprove = async (student) => {
         created_at: record.created_at,
         status: 'Not Eligible',
         address: record.address,
-        camp: record.camp,
-        campdate: record.campdate || record.camp_date || null
+        camp: record.camp
       });
 
 
