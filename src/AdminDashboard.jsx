@@ -378,24 +378,23 @@ export default function AdminDashboard() {
     return feeTrackingRecords.find((record) => asComparableId(record.student_form_id) === comparableStudentId);
   };
 
-  const feeTrackingStudents = useMemo(() => {
-    return verifiedFeeStudents.filter((student) => {
-      const record = getFeeTrackingRecord(student);
-      return parseMoney(record?.fee_paid_by_tal) <= 0;
+const feeTrackingStudents = useMemo(() => {
+    return feeTrackingRecords.filter((record) => {
+      return parseMoney(record.fee_paid_by_tal) <= 0;
     });
-  }, [verifiedFeeStudents, feeTrackingRecords]);
+  }, [feeTrackingRecords]);
 
-  const paidFeeRecords = useMemo(() => {
+const paidFeeRecords = useMemo(() => {
     return feeTrackingRecords.filter((record) => parseMoney(record.fee_paid_by_tal) > 0);
   }, [feeTrackingRecords]);
 
-  const feeReceiptRecords = useMemo(() => {
+const feeReceiptRecords = useMemo(() => {
     return paidFeeRecords.filter((record) => Boolean(record.voucher_url));
   }, [paidFeeRecords]);
 
-  const totalFeeDue = useMemo(() => {
+const totalFeeDue = useMemo(() => {
     return feeTrackingRecords.reduce((sum, record) => {
-      const requiredFee = parseMoney(record.required_fee);
+      const requiredFee = parseMoney(record.total_educational_expenses);
       const paidAmount = parseMoney(record.fee_paid_by_tal);
       return sum + Math.max(requiredFee - paidAmount, 0);
     }, 0);
@@ -952,7 +951,7 @@ const fetchNonEligibleCount = async () => {
     const normalizedStudentFormId = Number(studentFormId);
     const recordStudentFormId = Number.isFinite(normalizedStudentFormId) ? normalizedStudentFormId : studentFormId;
     const existingRecord = getFeeTrackingRecord(student);
-    const requiredFee = parseMoney(existingRecord?.required_fee ?? student.fee ?? student.required_fee);
+const requiredFee = parseMoney(existingRecord?.total_educational_expenses || 0);
     const paidValue = parseMoney(feePaidInput[studentFormId] ?? existingRecord?.fee_paid_by_tal ?? 0);
     const feeStatus = paidValue === 0 ? 'Pending' : paidValue >= requiredFee && requiredFee > 0 ? 'Paid' : 'Partial';
     const studentName = student.student_name || student.full_name || student.name || existingRecord?.student_name;
@@ -1635,14 +1634,14 @@ const handleEditDonor = (donor) => {
     const sourceRows = feeSectionTab === 'tracking'
       ? feeTrackingStudents.map((student) => {
           const record = getFeeTrackingRecord(student);
-          const requiredFee = parseMoney(record?.required_fee ?? student.fee);
+          const requiredFee = parseMoney(record?.total_educational_expenses ?? student.fee);
           const paidAmount = parseMoney(record?.fee_paid_by_tal);
           const balance = Math.max(requiredFee - paidAmount, 0);
           return {
             student_public_id: student.student_public_id || record?.student_public_id || '',
             student_name: student.student_name || student.full_name || student.name || record?.student_name || '',
             email: student.email || record?.email || '',
-            required_fee: requiredFee,
+            rtotal_educational_expenses: requiredFee,
             paid_amount: paidAmount,
             balance,
             fee_status: record?.fee_status || 'Pending',
@@ -1650,28 +1649,28 @@ const handleEditDonor = (donor) => {
         })
       : feeSectionTab === 'receipts'
         ? feeReceiptRecords.map((record) => {
-            const requiredFee = parseMoney(record.required_fee);
+            const requiredFee = parseMoney(record.total_educational_expenses);
             const paidAmount = parseMoney(record.fee_paid_by_tal);
             const balance = Math.max(requiredFee - paidAmount, 0);
             return {
               student_public_id: record.student_public_id || '',
               student_name: record.student_name || '',
               email: record.email || '',
-              required_fee: requiredFee,
+              total_educational_expenses: requiredFee,
               paid_amount: paidAmount,
               balance,
               fee_status: record.fee_status || 'Pending',
             };
           })
         : paidFeeRecords.map((record) => {
-            const requiredFee = parseMoney(record.required_fee);
+            const requiredFee = parseMoney(record.total_educational_expenses);
             const paidAmount = parseMoney(record.fee_paid_by_tal);
             const balance = Math.max(requiredFee - paidAmount, 0);
             return {
               student_public_id: record.student_public_id || '',
               student_name: record.student_name || '',
               email: record.email || '',
-              required_fee: requiredFee,
+              total_educational_expenses: requiredFee,
               paid_amount: paidAmount,
               balance,
               fee_status: record.fee_status || 'Pending',
@@ -1684,8 +1683,8 @@ const handleEditDonor = (donor) => {
     }
 
     const rows = [
-      'student_public_id,student_name,email,required_fee,paid_amount,balance,status',
-      ...sourceRows.map((row) => `"${row.student_public_id}","${row.student_name}","${row.email}",${row.required_fee},${row.paid_amount},${row.balance},"${row.fee_status}"`),
+      'student_public_id,student_name,email,total_educational_expenses,paid_amount,balance,status',
+      ...sourceRows.map((row) => `"${row.student_public_id}","${row.student_name}","${row.email}",${row.total_educational_expenses},${row.paid_amount},${row.balance},"${row.fee_status}"`),
     ];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -1707,9 +1706,9 @@ const handleEditDonor = (donor) => {
     }
 
     const rows = [
-      'student_public_id,student_name,email,required_fee,paid_amount,balance,status,voucher_uploaded_at',
+      'student_public_id,student_name,email,total_educational_expenses,paid_amount,balance,status,voucher_uploaded_at',
       ...feeReceiptRecords.map((record) => {
-        const requiredFee = parseMoney(record.required_fee);
+        const requiredFee = parseMoney(record.total_educational_expenses);
         const paidAmount = parseMoney(record.fee_paid_by_tal);
         const balance = Math.max(requiredFee - paidAmount, 0);
         return `"${record.student_public_id || ''}","${record.student_name || ''}","${record.email || ''}",${requiredFee},${paidAmount},${balance},"${record.fee_status || 'Pending'}","${record.voucher_uploaded_at || ''}"`;
@@ -2835,7 +2834,7 @@ const handleEditDonor = (donor) => {
                         const studentFormId = student.student_form_id || student.student_id || student.id;
                         const record = getFeeTrackingRecord(student);
                         const currentPaid = feePaidInput[studentFormId] ?? (record?.fee_paid_by_tal ?? '');
-                        const requiredFee = parseMoney(record?.required_fee ?? student.fee);
+                        const requiredFee = parseMoney(record?.total_educational_expenses ?? student.fee);
                         const paidAmount = parseMoney(record?.fee_paid_by_tal);
                         const balance = Math.max(requiredFee - paidAmount, 0);
                         const status = record?.fee_status || 'Pending';
@@ -2903,7 +2902,7 @@ const handleEditDonor = (donor) => {
                           </td>
                         </tr>
                       ) : paidFeeRecords.map((record) => {
-                        const requiredFee = parseMoney(record.required_fee);
+                        const requiredFee = parseMoney(record.total_educational_expenses);
                         const paidAmount = parseMoney(record.fee_paid_by_tal);
                         const balance = Math.max(requiredFee - paidAmount, 0);
                         return (
@@ -2966,7 +2965,7 @@ const handleEditDonor = (donor) => {
                           </td>
                         </tr>
                       ) : feeReceiptRecords.map((record) => {
-                        const requiredFee = parseMoney(record.required_fee);
+                        const requiredFee = parseMoney(record.total_educational_expenses);
                         const paidAmount = parseMoney(record.fee_paid_by_tal);
                         return (
                           <tr key={record.id || record.student_form_id}>
@@ -3010,7 +3009,7 @@ const handleEditDonor = (donor) => {
                     const student = viewingFeeStudent;
                     const record = getFeeTrackingRecord(student);
                     const paidAmount = parseMoney(record?.fee_paid_by_tal);
-                    const requiredFee = parseMoney(record?.required_fee ?? student.fee);
+                    const requiredFee = parseMoney(record?.total_educational_expenses ?? student.fee);
                     const balance = requiredFee - paidAmount;
                     const status = record?.fee_status || 'Pending';
 
