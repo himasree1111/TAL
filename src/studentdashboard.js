@@ -777,6 +777,17 @@ const handleUpload = async (category, files, documentName) => {
     setProfileForm(prev => ({ ...prev, educational_expenses: updatedExpenses }));
   };
 
+  const calculateTotalExpenses = () => {
+    const expenses = profileForm.educational_expenses;
+    let total = 0;
+    for (const exp of Object.values(expenses)) {
+      if (exp.checked && exp.amount) {
+        total += parseFloat(exp.amount) || 0;
+      }
+    }
+    return total;
+  };
+
   const handleFamilyMemberChange = (index, field, value) => {
     const updatedDetails = [...profileForm.family_members_details];
     if (updatedDetails[index]) {
@@ -849,6 +860,7 @@ const handleUpload = async (category, files, documentName) => {
         prev_percent: parseFloat(profileForm.prev_percent) || null,
         present_percent: parseFloat(profileForm.present_percent) || null,
 fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileForm.educational_expenses,
+        total_educational_expenses: calculateTotalExpenses(),
         job: profileForm.job || null,
         aspiration: profileForm.aspiration || null,
         scholarship: profileForm.scholarship || null,
