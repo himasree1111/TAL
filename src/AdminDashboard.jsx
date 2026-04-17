@@ -730,7 +730,7 @@ const fetchNonEligibleCount = async () => {
         }, 0);
       }
 
-      // Priority 3: Use fee field as fallback
+// Priority 3: Use fee field as fallback
       if (totalEducationalExpenses === 0 && formData.fee) {
         totalEducationalExpenses = parseFloat(formData.fee) || 0;
       }
@@ -935,10 +935,13 @@ const requiredFee = parseMoney(existingRecord?.total_educational_expenses || 0);
 
     setSavingFeeRecord(true);
     try {
+      // Find LATEST record by student_form_id for update
       const { data: existing, error: findError } = await supabase
         .from('fee_tracking')
         .select('id')
         .eq('student_form_id', recordStudentFormId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (findError) {
@@ -956,7 +959,9 @@ const requiredFee = parseMoney(existingRecord?.total_educational_expenses || 0);
         if (updateError) {
           throw updateError;
         }
+        console.log(`✅ Updated fee record ID ${existing.id}`);
       } else {
+        console.warn('No existing fee record found - creating new');
         const { error: insertError } = await supabase
           .from('fee_tracking')
           .insert(payload);

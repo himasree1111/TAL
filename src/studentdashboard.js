@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { key: "profile", label: "My Profile", icon: "👤" },
   { key: "notifications", label: "Alerts & Broadcasts", icon: "🔔" },
   { key: "documents", label: "Document Upload", icon: "📄" },
+  { key: "fee-status", label: "Fee Status", icon: "💰" },
   /*{ key: "settings", label: "Student Settings", icon: "⚙️" },*/
 ];
 
@@ -177,6 +178,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);*/
     has_scholarship: ''
   });
   const [feeInfo, setFeeInfo] = useState({});
+  const [feeHistory, setFeeHistory] = useState([]); // NEW: Fee history state
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -1012,7 +1014,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                 <p className="doc-subtitle">Upload</p>
                 {category.key === 'fee' && (
                   <div style={{ marginTop: '10px', fontSize: '0.92rem', color: '#374151' }}>
-                    <div><strong>Required Fee:</strong> ₹{Number(feeInfo.required_fee || 0).toLocaleString()}</div>
+                    <div><strong>Required Fee:</strong> ₹{Number(feeInfo.total_educational_expenses || 0).toLocaleString()}</div>
                     <div><strong>Fee Status:</strong> {feeInfo.fee_status || 'Pending'}</div>
                     <div><strong>Paid by TAL:</strong> ₹{feeInfo.fee_paid_by_tal?.toLocaleString() || '0'}</div>
                     <div>
@@ -2094,6 +2096,179 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
   );
 
 
+  const renderFeeStatus = () => {
+    const latest = feeHistory[0];
+    
+    const formatCurrency = (amount) => {
+      return new Intl.NumberFormat('en-IN', { 
+        style: 'currency', 
+        currency: 'INR',
+        maximumFractionDigits: 0 
+      }).format(amount || 0);
+    };
+
+    const getStatusClass = (status) => {
+      const classes = {
+        'Pending': 'fee-badge-pending',
+        'Paid': 'fee-badge-paid',
+        'Partial': 'fee-badge-partial',
+        'Overdue': 'fee-badge-overdue'
+      };
+      return classes[status] || 'fee-badge-default';
+    };
+
+    return (
+      <>
+        {/* Hero Header - Removed text */}
+        {/*<div className="hero-header" style={{ textAlign: 'center', padding: '1.25rem 1rem', background: 'linear-gradient(135deg, #7fc74a 0%, #6bb43f 100%)', color: 'white', borderRadius: '16px', marginBottom: '1.25rem' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>💰</div>
+        </div>*/}
+
+        {/* Current Summary */}
+        {latest && (
+          <div className="section-block">
+            <div className="section-header">
+              <h3>📊 Current Fee Summary</h3>
+              <p className="section-note">Latest record from {new Date(latest.updated_at).toLocaleDateString('en-IN')}</p>
+            </div>
+            <div className="fee-summary-grid">
+              <div className="fee-card fee-card-expenses">
+                <div className="fee-card-icon">📈</div>
+                <div className="fee-card-value">{formatCurrency(latest.total_educational_expenses)}</div>
+                <div className="fee-card-label">Total Expenses</div>
+              </div>
+              <div className="fee-card fee-card-paid">
+                <div className="fee-card-icon">✅</div>
+                <div className="fee-card-value">{formatCurrency(latest.fee_paid_by_tal)}</div>
+                <div className="fee-card-label">Paid by TAL</div>
+              </div>
+              <div className="fee-card fee-card-balance">
+                <div className="fee-card-icon">⚖️</div>
+                <div className="fee-card-value">{formatCurrency(latest.balance_due)}</div>
+                <div className="fee-card-label">Balance Due</div>
+              </div>
+              <div className="fee-card fee-card-status">
+                <div className="fee-card-icon">🏷️</div>
+                <div className={`fee-status-badge ${getStatusClass(latest.fee_status)}`}>
+                  {latest.fee_status}
+                </div>
+                <div className="fee-card-label">Status</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History Table */}
+        <div className="section-block">
+          <div className="section-header">
+            <h3>📋 Payment History</h3>
+            <div className="section-note">{feeHistory.length} record{feeHistory.length !== 1 ? 's' : ''} • <span className="live-indicator">🔴 LIVE</span></div>
+          </div>
+
+          {feeHistory.length === 0 ? (
+            <div className="empty-hero">
+              <div className="empty-icon">📊</div>
+              <h4 className="empty-title">No Fee Records Yet</h4>
+              <p className="empty-subtitle">Upload documents for admin to create your first fee tracking entry</p>
+              <button className="btn primary empty-action" onClick={() => setActiveNav('documents')}>
+                📄 Go to Documents
+              </button>
+            </div>
+          ) : (
+            <div className="fee-history-container">
+              <div className="fee-history-table-wrapper">
+                <table className="fee-history-table">
+                  <thead>
+                    <tr>
+                      <th>Date Updated</th>
+                      <th>Expenses</th>
+                      <th>TAL Paid</th>
+                      <th>Balance</th>
+                      <th>Status</th>
+                      {latest?.voucher_url && <th>Voucher</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feeHistory.map((record) => (
+                      <tr key={record.id}>
+                        <td className="date-cell">
+                          <div className="date">{new Date(record.updated_at).toLocaleDateString('en-IN')}</div>
+                          <div className="time">{new Date(record.updated_at).toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'})}</div>
+                        </td>
+                        <td className="amount-cell">{formatCurrency(record.total_educational_expenses)}</td>
+                        <td className="amount-cell paid">{formatCurrency(record.fee_paid_by_tal)}</td>
+                        <td className="amount-cell balance">{formatCurrency(record.balance_due)}</td>
+                        <td><span className={`fee-badge ${getStatusClass(record.fee_status)}`}>{record.fee_status}</span></td>
+                        {record.voucher_url && (
+                          <td className="voucher-cell">
+                            <a href={record.voucher_url} target="_blank" rel="noreferrer" className="voucher-link">
+                              📎 Receipt
+                            </a>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  const fetchFeeHistory = useCallback(async () => {
+    if (!studentEmail || !studentFormId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('fee_tracking')
+        .select('*')
+        .eq('student_form_id', studentFormId)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching fee history:', error);
+        return;
+      }
+      
+      setFeeHistory(data || []);
+    } catch (err) {
+      console.error('fetchFeeHistory error:', err);
+    }
+  }, [studentEmail, studentFormId]);
+
+  useEffect(() => {
+    fetchFeeHistory();
+  }, [fetchFeeHistory]);
+
+  // Realtime subscription for fee_history
+  useEffect(() => {
+    if (!studentEmail) return;
+
+    const channel = supabase
+      .channel(`fee_history:${studentEmail}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'fee_tracking',
+          filter: `email=eq.${studentEmail}`,
+        },
+        (payload) => {
+          console.log('FEE HISTORY UPDATE:', payload);
+          fetchFeeHistory(); // Refresh full list
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [studentEmail, fetchFeeHistory]);
+
   const renderMainContent = () => {
     if (activeNav === "documents") {
       return (
@@ -2107,7 +2282,11 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
       );
     }
 
-  if (activeNav === "notifications") {
+    if (activeNav === "fee-status") {
+      return renderFeeStatus();
+    }
+
+    if (activeNav === "notifications") {
       return (
         <>
           <div className="section-header">
@@ -2119,7 +2298,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
       );
     }
 
-   /* if (activeNav === "settings") {
+    /* if (activeNav === "settings") {
       return renderSettings({
         settings,
         setSettings,

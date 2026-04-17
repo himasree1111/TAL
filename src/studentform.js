@@ -869,7 +869,7 @@ earning_members: parseInt(formData.num_earning_members) || 0,
   fee: formData.fee || null,
  
   educational_expenses: formData.educational_expenses,
-  total_educational_expenses: calculateTotalExpenses(),
+        total_educational_expenses: calculateTotalExpenses(),
 
 is_single_parent: isSingleParent,
 

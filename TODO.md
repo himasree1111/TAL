@@ -1,37 +1,15 @@
-# Fee Tracking Required Fee Fix - IMPLEMENTATION PLAN
+# Fee Tracking Fix Progress
 
-## Plan Approved ✅ (User: "u fix it please")
+✅ Step 1: Reverted AdminDashboard.jsx fee_tracking query to simple SELECT * (removed nested join)
 
-**Progress: 4/5** ✅ (Required Fee Fix + Status Sync + Student Banner + Enhanced Messages)
+✅ Step 2: Fixed populateOrUpdateFeeTracking priority 3 fallback (now correctly uses formData.fee as fallback)
 
-### [ ] Step 1: Create TODO.md (IN PROGRESS)
-```
-✅ Current step complete
-```
+**Next Steps (Test):**
+1. Student fills expenses in studentform/profile → saves total_educational_expenses
+2. Admin verifies documents → populateOrUpdateFeeTracking called  
+3. Check student dashboard "Required Fee" shows correct amount from fee_tracking.total_educational_expenses
+4. Refresh student dashboard (realtime subscription should update automatically)
 
-### [ ] Step 2: Fix all 'required_fee' → 'total_educational_expenses' in src/AdminDashboard.jsx
-```
-- handleSaveFeeRecord(): requiredFee calculation
-- Fee table display: requiredFee column  
-- Download reports: CSV headers/data
-- Remove balance_due references (not in schema)
-```
+**Status:** ✅ COMPLETE - Ready for testing. Student dashboard "Required Fee: ₹0" should now show correct value after doc verification.
 
-### [ ] Step 3: Apply edit_file changes to AdminDashboard.jsx
-```
-Single edit_file call with multiple targeted replacements
-Test: Save fee → correct required amount shows
-```
-
-### [ ] Step 4: Test & Verify
-```
-1. Fee Tracking tab → Verify 'Required Fee' column values
-2. Enter amount → Save → Moves to Voucher tab
-3. Export CSV → Correct 'required_fee' column header/data
-4. Supabase SQL: SELECT total_educational_expenses FROM fee_tracking;
-```
-
-### [ ] Step 5: Update TODO.md [COMPLETE] → attempt_completion
-
-**Next: Apply code changes → Mark Step 2 ✓ → Step 3**
-
+**Test Command:** `npm start` then verify student dashboard after admin doc verification.

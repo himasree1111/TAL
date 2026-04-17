@@ -1652,3 +1652,302 @@ width: 100%;
 .upload-progress.success { border-color: #28a745; }
 .upload-progress.error { border-color: #dc3545; }
 
+/* === FEE STATUS UI === */
+.hero-header {
+  text-align: center;
+  padding: 1.75rem 1.5rem 1.25rem;
+  background: linear-gradient(135deg, #7fc74a 0%, #6bb43f 100%);
+  color: white;
+  border-radius: 20px;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 12px 30px rgba(127, 199, 74, 0.25);
+}
+
+.hero-header h1 {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-weight: 700;
+  margin: 0.25rem 0 0.125rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-header p {
+  font-size: clamp(0.85rem, 1.75vw, 0.95rem);
+  opacity: 0.92;
+  max-width: 24rem;
+  margin: 0 auto;
+  line-height: 1.45;
+}
+
+.fee-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.fee-card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.75rem;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  border: 1px solid #f1f5f9;
+}
+
+.fee-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+}
+
+.fee-card-expenses {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border-left: 5px solid #7c3aed;
+}
+
+.fee-card-paid {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-left: 5px solid #10b981;
+}
+
+.fee-card-balance {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border-left: 5px solid #f97316;
+}
+
+.fee-card-status {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-left: 5px solid #64748b;
+}
+
+.fee-card-icon {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.fee-card-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.125rem;
+}
+
+.fee-card-label {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.live-indicator {
+  background: rgba(34,197,94,0.2);
+  color: #10b981;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.empty-hero {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 24px;
+  border: 2px dashed #cbd5e1;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.empty-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+}
+
+.empty-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  max-width: 24rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-action {
+  padding: 1rem 2.5rem !important;
+  font-size: 1.1rem !important;
+  box-shadow: 0 10px 25px rgba(127,199,74,0.4) !important;
+}
+
+.fee-history-container {
+  background: #fafbfc;
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.fee-history-table-wrapper {
+  overflow-x: auto;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.fee-history-table {
+  width: 100%;
+  min-width: 700px;
+  background: white;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.fee-history-table thead tr {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.fee-history-table th {
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.fee-history-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fee-history-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.date-cell {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.date-cell .date {
+  font-size: 1rem;
+}
+
+.date-cell .time {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.amount-cell {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.amount-cell.paid {
+  color: #059669 !important;
+}
+
+.amount-cell.balance {
+  color: #d97706 !important;
+}
+
+.fee-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.fee-badge-pending {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+}
+
+.fee-badge-paid {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+
+.fee-badge-partial {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1e40af;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+.fee-badge-overdue {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #991b1b;
+  box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+}
+
+.fee-badge-default {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.voucher-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  background: #eff6ff;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.voucher-link:hover {
+  background: #dbeafe;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Mobile Fee UI */
+@media (max-width: 768px) {
+  .fee-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .fee-card {
+    padding: 1.5rem;
+  }
+  
+  .fee-history-table {
+    min-width: 600px;
+    font-size: 0.9rem;
+  }
+  
+  .fee-history-table th,
+  .fee-history-table td {
+    padding: 1rem 0.75rem;
+  }
+  
+  .hero-header {
+    padding: 2rem 1rem;
+  }
+  
+  .hero-header h1 {
+    font-size: 1.75rem;
+  }
+}
+
