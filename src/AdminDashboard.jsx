@@ -760,77 +760,29 @@ const fetchNonEligibleCount = async () => {
       // Log what we're about to insert for debugging
       console.log('Fee tracking payload:', feePayload);
 
-      // Check if record already exists
-      const { data: existingFeeRecord, error: findError } = await supabase
-        .from('fee_tracking')
-        .select('id, voucher_url, fee_paid_by_tal, total_paid_by_tal')
-        .eq('student_form_id', studentFormId)
-        .maybeSingle();
+// ALWAYS CREATE NEW ROW ON EVERY VERIFICATION (per requirement)
+console.log('📝 Creating NEW fee_tracking row for verification #', formData.email);
 
-      if (findError) {
-        console.error('Error checking fee tracking:', findError);
-        return;
-      }
+const { error: insertError, data: insertedData } = await supabase
+  .from('fee_tracking')
+  .insert(feePayload)
+  .select();
 
-      let error;
-      
-      if (existingFeeRecord?.id) {
-        // UPDATE existing record (preserve voucher_url and payment info)
-        const updatePayload = {
-          ...feePayload,
-          // Preserve existing voucher URL - don't overwrite
-          voucher_url: existingFeeRecord.voucher_url || null,
-          // Preserve payment information if already paid
-          fee_paid_by_tal: existingFeeRecord.fee_paid_by_tal || 0,
-          total_paid_by_tal: existingFeeRecord.total_paid_by_tal || 0,
-          // Update status based on preserved payment
-          fee_status: (existingFeeRecord.fee_paid_by_tal || 0) > 0 
-            ? ((existingFeeRecord.fee_paid_by_tal >= totalEducationalExpenses && totalEducationalExpenses > 0) ? 'Paid' : 'Partial')
-            : 'Pending',
-          updated_at: new Date().toISOString(),
-        };
-        
-        const { error: updateError } = await supabase
-          .from('fee_tracking')
-          .update(updatePayload)
-          .eq('id', existingFeeRecord.id);
-        
-        error = updateError;
-        
-        if (!updateError) {
-          console.log('✅ Fee tracking record UPDATED successfully for:', studentFormId);
-          console.log('Updated fields:', {
-            student_name: updatePayload.student_name,
-            email: updatePayload.email,
-            education: updatePayload.education,
-            school: updatePayload.school,
-            total_educational_expenses: updatePayload.total_educational_expenses,
-            preserved_voucher: !!updatePayload.voucher_url,
-            preserved_payment: updatePayload.fee_paid_by_tal
-          });
-        }
+if (insertError) {
+  console.error('❌ INSERT failed:', insertError);
+} else {
+  console.log('✅ NEW Fee tracking record CREATED:', insertedData[0].id);
+}
+
+await fetchFeeTrackingRecords();
+
+      // ESLint fix: error is insertError
+      if (insertError) {
+        console.error('❌ INSERT failed:', insertError);
       } else {
-        // INSERT new record with ALL fields populated
-        const { error: insertError, data: insertedData } = await supabase
-          .from('fee_tracking')
-          .insert(feePayload)
-          .select();
-        
-        error = insertError;
-        
-        if (!insertError) {
-          console.log('✅ Fee tracking record CREATED successfully for:', studentFormId);
-          console.log('Inserted record:', insertedData);
-        }
+        console.log('✅ NEW Fee tracking record CREATED:', insertedData[0]?.id);
       }
-
-      if (error) {
-        console.error('❌ Error updating fee tracking record:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-      } else {
-        // Refresh fee tracking records
-        await fetchFeeTrackingRecords();
-      }
+      await fetchFeeTrackingRecords();
     } catch (err) {
       console.error('❌ Error in populateOrUpdateFeeTracking:', err);
       console.error('Error stack:', err.stack);
@@ -1015,7 +967,7 @@ const requiredFee = parseMoney(existingRecord?.total_educational_expenses || 0);
       }
 
       await fetchFeeTrackingRecords();
-      alert('Fee record saved successfully.');
+alert(`✅ Fee record saved! Status: ${feeStatus}. Student dashboard auto-updates via realtime. Ask student to update total_educational_expenses in profile → syncs on next doc verification.`);
     } catch (err) {
       console.error('Error saving fee record:', err);
       alert('Unable to save fee record: ' + err.message);

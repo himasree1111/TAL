@@ -2062,7 +2062,14 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
         </div>
       </div>
 
-      {renderStatsBar()}
+{(['Paid', 'Partial'].includes(feeInfo.fee_status || '') && feeInfo.fee_paid_by_tal > 0) && (
+          <div className="success-banner" style={{marginBottom: '20px'}}>
+            ✅ <strong>Fee Verified!</strong> Your fee status is now <strong>{feeInfo.fee_status}</strong>. 
+            <br/>📝 <strong>Next Step:</strong> Update your <strong>total_educational_expenses</strong> in <em>Profile → Expenses tab</em> 
+            so it shows correctly in Admin Fee Tracking after next document verification.
+          </div>
+        )}
+        {renderStatsBar()}
 
       <div className="section-block">
         <div className="section-header">
