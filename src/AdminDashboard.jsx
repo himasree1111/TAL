@@ -358,6 +358,7 @@ export default function AdminDashboard() {
   const [uploadingVoucherFor, setUploadingVoucherFor] = useState(null);
   const [feePaidInput, setFeePaidInput] = useState({});
   const [viewingFeeStudent, setViewingFeeStudent] = useState(null);
+  const [viewingReceiptRecord, setViewingReceiptRecord] = useState(null);
 
   const totals = useMemo(() => {
     const totalStudents = students.length;
@@ -388,7 +389,78 @@ const paidFeeRecords = useMemo(() => {
     return feeTrackingRecords.filter((record) => parseMoney(record.fee_paid_by_tal) > 0);
   }, [feeTrackingRecords]);
 
-const feeReceiptRecords = useMemo(() => {
+  const voucherNoUploadRecords = useMemo(() => {
+    return paidFeeRecords.filter((record) => !record.voucher_url);
+  }, [paidFeeRecords]);
+
+  // Students with student-uploaded fee receipts (category='fee', not verified)
+  const [studentFeeReceipts, setStudentFeeReceipts] = useState([]);
+  const [loadingStudentReceipts, setLoadingStudentReceipts] = useState(false);
+
+  useEffect(() => {
+    if (feeSectionTab === 'receipts') {
+      fetchStudentFeeReceipts();
+    }
+  }, [feeSectionTab]);
+
+  const fetchStudentFeeReceipts = async () => {
+    setLoadingStudentReceipts(true);
+    try {
+      const { data, error } = await supabase
+        .from('student_documents')
+        .select(`
+          *,
+          student_form_submissions!inner(full_name, email, student_public_id),
+          fee_tracking!student_id(*)
+        `)
+        .eq('category', 'fee')
+        .is('is_checked', false)
+        .order('uploaded_at', { ascending: false });
+      
+      if (error) throw error;
+      setStudentFeeReceipts(data || []);
+    } catch (err) {
+      console.error('Error fetching student fee receipts:', err);
+    } finally {
+      setLoadingStudentReceipts(false);
+    }
+  };
+
+  const handleVerifyFeeReceipt = async (doc) => {
+    if (!window.confirm(`Verify fee receipt for ${doc.student_form_submissions.full_name}?`)) return;
+    
+    try {
+      // Mark student receipt as verified
+      const { error: docError } = await supabase
+        .from('student_documents')
+        .update({ is_checked: true })
+        .eq('id', doc.id);
+      
+      if (docError) throw docError;
+
+      // Update latest fee_tracking voucher_url
+      if (doc.fee_tracking && doc.fee_tracking.length > 0) {
+        const latestRecord = doc.fee_tracking.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+        const { error: ftError } = await supabase
+          .from('fee_tracking')
+          .update({ 
+            voucher_url: doc.file_url,
+            voucher_uploaded_at: new Date().toISOString()
+          })
+          .eq('id', latestRecord.id);
+        
+        if (ftError) console.error('Fee tracking update failed:', ftError);
+      }
+
+      await fetchStudentFeeReceipts();
+      alert('✅ Fee receipt verified & linked to fee tracking!');
+    } catch (err) {
+      console.error('Verification failed:', err);
+      alert('Verification failed: ' + err.message);
+    }
+  };
+
+  const feeReceiptRecords = useMemo(() => {
     return paidFeeRecords.filter((record) => Boolean(record.voucher_url));
   }, [paidFeeRecords]);
 
@@ -1020,10 +1092,14 @@ alert(`✅ Fee record saved! Status: ${feeStatus}. Student dashboard auto-update
         throw insertError;
       }
 
+      // Find LATEST paid fee record by student_form_id
       const { data: existing, error: findError } = await supabase
         .from('fee_tracking')
         .select('id, student_name, email, student_public_id, fee_paid_by_tal')
         .eq('student_form_id', studentFormId)
+        .gte('fee_paid_by_tal', 1)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (findError) {
@@ -1048,8 +1124,9 @@ alert(`✅ Fee record saved! Status: ${feeStatus}. Student dashboard auto-update
         if (updateError) throw updateError;
       }
 
-      await fetchFeeTrackingRecords();
-      alert('Voucher uploaded successfully.');
+await fetchFeeTrackingRecords();
+      await fetchStudentFeeReceipts(); // Refresh receipts list to show new admin voucher
+      alert('✅ Voucher uploaded successfully and ready for verification in Fee Receipts tab!');
     } catch (err) {
       console.error('Error uploading voucher:', err);
       alert('Voucher upload failed: ' + err.message);
@@ -2840,65 +2917,183 @@ const handleEditDonor = (donor) => {
                 </div>
               ) : feeSectionTab === 'voucher' ? (
                 <div className="table-wrap">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>Email</th>
-                        <th>Required Fee</th>
-                        <th>Paid Amount</th>
-                        <th>Status</th>
-                        <th>Voucher</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paidFeeRecords.length === 0 ? (
+                  {voucherNoUploadRecords.length === 0 ? (
+                    <p style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                      No fee records pending voucher upload. All vouchers are uploaded and visible in Fee Receipts.
+                    </p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
                         <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', padding: '1rem' }}>
-                            No fee records are ready for voucher upload yet.
-                          </td>
+                          <th>Student Name</th>
+                          <th>Email</th>
+                          <th>Required Fee</th>
+                          <th>Paid Amount</th>
+                          <th>Status</th>
+                          <th>Voucher</th>
                         </tr>
-                      ) : paidFeeRecords.map((record) => {
-                        const requiredFee = parseMoney(record.total_educational_expenses);
-                        const paidAmount = parseMoney(record.fee_paid_by_tal);
-                        const balance = Math.max(requiredFee - paidAmount, 0);
-                        return (
-                          <tr key={record.id || record.student_form_id}>
-                            <td>{record.student_name || '—'}</td>
-                            <td>{record.email || '—'}</td>
-                            <td>₹{requiredFee.toLocaleString()}</td>
-                            <td>₹{paidAmount.toLocaleString()}</td>
+                      </thead>
+                      <tbody>
+                        {voucherNoUploadRecords.map((record, index) => {
+                          const requiredFee = parseMoney(record.total_educational_expenses);
+                          const paidAmount = parseMoney(record.fee_paid_by_tal);
+                          const balance = Math.max(requiredFee - paidAmount, 0);
+                          return (
+                            <tr key={record.id || record.student_form_id || index}>
+                              <td>{record.student_name || '—'}</td>
+                              <td>{record.email || '—'}</td>
+                              <td>₹{requiredFee.toLocaleString()}</td>
+                              <td>₹{paidAmount.toLocaleString()}</td>
+                              <td>
+                                <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
+                                  {record.fee_status || 'Pending'}
+                                </span>
+                              </td>
+                              <td>
+                                {record.voucher_url ? (
+                                  <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
+                                ) : (
+                                  <label className="btn small" style={{ cursor: 'pointer' }}>
+                                    {uploadingVoucherFor === record.student_form_id ? 'Uploading...' : 'Upload'}
+                                    <input
+                                      type="file"
+                                      accept="application/pdf,image/*"
+                                      style={{ display: 'none' }}
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          handleUploadVoucher(record, file);
+                                        }
+                                        e.target.value = null;
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+             // ) : feeSectionTab === 'receipts' ? (
+              ) : feeSectionTab === 'receipts' ? (
+                <div className="table-wrap">
+                  <h4>Student Fee Receipts for Admin Verification ({studentFeeReceipts.length})</h4>
+                  {loadingStudentReceipts ? (
+                    <p>Loading student receipts...</p>
+                  ) : studentFeeReceipts.length === 0 ? (
+                    <p>No unverified student fee receipts.</p>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th>Email</th>
+                          <th>Document</th>
+                          <th>Uploaded</th>
+                          <th>Fee Tracking</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentFeeReceipts.map((doc) => (
+                          <tr key={doc.id}>
+                            <td>{doc.student_form_submissions?.full_name || '—'}</td>
+                            <td>{doc.student_form_submissions?.email || '—'}</td>
+                            <td>{doc.document_name || doc.file_name}</td>
+                            <td>{formatToIST(doc.uploaded_at)}</td>
+                            <td>{doc.fee_tracking?.length > 0 ? 'Linked' : 'No record'}</td>
                             <td>
-                              <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
-                                {record.fee_status || 'Pending'}
-                              </span>
-                            </td>
-                            <td>
-                              {record.voucher_url ? (
-                                <a href={record.voucher_url} target="_blank" rel="noreferrer">View Voucher</a>
-                              ) : (
-                                <label className="btn small" style={{ cursor: 'pointer' }}>
-                                  {uploadingVoucherFor === record.student_form_id ? 'Uploading...' : 'Upload'}
-                                  <input
-                                    type="file"
-                                    accept="application/pdf,image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        handleUploadVoucher(record, file);
-                                      }
-                                      e.target.value = null;
-                                    }}
-                                  />
-                                </label>
-                              )}
+                              <a href={doc.file_url} target="_blank" className="btn small">View</a>
+                              <button 
+                                className="btn small primary" 
+                                onClick={() => handleVerifyFeeReceipt(doc)}
+                              >
+                                ✅ Verify
+                              </button>
                             </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {/* NEW: Completed Fee Receipts from fee_tracking (voucher_url NOT NULL) */}
+                  <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '2px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h4>✅ Completed Fee Receipts ({feeReceiptRecords.length})</h4>
+                      <button 
+                        className="btn primary" 
+                        onClick={handleDownloadFeeReceiptsReport}
+                        disabled={feeReceiptRecords.length === 0}
+                      >
+                        📥 Export CSV
+                      </button>
+                    </div>
+                    {feeReceiptRecords.length === 0 ? (
+                      <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                        No completed fee receipts (voucher_url NOT NULL) found.
+                      </p>
+                    ) : (
+                      <div className="table-wrap">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Student Name</th>
+                              <th>Email</th>
+                              <th>Required Fee</th>
+                              <th>Paid</th>
+                              <th>Status</th>
+                              <th>Voucher</th>
+                              <th>Uploaded</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {feeReceiptRecords.map((record) => {
+                              const requiredFee = parseMoney(record.total_educational_expenses || 0);
+                              const paidAmount = parseMoney(record.fee_paid_by_tal || 0);
+                              return (
+                                <tr key={record.id}>
+                                  <td><strong>#{record.id}</strong></td>
+                                  <td>{record.student_name || '—'}</td>
+                                  <td>{record.email || '—'}</td>
+                                  <td>₹{requiredFee.toLocaleString()}</td>
+                                  <td>₹{paidAmount.toLocaleString()}</td>
+                                  <td>
+                                    <span className={`status-badge ${record.fee_status?.toLowerCase() || 'pending'}`}>
+                                      {record.fee_status || 'Pending'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {record.voucher_url ? (
+                                      <a href={record.voucher_url} target="_blank" rel="noreferrer" className="btn small">View</a>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </td>
+                                  <td>{record.voucher_uploaded_at ? formatToIST(record.voucher_uploaded_at) : '—'}</td>
+                                  <td>
+                                    <button 
+                                      className="btn small primary" 
+                                      onClick={() => {
+                                        setViewingReceiptRecord(record);
+                                      }}
+                                    >
+                                      👁️ View Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="table-wrap">
@@ -2921,7 +3116,7 @@ const handleEditDonor = (donor) => {
                             No completed fee receipts found yet.
                           </td>
                         </tr>
-                      ) : feeReceiptRecords.map((record) => {
+                      ) : feeReceiptRecords.map((record, index) => {
                         const requiredFee = parseMoney(record.total_educational_expenses);
                         const paidAmount = parseMoney(record.fee_paid_by_tal);
                         return (
@@ -3895,6 +4090,103 @@ const handleEditDonor = (donor) => {
           </div>
         </div>
       )}
+
+      {/* NEW: Completed Fee Receipt Details Modal */}
+      {viewingReceiptRecord && (
+        <div className="modal-overlay" onClick={() => setViewingReceiptRecord(null)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Fee Receipt Details - ID #{viewingReceiptRecord.id}</h3>
+              <button className="close-btn" onClick={() => setViewingReceiptRecord(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="student-details-grid">
+                <div className="detail-section">
+                  <h4>📄 Receipt Information</h4>
+                  <div className="detail-row">
+                    <span className="label">Fee Tracking ID:</span>
+                    <span className="value"><strong>#{viewingReceiptRecord.id}</strong></span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Student Form ID:</span>
+                    <span className="value">{viewingReceiptRecord.student_form_id || '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Student Public ID:</span>
+                    <span className="value">{viewingReceiptRecord.student_public_id || '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Voucher URL:</span>
+                    <span className="value">
+                      {viewingReceiptRecord.voucher_url ? (
+                        <a href={viewingReceiptRecord.voucher_url} target="_blank" rel="noreferrer">🔗 Open Voucher</a>
+                      ) : 'No voucher'}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Uploaded At:</span>
+                    <span className="value">{viewingReceiptRecord.voucher_uploaded_at ? formatToIST(viewingReceiptRecord.voucher_uploaded_at) : '—'}</span>
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>👤 Student Details</h4>
+                  <div className="detail-row">
+                    <span className="label">Name:</span>
+                    <span className="value">{viewingReceiptRecord.student_name || '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Email:</span>
+                    <span className="value">{viewingReceiptRecord.email || '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">WhatsApp:</span>
+                    <span className="value">{viewingReceiptRecord.whatsapp_number || '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Camp:</span>
+                    <span className="value">{viewingReceiptRecord.camp_name || '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Education:</span>
+                    <span className="value">{viewingReceiptRecord.education || '—'}</span>
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <h4>💰 Fee Details</h4>
+                  <div className="detail-row">
+                    <span className="label">Total Educational Expenses:</span>
+                    <span className="value">₹{parseMoney(viewingReceiptRecord.total_educational_expenses || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Paid by TAL:</span>
+                    <span className="value">₹{parseMoney(viewingReceiptRecord.fee_paid_by_tal || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Status:</span>
+                    <span className={`value status-badge ${viewingReceiptRecord.fee_status?.toLowerCase() || 'pending'}`}>
+                      {viewingReceiptRecord.fee_status || 'Pending'}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Record Created:</span>
+                    <span className="value">{viewingReceiptRecord.created_at ? formatToIST(viewingReceiptRecord.created_at) : '—'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="label">Last Updated:</span>
+                    <span className="value">{viewingReceiptRecord.updated_at ? formatToIST(viewingReceiptRecord.updated_at) : '—'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn primary" onClick={() => setViewingReceiptRecord(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,15 +1,11 @@
-# Fee Tracking Fix Progress
+# Fix AdminDashboard.jsx Syntax Error
 
-✅ Step 1: Reverted AdminDashboard.jsx fee_tracking query to simple SELECT * (removed nested join)
+## Plan Steps
+- [x] 1. Create TODO.md (tracking progress)
+- [ ] 2. Edit src/AdminDashboard.jsx - Remove invalid JS consts from JSX (lines 2977-2982)  
+- [ ] 3. Verify compilation succeeds
+- [ ] 4. Test fee tracking functionality
+- [ ] 5. Complete task
 
-✅ Step 2: Fixed populateOrUpdateFeeTracking priority 3 fallback (now correctly uses formData.fee as fallback)
+**Current Status:** Step 2/5 - Removing duplicate ternary at line 2980
 
-**Next Steps (Test):**
-1. Student fills expenses in studentform/profile → saves total_educational_expenses
-2. Admin verifies documents → populateOrUpdateFeeTracking called  
-3. Check student dashboard "Required Fee" shows correct amount from fee_tracking.total_educational_expenses
-4. Refresh student dashboard (realtime subscription should update automatically)
-
-**Status:** ✅ COMPLETE - Ready for testing. Student dashboard "Required Fee: ₹0" should now show correct value after doc verification.
-
-**Test Command:** `npm start` then verify student dashboard after admin doc verification.

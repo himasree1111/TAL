@@ -1007,29 +1007,31 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
         const docs = documents[category.key] || [];
         return (
           <section key={category.key} className="doc-card">
-            <div className="doc-card-header">
-              <div>
-                <div className="doc-tag">{category.icon}</div>
-                <h3>{category.title}</h3>
-                <p className="doc-subtitle">Upload</p>
-                {category.key === 'fee' && (
-                  <div style={{ marginTop: '10px', fontSize: '0.92rem', color: '#374151' }}>
-                    <div><strong>Required Fee:</strong> ₹{Number(feeInfo.total_educational_expenses || 0).toLocaleString()}</div>
-                    <div><strong>Fee Status:</strong> {feeInfo.fee_status || 'Pending'}</div>
-                    <div><strong>Paid by TAL:</strong> ₹{feeInfo.fee_paid_by_tal?.toLocaleString() || '0'}</div>
-                    <div>
-                      <strong>Voucher:</strong>{' '}
-                      {feeInfo.voucher_url ? (
-                        <a href={feeInfo.voucher_url} target="_blank" rel="noreferrer">View uploaded voucher</a>
-                      ) : (
-                        'Not uploaded yet'
-                      )}
-                    </div>
-                    <div style={{ marginTop: '8px', color: '#475569' }}>
-                      Upload your fee receipt (name it with voucher number) here so the admin can verify payment and update your student dashboard status.
-                    </div>
-                  </div>
-                )}
+
+                <div className="doc-card-header">
+                  <div>
+                    <div className="doc-tag">{category.icon}</div>
+                    <h3>{category.title}</h3>
+                    <p className="doc-subtitle">Upload</p>
+                    {category.key === 'fee' && feeHistory[0] && (
+                      <div style={{ marginTop: '10px', fontSize: '0.92rem', color: '#374151' }}>
+                        <div><strong>Required Fee:</strong> ₹{Number(feeHistory[0].total_educational_expenses || 0).toLocaleString()}</div>
+                        <div><strong>Fee Status:</strong> {feeHistory[0].fee_status || 'Pending'}</div>
+                        <div><strong>Paid by TAL:</strong> ₹{Number(feeHistory[0].fee_paid_by_tal || 0).toLocaleString()}</div>
+                        <div>
+                          <strong>Voucher:</strong>{' '}
+                          {feeHistory[0].voucher_url ? (
+                            <a href={feeHistory[0].voucher_url} target="_blank" rel="noreferrer">View uploaded voucher</a>
+                          ) : (
+                            'Not uploaded yet'
+                          )}
+                        </div>
+                        <div style={{ marginTop: '8px', color: '#475569' }}>
+                          Upload your fee receipt (name it with voucher number) here so the admin can verify payment and update your student dashboard status.
+                        </div>
+                      </div>
+                    )}
+
               </div>
               <div className="upload-section">
 {category.key === 'academic' ? (
