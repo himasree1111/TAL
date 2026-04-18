@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 import supabase from "./supabaseClient";
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const attachStudentPublicIds = async (rows = []) => {
+  const attachStudentPublicIds = useCallback(async (rows = []) => {
     if (!Array.isArray(rows) || rows.length === 0) {
       return [];
     }
@@ -219,7 +219,7 @@ export default function AdminDashboard() {
           null,
       };
     });
-  };
+  }, []);
 
   // Fetch user and real data from Supabase
   useEffect(() => {
@@ -334,11 +334,6 @@ export default function AdminDashboard() {
   ];
 
   const [activeSection, setActiveSection] = useState("overview");
-  useEffect(() => {
-    if (activeSection === 'noneligible') {
-      fetchNonEligibleStudents();
-    }
-  }, [activeSection]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
   const [editStudent, setEditStudent] = useState(null);
@@ -917,7 +912,7 @@ await fetchFeeTrackingRecords();
     }
   };
 
-  const fetchNonEligibleStudents = async () => {
+  const fetchNonEligibleStudents = useCallback(async () => {
     setLoadingNonEligible(true);
     try {
       const { data, error } = await supabase
@@ -939,7 +934,13 @@ await fetchFeeTrackingRecords();
     } finally {
       setLoadingNonEligible(false);
     }
-  };
+  }, [attachStudentPublicIds]);
+
+  useEffect(() => {
+    if (activeSection === 'noneligible') {
+      fetchNonEligibleStudents();
+    }
+  }, [activeSection, fetchNonEligibleStudents]);
 
   const fetchFeeTrackingRecords = async () => {
     setLoadingFeeTracking(true);
@@ -2937,7 +2938,6 @@ const handleEditDonor = (donor) => {
                         {voucherNoUploadRecords.map((record, index) => {
                           const requiredFee = parseMoney(record.total_educational_expenses);
                           const paidAmount = parseMoney(record.fee_paid_by_tal);
-                          const balance = Math.max(requiredFee - paidAmount, 0);
                           return (
                             <tr key={record.id || record.student_form_id || index}>
                               <td>{record.student_name || '—'}</td>
@@ -3006,7 +3006,7 @@ const handleEditDonor = (donor) => {
                             <td>{formatToIST(doc.uploaded_at)}</td>
                             <td>{doc.fee_tracking?.length > 0 ? 'Linked' : 'No record'}</td>
                             <td>
-                              <a href={doc.file_url} target="_blank" className="btn small">View</a>
+                              <a href={doc.file_url} target="_blank" rel="noreferrer" className="btn small">View</a>
                               <button 
                                 className="btn small primary" 
                                 onClick={() => handleVerifyFeeReceipt(doc)}
