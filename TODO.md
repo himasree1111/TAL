@@ -1,11 +1,11 @@
-# Task Progress: Fix Achievements Filter in AdminDashboard
+# Fix AdminDashboard.jsx Syntax Error
 
-## Steps from Approved Plan:
-- [x] **1. Create TODO.md** - Tracking progress
-- [ ] **2. Edit src/AdminDashboard.jsx** - Update filterAchievementMatch logic for 'all' case
-- [ ] **3. Test the filter functionality**
-- [ ] **4. Update TODO.md** - Mark complete
-- [ ] **5. Attempt completion**
+## Plan Steps
+- [x] 1. Create TODO.md (tracking progress)
+- [ ] 2. Edit src/AdminDashboard.jsx - Remove invalid JS consts from JSX (lines 2977-2982)  
+- [ ] 3. Verify compilation succeeds
+- [ ] 4. Test fee tracking functionality
+- [ ] 5. Complete task
 
-**Current Status:** Ready to implement the filter logic fix.
+**Current Status:** Step 2/5 - Removing duplicate ternary at line 2980
 
