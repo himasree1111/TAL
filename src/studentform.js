@@ -25,7 +25,6 @@ const [formData, setFormData] = useState({
     middle_name: "",
     dob: "",
     age: "",
-    pob: "",
     camp_name: "",
     nationality: "",
     address: "",
@@ -36,6 +35,7 @@ const [formData, setFormData] = useState({
     educationcategory_custom: "",
     educationsubcategory_custom: "",
     educationyear_custom: "",
+    pob: "",
     email: "",
     contact: "",
     parent_contact_2: "",
@@ -59,12 +59,13 @@ const [formData, setFormData] = useState({
     job: "",
     aspiration: "",
     scholarship: "",
-    certificates: "",
-    years_area: "",
-    num_family_members: "",
-    family_members_details: [],
-    num_earning_members: "",
-    earning_members_details: [],
+        certificates: "",
+        years_area: "",
+        pob: "",
+        num_family_members: "",
+        family_members_details: [],
+        num_earning_members: "",
+        earning_members_details: [],
     account_no: "",
     bank_name: "",
     bank_branch: "",
@@ -322,7 +323,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       
       // Add new entries if increasing
       while (newDetails.length < num) {
-        newDetails.push({ name: "", relation: "" });
+        newDetails.push({ name: "", relation: "", custom_relation: "" });
       }
       
       // Remove extra entries if decreasing
@@ -335,13 +336,24 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     }
 
     // Handle family member details changes
-    if (name.startsWith("family_member_name_") || name.startsWith("family_member_relation_")) {
-      const index = parseInt(name.split('_')[3]); // Extract index from "family_member_name_0" or "family_member_relation_0"
-      const field = name.includes("_name_") ? "name" : "relation";
+    if (name.startsWith("family_member_name_") || name.startsWith("family_member_relation_") || name.startsWith("family_member_custom_relation_")) {
+      const index = parseInt(name.split('_')[3]);
+      let field;
+      if (name.includes("custom_relation")) {
+        field = "custom_relation";
+      } else if (name.includes("_name_")) {
+        field = "name";
+      } else {
+        field = "relation";
+      }
       
       const updatedDetails = [...formData.family_members_details];
       if (updatedDetails[index]) {
         updatedDetails[index][field] = value;
+        // Clear custom_relation if relation not "others"
+        if (field === "relation" && value !== "others" && updatedDetails[index].custom_relation) {
+          updatedDetails[index].custom_relation = "";
+        }
       }
       
       setFormData(prev => ({ ...prev, family_members_details: updatedDetails }));
@@ -359,7 +371,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       
       // Add new entries if increasing
       while (newDetails.length < num) {
-        newDetails.push({ name: "", occupation: "" });
+        newDetails.push({ name: "", relation: "", custom_relation: "", occupation: "" });
       }
       
       // Remove extra entries if decreasing
@@ -372,13 +384,26 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     }
 
     // Handle earning member details changes
-    if (name.startsWith("earning_member_name_") || name.startsWith("earning_member_occ_")) {
-      const index = parseInt(name.split('_')[3]); // Extract index from "earning_member_name_0" or "earning_member_occ_0"
-      const field = name.includes("_name_") ? "name" : "occupation";
+    if (name.startsWith("earning_member_name_") || name.startsWith("earning_member_relation_") || name.startsWith("earning_member_custom_relation_") || name.startsWith("earning_member_occ_")) {
+      const index = parseInt(name.split('_')[3]);
+      let field;
+      if (name.includes("custom_relation")) {
+        field = "custom_relation";
+      } else if (name.includes("relation")) {
+        field = "relation";
+      } else if (name.includes("_name_")) {
+        field = "name";
+      } else {
+        field = "occupation";
+      }
       
       const updatedDetails = [...formData.earning_members_details];
       if (updatedDetails[index]) {
         updatedDetails[index][field] = value;
+        // Clear custom_relation if relation not "others"
+        if (field === "relation" && value !== "others" && updatedDetails[index].custom_relation) {
+          updatedDetails[index].custom_relation = "";
+        }
       }
       
       setFormData(prev => ({ ...prev, earning_members_details: updatedDetails }));
@@ -522,7 +547,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       { key: 'address', label: 'Address' },
       { key: 'whatsapp', label: 'Whatsapp Number' },
       { key: 'school', label: 'Name of School/College' },
-      { key: 'class', label: 'Class' },
+      // { key: 'class', label: 'Class' }, // Auto-populated by EducationDropdown
       { key: 'prev_percent', label: 'Previous Year Percentage' },
 { key: 'present_percent', label: 'Present Year Percentage' },
       { key: 'camp_name', label: 'Camp Name' },
@@ -672,23 +697,22 @@ if (formData.has_scholarship === "YES" && !formData.scholarship.trim()) {
 
       // Parse family members details if it exists
       let updatedData = { ...data };
-      if (data.family_members_details) {
-        try {
-         updatedData.family_members_details = data.family_members_details || [];
-updatedData.num_family_members = (data.family_members_details || []).length.toString();
+      // Process family_members_details
+      updatedData.family_members_details = data.family_members_details?.map((member) => ({
+        name: member.name || "",
+        relation: member.custom_relation ? "others" : (member.relation || ""),
+        custom_relation: member.custom_relation || ""
+      })) || [];
+      updatedData.num_family_members = updatedData.family_members_details.length.toString();
 
-updatedData.earning_members_details = data.earning_members_details || [];
-updatedData.num_earning_members = (data.earning_members_details || []).length.toString();
-          updatedData.num_family_members = updatedData.family_members_details.length.toString();
-        } catch (e) {
-          console.error("Error parsing family members details:", e);
-          updatedData.family_members_details = [];
-          updatedData.num_family_members = "0";
-        }
-      } else {
-        updatedData.family_members_details = [];
-        updatedData.num_family_members = data.num_family_members || "0";
-      }
+      // Process earning_members_details
+      updatedData.earning_members_details = data.earning_members_details?.map((member) => ({
+        name: member.name || "",
+        relation: member.custom_relation ? "others" : (member.relation || ""),
+        custom_relation: member.custom_relation || "",
+        occupation: member.occupation || ""
+      })) || [];
+      updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
 
       // Parse earning members details if it exists
       if (data.earning_members_details) {
@@ -718,6 +742,31 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
 
       // ✅ Map achievements for edit mode - safe null handling
       updatedData.academic_achievements_choice = (data.academic_achievements === true || data.academic_achievements === 'true') ? "YES" : "NO";
+      // Handle education fields properly for edit mode
+      updatedData.educationcategory = data.educationcategory || "";
+      updatedData.educationsubcategory = data.educationsubcategory || "";
+      updatedData.educationyear = data.educationyear || "";
+      updatedData.educationcategory_custom = "";
+      updatedData.educationsubcategory_custom = "";
+      updatedData.educationyear_custom = "";
+      updatedData.class = data.class || "";
+
+      // If category indicates custom (logic depends on your dropdown values, adjust as needed)
+      if (data.educationcategory?.includes('Custom') || !data.educationcategory) {
+        updatedData.educationcategory = "Other";
+        updatedData.educationcategory_custom = data.educationcategory || "";
+      }
+      if (data.educationsubcategory?.includes('Custom') || !data.educationsubcategory) {
+        updatedData.educationsubcategory = "Other";
+        updatedData.educationsubcategory_custom = data.educationsubcategory || "";
+      }
+      if (data.educationyear?.includes('Custom') || !data.educationyear) {
+        updatedData.educationyear = "Other";
+        updatedData.educationyear_custom = data.educationyear || "";
+      }
+
+      updatedData.pob = data.pob || "";
+
       updatedData.academic_achievements_details = data.academic_achievements_details || "";
       updatedData.non_academic_achievements_choice = (data.non_academic_achievements === true || data.non_academic_achievements === 'true') ? "YES" : "NO";
       updatedData.non_academic_achievements_details = data.non_academic_achievements_details || "";
@@ -822,7 +871,6 @@ const isSingleParent = yesNoToBool(formData.is_single_parent);
 full_name: fullName,
   dob: formData.dob || null,
   age: parseInt(formData.age),
-  pob: formData.pob || null,
 
   camp_name: formData.camp_name || null,
   camp_date: formData.camp_date || null,
@@ -943,7 +991,6 @@ scholarship: hasScholarship ? formData.scholarship : null,
         middle_name: "",
         dob: "",
         age: "",
-        pob: "",
         camp_name: "",
         nationality: "",
         address: "",
@@ -951,6 +998,9 @@ scholarship: hasScholarship ? formData.scholarship : null,
         educationcategory: "",
         educationsubcategory: "",
         educationyear: "",
+        educationcategory_custom: "",
+        educationsubcategory_custom: "",
+        educationyear_custom: "",
         email: "",
         contact: "",
         whatsapp: "",
@@ -960,6 +1010,7 @@ scholarship: hasScholarship ? formData.scholarship : null,
         prev_percent: "",
         present_percent: "",
         fee: "",
+        pob: "",
        
         educational_expenses: {
           tuition_fee: { checked: false, amount: "" },
@@ -1025,8 +1076,18 @@ has_scholarship: "",
     </div>
   );
 
+  const RELATION_OPTIONS = [
+    "father",
+    "mother",
+    "sister",
+    "brother",
+    "grandfather",
+    "grandmother",
+    "others"
+  ];
+
   // Render family members details dynamically
-  const renderFamilyMembers = () => {
+    const renderFamilyMembers = () => {
     const num = parseInt(formData.num_family_members) || 0;
     
     if (num <= 0) return null;
@@ -1034,32 +1095,55 @@ has_scholarship: "",
     return (
       <div className="family-members-section">
         <h3>Family Details</h3>
-        {Array.from({ length: num }, (_, index) => (
-          <div key={index} className="family-member-card">
-            <div className="form-group">
-              <label>
-                <span className="field-label"> Name<span className="required">*</span></span>
-                <input
-                  type="text"
-                  name={`family_member_name_${index}`}
-                  value={formData.family_members_details[index]?.name || ""}
-                  onChange={handleInputChange}
-                  placeholder="Enter Name"
-                />
-              </label>
-              <label>
-                <span className="field-label">Relationship with Applicant<span className="required">*</span></span>
-                <input
-                  type="text"
-                  name={`family_member_relation_${index}`}
-                  value={formData.family_members_details[index]?.relation || ""}
-                  onChange={handleInputChange}
-                  placeholder="Enter relationship"
-                />
-              </label>
+        {Array.from({ length: num }, (_, index) => {
+          const member = formData.family_members_details[index] || {};
+          const showCustom = member.relation === "others";
+          
+          return (
+            <div key={index} className="family-member-card">
+              <div className="form-group">
+                <label>
+                  <span className="field-label">Name<span className="required">*</span></span>
+                  <input
+                    type="text"
+                    name={`family_member_name_${index}`}
+                    value={member.name || ""}
+                    onChange={handleInputChange}
+                    placeholder="Enter Name"
+                  />
+                </label>
+                <label>
+                  <span className="field-label">Relationship with Applicant<span className="required">*</span></span>
+                  <div className="relation-group">
+                    <select
+                      name={`family_member_relation_${index}`}
+                      value={member.relation || ""}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select Relation</option>
+                      {RELATION_OPTIONS.map(option => (
+                        <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>
+                      ))}
+                    </select>
+                    {showCustom && (
+                      <div style={{marginTop: '0.5rem'}}>
+                        <input
+                          type="text"
+                          name={`family_member_custom_relation_${index}`}
+                          value={member.custom_relation || ""}
+                          onChange={handleInputChange}
+                          placeholder="Enter custom relation"
+                          className="custom-relation-input"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -1073,30 +1157,63 @@ has_scholarship: "",
     return (
       <div className="earning-members-section">
         <h3>Details of Earning Family Members</h3>
-        {Array.from({ length: num }, (_, index) => (
-          <div key={index} className="earning-member-group">
-            <div className="form-group">
-              <label>
-                <span className="field-label">Relation<span className="required">*</span></span>
-                <input
-                  type="text"
-                  name={`earning_member_name_${index}`}
-                  value={formData.earning_members_details[index]?.name || ""}
-                  onChange={handleInputChange}
-                />
-              </label>
-              <label>
-                <span className="field-label"> Occupation<span className="required">*</span></span>
-                <input
-                  type="text"
-                  name={`earning_member_occ_${index}`}
-                  value={formData.earning_members_details[index]?.occupation || ""}
-                  onChange={handleInputChange}
-                />
-              </label>
+        {Array.from({ length: num }, (_, index) => {
+          const member = formData.earning_members_details[index] || {};
+          const showCustom = member.relation === "others";
+          
+          return (
+            <div key={index} className="earning-member-group">
+              <div className="form-group">
+                <label>
+                  <span className="field-label">Relation<span className="required">*</span></span>
+                  <div className="relation-container">
+                    <select
+                      name={`earning_member_relation_${index}`}
+                      value={member.relation || ""}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select Relation</option>
+                      {RELATION_OPTIONS.map(option => (
+                        <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>
+                      ))}
+                    </select>
+                    {showCustom && (
+                      <input
+                        type="text"
+                        name={`earning_member_custom_relation_${index}`}
+                        value={member.custom_relation || ""}
+                        onChange={handleInputChange}
+                        placeholder="Enter custom relation"
+                        className="custom-relation-input"
+                      />
+                    )}
+                  </div>
+                </label>
+                <label>
+                  <span className="field-label">Name<span className="required">*</span></span>
+                  <input
+                    type="text"
+                    name={`earning_member_name_${index}`}
+                    value={member.name || ""}
+                    onChange={handleInputChange}
+                    placeholder="Enter Name"
+                  />
+                </label>
+                <label>
+                  <span className="field-label">Occupation<span className="required">*</span></span>
+                  <input
+                    type="text"
+                    name={`earning_member_occ_${index}`}
+                    value={member.occupation || ""}
+                    onChange={handleInputChange}
+                    placeholder="Enter Occupation"
+                  />
+                </label>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -1291,14 +1408,22 @@ has_scholarship: "",
                 required
               />
             </label>
-            <label>
+<label>
               <span className="field-label">Age<span className="required">*</span></span>
               <input type="number" name="age" value={formData.age} min={6} readOnly className="readonly-age" onChange={handleInputChange} />
               {errors.age && <p className="error-text">{errors.age}</p>}
             </label>
             <label>
               <span className="field-label">Student's Address<span className="required">*</span></span>
-              <input type="text" name="address" value={formData.address} onChange={handleInputChange} required />
+<textarea 
+  name="address" 
+  value={formData.address} 
+  onChange={handleInputChange} 
+  rows="3" 
+  style={{minHeight: '80px'}} 
+  required 
+  className={errors.address ? "input-error" : ""}
+/>
             </label>
             <label>
               <span className="field-label">Name of Camp<span className="required">*</span></span>
@@ -1450,7 +1575,7 @@ has_scholarship: "",
         <div className="section">
           <h2>3. Academic Data</h2>
           <div className="form-group">
-            <label>
+<label>
               <span className="field-label">Name of School/College/University<span className="required">*</span></span>
               <input
                 type="text"
@@ -1458,11 +1583,12 @@ has_scholarship: "",
                 value={formData.school}
                 onChange={handleInputChange}
                 className={errors.school ? "input-error" : ""}
+                placeholder="Enter school/college/university name"
                 required
               />
               {errors.school && <p className="error-text">{errors.school}</p>}
             </label>
-            <label>
+<label>
               <span className="field-label">Address with Branch Name<span className="required">*</span></span>
               <input
                 type="text"
@@ -1470,6 +1596,7 @@ has_scholarship: "",
                 value={formData.branch}
                 onChange={handleInputChange}
                 className={errors.branch ? "input-error" : ""}
+                placeholder="Enter address with branch name"
                 required
               />
               {errors.branch && <p className="error-text">{errors.branch}</p>}
@@ -1572,13 +1699,15 @@ has_scholarship: "",
           {formData.does_work === "YES" && (
             <label className="full-width">
               <span className="field-label">What kind of job does she do?<span className="required">*</span></span>
-              <input
+<input
                 type="text"
                 name="job"
                 value={formData.job}
                 onChange={handleInputChange}
                 placeholder="Describe her occupation"
+                className={errors.job ? "input-error" : ""}
               />
+              {errors.job && <p className="error-text">{errors.job}</p>}
             </label>
           )}
         </div>
@@ -1587,11 +1716,14 @@ has_scholarship: "",
         <div className="form-group">
           <label className="full-width">
             <span className="field-label">What are her career aspirations and planned courses for the next two years?</span>
-            <input
-              type="text"
+<textarea
               name="aspiration"
               value={formData.aspiration}
               onChange={handleInputChange}
+              rows="3"
+              style={{minHeight: '60px'}}
+              className="full-width"
+              placeholder="Describe career aspirations and planned courses..."
             />
           </label>
         </div>

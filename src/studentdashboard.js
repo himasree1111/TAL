@@ -1449,16 +1449,17 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                   </div>
                 )}
               </div>
-              <div className="form-row">
+<div className="form-row">
                 <label>Place of Birth</label>
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <textarea
                     value={profileForm.pob}
                     onChange={(e) => handleProfileChange('pob', e.target.value)}
+                    rows="3"
+                    style={{minHeight: '80px'}}
                   />
                 ) : (
-                  <div className="view-value">
+                  <div className="view-value multiline">
                     {profileForm.pob || 'Not provided'}
                   </div>
                 )}
@@ -1593,36 +1594,38 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
           <div className="profile-section">
             <h3 className="profile-section-title">Academic Information</h3>
           
-            <div className="form-row">
-              <label>School/College Name</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileForm.school}
-                  onChange={(e) => handleProfileChange('school', e.target.value)}
-                  required
-                />
-              ) : (
-                <div className="view-value">
-                  {profileForm.school || 'Not provided'}
-                </div>
-              )}
-            </div>
+<div className="form-row">
+                <label>School/College Name</label>
+                {isEditing ? (
+                  <textarea
+                    value={profileForm.school}
+                    onChange={(e) => handleProfileChange('school', e.target.value)}
+                    rows="3"
+                    style={{minHeight: '80px'}}
+                    required
+                  />
+                ) : (
+                  <div className="view-value multiline">
+                    {profileForm.school || 'Not provided'}
+                  </div>
+                )}
+              </div>
 
-            <div className="form-row">
-              <label>Branch</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileForm.branch}
-                  onChange={(e) => handleProfileChange('branch', e.target.value)}
-                />
-              ) : (
-                <div className="view-value">
-                  {profileForm.branch || 'Not provided'}
-                </div>
-              )}
-            </div>
+<div className="form-row">
+                <label>Branch</label>
+                {isEditing ? (
+                  <textarea
+                    value={profileForm.branch}
+                    onChange={(e) => handleProfileChange('branch', e.target.value)}
+                    rows="3"
+                    style={{minHeight: '80px'}}
+                  />
+                ) : (
+                  <div className="view-value multiline">
+                    {profileForm.branch || 'Not provided'}
+                  </div>
+                )}
+              </div>
 
             <div className="form-row">
               <label>Class/Course</label>
@@ -1670,20 +1673,21 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
               </div>
             </div>
 
-            <div className="form-row">
-              <label>Academic Achievements</label>
-              {isEditing ? (
-                <textarea
-                  value={profileForm.academic_achievements}
-                  onChange={(e) => handleProfileChange('academic_achievements', e.target.value)}
-                  style={{ minHeight: '60px' }}
-                />
-              ) : (
-                <div className="view-value multiline">
-                  {profileForm.academic_achievements || 'Not provided'}
-                </div>
-              )}
-            </div>
+<div className="form-row">
+                <label>Academic Achievements</label>
+                {isEditing ? (
+                  <textarea
+                    value={profileForm.academic_achievements}
+                    onChange={(e) => handleProfileChange('academic_achievements', e.target.value)}
+                    rows="5"
+                    style={{ minHeight: '120px' }}
+                  />
+                ) : (
+                  <div className="view-value multiline">
+                    {profileForm.academic_achievements || 'Not provided'}
+                  </div>
+                )}
+              </div>
 
             <div className="form-row">
               <label>Non-Academic Achievements</label>
