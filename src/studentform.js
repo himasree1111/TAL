@@ -35,7 +35,6 @@ const [formData, setFormData] = useState({
     educationcategory_custom: "",
     educationsubcategory_custom: "",
     educationyear_custom: "",
-    pob: "",
     email: "",
     contact: "",
     parent_contact_2: "",
@@ -580,10 +579,10 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       const num = parseInt(formData.num_family_members);
       if (num > 0) {
         for (let i = 0; i < num; i++) {
-          if (!formData.family_members_details[i] || 
-              !formData.family_members_details[i].name.trim() || 
-              !formData.family_members_details[i].relation.trim()) {
-            newErrors.family_members = `Please provide name and relation for family member ${i + 1}`;
+              if (!formData.family_members_details[i] ||
+              !formData.family_members_details[i].name.trim() ||
+              (!formData.family_members_details[i].relation.trim() && !formData.family_members_details[i].custom_relation.trim())) {
+            newErrors.family_members = `Please provide name and relation (or custom relation if "others") for family member ${i + 1}`;
             break;
           }
         }
@@ -595,10 +594,11 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       const num = parseInt(formData.num_earning_members);
       if (num > 0) {
         for (let i = 0; i < num; i++) {
-          if (!formData.earning_members_details[i] || 
-              !formData.earning_members_details[i].name.trim() || 
-              !formData.earning_members_details[i].occupation.trim()) {
-            newErrors.earning_members = `Please provide name and occupation for earning member ${i + 1}`;
+          if (!formData.earning_members_details[i] ||
+              !formData.earning_members_details[i].name.trim() ||
+              !formData.earning_members_details[i].occupation.trim() ||
+              (!formData.earning_members_details[i].relation.trim() && !formData.earning_members_details[i].custom_relation.trim())) {
+            newErrors.earning_members = `Please provide name, occupation, and relation (or custom relation if "others") for earning member ${i + 1}`;
             break;
           }
         }
@@ -703,7 +703,7 @@ if (formData.has_scholarship === "YES" && !formData.scholarship.trim()) {
         relation: member.custom_relation ? "others" : (member.relation || ""),
         custom_relation: member.custom_relation || ""
       })) || [];
-      updatedData.num_family_members = updatedData.family_members_details.length.toString();
+      updatedData.num_family_members = String(updatedData.family_members_details?.length || 0);
 
       // Process earning_members_details
       updatedData.earning_members_details = data.earning_members_details?.map((member) => ({
@@ -712,28 +712,20 @@ if (formData.has_scholarship === "YES" && !formData.scholarship.trim()) {
         custom_relation: member.custom_relation || "",
         occupation: member.occupation || ""
       })) || [];
-      updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
+      updatedData.num_earning_members = String(updatedData.earning_members_details?.length || 0);
 
       // Parse earning members details if it exists
-      if (data.earning_members_details) {
-        try {
       updatedData.earning_members_details = data.earning_members_details || [];
-updatedData.num_earning_members =
-  (data.earning_members_details || []).length.toString();
+      updatedData.num_earning_members = String(updatedData.earning_members_details?.length || data.earning_members || 0);
 
-          updatedData.num_earning_members = updatedData.earning_members_details.length.toString();
-        } catch (e) {
-          console.error("Error parsing earning members details:", e);
-          updatedData.earning_members_details = [];
-          updatedData.num_earning_members = "0";
-        }
-      } else {
-        updatedData.earning_members_details = [];
-        updatedData.num_earning_members = data.earning_members || "0";
-      }
 updatedData.is_single_parent = data.is_single_parent ? "YES" : "NO";
 updatedData.does_work = data.does_work ? "YES" : "NO";
 updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
+
+// ✅ Ensure academic achievements choice maps correctly for edit
+updatedData.academic_achievements_choice = data.academic_achievements ? "YES" : "NO";
+if (data.academic_achievements === false) updatedData.academic_achievements_choice = "NO";
+
 
       // Load educational expenses if they exist
       if (data.educational_expenses) {
@@ -751,19 +743,50 @@ updatedData.has_scholarship = data.has_scholarship ? "YES" : "NO";
       updatedData.educationyear_custom = "";
       updatedData.class = data.class || "";
 
-      // If category indicates custom (logic depends on your dropdown values, adjust as needed)
-      if (data.educationcategory?.includes('Custom') || !data.educationcategory) {
+// ✅ FIXED: Robust education restoration for edit mode
+      // Predefined options exactly matching dropdown (case-sensitive)
+      const predefinedCategories = [
+        "SCHOOL", 
+        "INTERMEDIATE (State board)", 
+        "ENGINEERING (B.Tech / BE)", 
+        "MEDICAL (BiPC Students After Intermediate)", 
+        "DEGREE (UG REGULAR COURSES)", 
+        "DIPLOMA / POLYTECHNIC", 
+        "ITI", 
+        "PROFESSIONAL COURSES", 
+        "POST-GRADUATION (PG)", 
+        "Other"
+      ];
+
+      // Education category restoration
+      if (!predefinedCategories.includes(data.educationcategory || '') || data.educationcategory_custom) {
         updatedData.educationcategory = "Other";
-        updatedData.educationcategory_custom = data.educationcategory || "";
+        updatedData.educationcategory_custom = data.educationcategory_custom || data.educationcategory || "";
+      } else {
+        updatedData.educationcategory = data.educationcategory || "";
+        updatedData.educationcategory_custom = "";
       }
-      if (data.educationsubcategory?.includes('Custom') || !data.educationsubcategory) {
+
+      // Education subcategory restoration
+      if (data.educationsubcategory_custom || !data.educationsubcategory || data.educationsubcategory === "Other") {
         updatedData.educationsubcategory = "Other";
-        updatedData.educationsubcategory_custom = data.educationsubcategory || "";
+        updatedData.educationsubcategory_custom = data.educationsubcategory_custom || data.educationsubcategory || "";
+      } else {
+        updatedData.educationsubcategory = data.educationsubcategory || "";
+        updatedData.educationsubcategory_custom = "";
       }
-      if (data.educationyear?.includes('Custom') || !data.educationyear) {
+
+      // Education year restoration
+      if (data.educationyear_custom || !data.educationyear || data.educationyear === "Other") {
         updatedData.educationyear = "Other";
-        updatedData.educationyear_custom = data.educationyear || "";
+        updatedData.educationyear_custom = data.educationyear_custom || data.educationyear || "";
+      } else {
+        updatedData.educationyear = data.educationyear || "";
+        updatedData.educationyear_custom = "";
       }
+
+      updatedData.class = data.class || "";
+
 
       updatedData.pob = data.pob || "";
 
@@ -1101,7 +1124,7 @@ has_scholarship: "",
           
           return (
             <div key={index} className="family-member-card">
-              <div className="form-group">
+              <div className="form-group">  
                 <label>
                   <span className="field-label">Name<span className="required">*</span></span>
                   <input
@@ -1114,7 +1137,7 @@ has_scholarship: "",
                 </label>
                 <label>
                   <span className="field-label">Relationship with Applicant<span className="required">*</span></span>
-                  <div className="relation-group">
+                  <div className="relation-wrapper">
                     <select
                       name={`family_member_relation_${index}`}
                       value={member.relation || ""}
@@ -1127,16 +1150,16 @@ has_scholarship: "",
                       ))}
                     </select>
                     {showCustom && (
-                      <div style={{marginTop: '0.5rem'}}>
-                        <input
-                          type="text"
-                          name={`family_member_custom_relation_${index}`}
-                          value={member.custom_relation || ""}
-                          onChange={handleInputChange}
-                          placeholder="Enter custom relation"
-                          className="custom-relation-input"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        name={`family_member_custom_relation_${index}`}
+                        value={member.custom_relation || ""}
+                        onChange={handleInputChange}
+                        placeholder="Enter custom relation (e.g. uncle, cousin)"
+                        className="custom-relation-input"
+                        autoComplete="off"
+                        style={{marginTop: '8px', width: '100%', minHeight: '44px'}}
+                      />
                     )}
                   </div>
                 </label>
@@ -1166,7 +1189,7 @@ has_scholarship: "",
               <div className="form-group">
                 <label>
                   <span className="field-label">Relation<span className="required">*</span></span>
-                  <div className="relation-container">
+                  <div className="relation-wrapper">
                     <select
                       name={`earning_member_relation_${index}`}
                       value={member.relation || ""}
@@ -1184,8 +1207,10 @@ has_scholarship: "",
                         name={`earning_member_custom_relation_${index}`}
                         value={member.custom_relation || ""}
                         onChange={handleInputChange}
-                        placeholder="Enter custom relation"
+                        placeholder="Enter custom relation (e.g. uncle, cousin)"
                         className="custom-relation-input"
+                        autoComplete="off"
+                        style={{marginTop: '8px', width: '100%', minHeight: '44px'}}
                       />
                     )}
                   </div>

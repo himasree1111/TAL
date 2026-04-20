@@ -107,7 +107,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
         </select>
       </label>
 
-      {educationcategory === "Other" ? (
+{(educationcategory === "Other" || educationcategory_custom) ? (
         <>
           <label style={{ marginTop: "12px" }}>
             <span className="field-label">Specify Education Level<span className="required">*</span></span>
