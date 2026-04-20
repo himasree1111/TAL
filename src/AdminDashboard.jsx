@@ -2162,17 +2162,11 @@ const handleEditDonor = (donor) => {
                               <span className="tooltiptext">View</span>
                             </div>
                             <div className="tooltip">
-                              <button className="btn small icon-btn" onClick={() => {
-                                if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                                handleApprove(s);
-                              }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
+                              <button className="btn small icon-btn" onClick={() => handleApprove(s)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
                               <span className="tooltiptext">Approve</span>
                             </div>
                             <div className="tooltip">
-                              <button className="btn small icon-btn" onClick={() => {
-                                if (!window.confirm('Are you sure you want to reject this beneficiary?')) return;
-                                handleNotApprove(s);
-                              }} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
+                              <button className="btn small icon-btn" onClick={() => handleNotApprove(s)} style={{backgroundColor: '#ffebee', color: '#c62828', borderColor: '#c62828'}}>❌</button>
                               <span className="tooltiptext">Not Approve</span>
                             </div>
                           </div>
@@ -2276,10 +2270,7 @@ const handleEditDonor = (donor) => {
                                 <span className="tooltiptext">View</span>
                               </div>
                               <div className="tooltip">
-                                <button className="btn small icon-btn" onClick={() => {
-                                  if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                                  handleApprove(student);
-                                }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
+                                <button className="btn small icon-btn" onClick={() => handleApprove(student)} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
                                 <span className="tooltiptext">Approve</span>
                               </div>
                             </div>
@@ -2371,7 +2362,6 @@ const handleEditDonor = (donor) => {
                       <button 
                         className="btn primary" 
                         onClick={() => {
-                          if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
                           handleApprove(viewNonEligibleStudent);
                           setViewNonEligibleStudent(null);
                         }}
