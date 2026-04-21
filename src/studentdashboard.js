@@ -113,7 +113,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);*/
     return acc;
   }, {}));
 
-  const [academicEducation, setAcademicEducation] = useState({
+const [academicEducation, setAcademicEducation] = useState({
     educationcategory: '',
     educationsubcategory: '',
     educationyear: '',
@@ -184,7 +184,9 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);*/
   const [profileError, setProfileError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null);
-  const [profileTab, setProfileTab] = useState('personal');
+const [profileTab, setProfileTab] = useState('personal');
+  const [showCustomFamily, setShowCustomFamily] = useState([]);
+  const [showCustomEarning, setShowCustomEarning] = useState([]);
 
   const PROFILE_TABS = [
     { key: 'personal', label: 'Personal Info' },
@@ -287,6 +289,18 @@ console.log(studentId, studentType);
   useEffect(() => {
     fetchProfileFormData();
   }, [fetchProfileFormData, studentEmail]);
+
+  // Initialize showCustom states when profile loads
+  useEffect(() => {
+    if (profileForm.family_members_details) {
+      const familyCustom = profileForm.family_members_details.map(m => Boolean(m?.custom_relation));
+      setShowCustomFamily(familyCustom);
+    }
+    if (profileForm.earning_members_details) {
+      const earningCustom = profileForm.earning_members_details.map(m => Boolean(m?.custom_relation));
+      setShowCustomEarning(earningCustom);
+    }
+  }, [profileForm.family_members_details, profileForm.earning_members_details]);
 
   useEffect(() => {
     if (!studentFormId) return;
@@ -790,19 +804,23 @@ const handleUpload = async (category, files, documentName) => {
     return total;
   };
 
-  const handleFamilyMemberChange = (index, field, value) => {
+const handleFamilyMemberChange = (index, field, value) => {
     const updatedDetails = [...profileForm.family_members_details];
-    if (updatedDetails[index]) {
-      updatedDetails[index][field] = value;
+    if (!updatedDetails[index]) {
+      updatedDetails[index] = { name: '', relation: '', custom_relation: '' };
     }
+    updatedDetails[index][field] = value;
+    
     setProfileForm(prev => ({ ...prev, family_members_details: updatedDetails }));
   };
 
-  const handleEarningMemberChange = (index, field, value) => {
+const handleEarningMemberChange = (index, field, value) => {
     const updatedDetails = [...profileForm.earning_members_details];
-    if (updatedDetails[index]) {
-      updatedDetails[index][field] = value;
+    if (!updatedDetails[index]) {
+      updatedDetails[index] = { name: '', relation: '', custom_relation: '', occupation: '' };
     }
+    updatedDetails[index][field] = value;
+    
     setProfileForm(prev => ({ ...prev, earning_members_details: updatedDetails }));
   };
 
@@ -1761,7 +1779,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                       const num = parseInt(e.target.value) || 0;
                       handleProfileChange('num_family_members', e.target.value);
                       const newDetails = [...profileForm.family_members_details];
-                      while (newDetails.length < num) newDetails.push({ name: '', relation: '' });
+while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom_relation: '' });
                       while (newDetails.length > num) newDetails.pop();
                       handleProfileChange('family_members_details', newDetails);
                     }}
@@ -1784,7 +1802,7 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                       const num = parseInt(e.target.value) || 0;
                       handleProfileChange('num_earning_members', e.target.value);
                       const newDetails = [...profileForm.earning_members_details];
-                      while (newDetails.length < num) newDetails.push({ name: '', occupation: '' });
+while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom_relation: '', occupation: '' });
                       while (newDetails.length > num) newDetails.pop();
                       handleProfileChange('earning_members_details', newDetails);
                     }}
@@ -1803,40 +1821,78 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
             {profileForm.family_members_details.length > 0 && (
               <div className="family-section">
                 <h4>Family Members</h4>
-                {profileForm.family_members_details.map((member, index) => (
-                  <div key={index} className="profile-grid">
-                    <div className="form-row">
-                      <label>Name</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={member.name}
-                          onChange={(e) => handleFamilyMemberChange(index, 'name', e.target.value)}
-                          placeholder="Family member name"
-                        />
-                      ) : (
-                        <div className="view-value">
-                          {member.name || 'Not provided'}
+{(() => {
+                    const familyMembers = profileForm.family_members_details || [];
+                    return familyMembers.map((member, index) => {
+                      const safeMember = member || { name: '', relation: '', custom_relation: '' };
+                      const displayRelation = safeMember.custom_relation || (safeMember.relation ? safeMember.relation.charAt(0).toUpperCase() + safeMember.relation.slice(1) : 'Not provided');
+                      
+                      return (
+                        <div key={`family-${index}`} className="profile-grid">
+                          <div className="form-row">
+                            <label>Name</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={safeMember.name || ''}
+                                onChange={(e) => handleFamilyMemberChange(index, 'name', e.target.value)}
+                                placeholder="Family member name"
+                                required={!isEditing}
+                              />
+                            ) : (
+                              <div className="view-value">
+                                {safeMember.name || 'Not provided'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="form-row">
+                            <label>Relation</label>
+                            {isEditing ? (
+                              <div className="relation-wrapper">
+                                <select
+                                  value={safeMember.relation || ''}
+                                  onChange={(e) => {
+                                    handleFamilyMemberChange(index, 'relation', e.target.value);
+                                    const isOthers = e.target.value === 'others';
+                                    setShowCustomFamily(prev => {
+                                      const newState = [...prev];
+                                      newState[index] = isOthers;
+                                      return newState;
+                                    });
+                                  }}
+                                  required
+                                >
+                                  <option value="">Select Relation</option>
+                                  <option value="father">Father</option>
+                                  <option value="mother">Mother</option>
+                                  <option value="sister">Sister</option>
+                                  <option value="brother">Brother</option>
+                                  <option value="grandfather">Grandfather</option>
+                                  <option value="grandmother">Grandmother</option>
+                                  <option value="others">Others</option>
+                                </select>
+                                {showCustomFamily[index] && (
+                                  <input
+                                    type="text"
+                                    value={safeMember.custom_relation || ''}
+                                    onChange={(e) => handleFamilyMemberChange(index, 'custom_relation', e.target.value)}
+                                    placeholder="Enter custom relation (e.g. uncle, cousin)"
+                                    className="custom-relation-input"
+                                    required={showCustomFamily[index]}
+                                    autoFocus={showCustomFamily[index]}
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="view-value">
+                                {displayRelation}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="form-row">
-                      <label>Relation</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={member.relation}
-                          onChange={(e) => handleFamilyMemberChange(index, 'relation', e.target.value)}
-                          placeholder="Relationship with student"
-                        />
-                      ) : (
-                        <div className="view-value">
-                          {member.relation || 'Not provided'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                      );
+                    });
+                  })()}
               </div>
             )}
 
@@ -1844,40 +1900,94 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
             {profileForm.earning_members_details.length > 0 && (
               <div className="family-section">
                 <h4>Earning Members</h4>
-                {profileForm.earning_members_details.map((member, index) => (
-                  <div key={index} className="profile-grid">
-                    <div className="form-row">
-                      <label>Name</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={member.name}
-                          onChange={(e) => handleEarningMemberChange(index, 'name', e.target.value)}
-                          placeholder="Earning member name"
-                        />
-                      ) : (
-                        <div className="view-value">
-                          {member.name || 'Not provided'}
+{(() => {
+                    const earningMembers = profileForm.earning_members_details || [];
+                    return earningMembers.map((member, index) => {
+                      const safeMember = member || { name: '', relation: '', custom_relation: '', occupation: '' };
+                      const displayRelation = safeMember.custom_relation || (safeMember.relation ? safeMember.relation.charAt(0).toUpperCase() + safeMember.relation.slice(1) : 'Not provided');
+                      
+                      return (
+                        <div key={`earning-${index}`} className="profile-grid">
+                          <div className="form-row">
+                            <label>Name</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={safeMember.name || ''}
+                                onChange={(e) => handleEarningMemberChange(index, 'name', e.target.value)}
+                                placeholder="Earning member name"
+                                required={!isEditing}
+                              />
+                            ) : (
+                              <div className="view-value">
+                                {safeMember.name || 'Not provided'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="form-row">
+                            <label>Relation</label>
+                            {isEditing ? (
+                              <div className="relation-wrapper">
+                                <select
+                                  value={safeMember.relation || ''}
+                                  onChange={(e) => {
+                                    handleEarningMemberChange(index, 'relation', e.target.value);
+                                    const isOthers = e.target.value === 'others';
+                                    setShowCustomEarning(prev => {
+                                      const newState = [...prev];
+                                      newState[index] = isOthers;
+                                      return newState;
+                                    });
+                                  }}
+                                  required
+                                >
+                                  <option value="">Select Relation</option>
+                                  <option value="father">Father</option>
+                                  <option value="mother">Mother</option>
+                                  <option value="sister">Sister</option>
+                                  <option value="brother">Brother</option>
+                                  <option value="grandfather">Grandfather</option>
+                                  <option value="grandmother">Grandmother</option>
+                                  <option value="others">Others</option>
+                                </select>
+                                {showCustomEarning[index] && (
+                                  <input
+                                    type="text"
+                                    value={safeMember.custom_relation || ''}
+                                    onChange={(e) => handleEarningMemberChange(index, 'custom_relation', e.target.value)}
+                                    placeholder="Enter custom relation (e.g. uncle, cousin)"
+                                    className="custom-relation-input"
+                                    required={showCustomEarning[index]}
+                                    autoFocus={showCustomEarning[index]}
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="view-value">
+                                {displayRelation}
+                              </div>
+                            )}
+                          </div>
+                          <div className="form-row">
+                            <label>Occupation</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={safeMember.occupation || ''}
+                                onChange={(e) => handleEarningMemberChange(index, 'occupation', e.target.value)}
+                                placeholder="Occupation"
+                                required={!isEditing}
+                              />
+                            ) : (
+                              <div className="view-value">
+                                {safeMember.occupation || 'Not provided'}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <div className="form-row">
-                      <label>Occupation</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={member.occupation}
-                          onChange={(e) => handleEarningMemberChange(index, 'occupation', e.target.value)}
-                          placeholder="Occupation"
-                        />
-                      ) : (
-                        <div className="view-value">
-                          {member.occupation || 'Not provided'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                      );
+                    });
+                  })()}
               </div>
             )}
           </div>

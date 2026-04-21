@@ -334,26 +334,16 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       return;
     }
 
-    // Handle family member details changes
-    if (name.startsWith("family_member_name_") || name.startsWith("family_member_relation_") || name.startsWith("family_member_custom_relation_")) {
+// Handle family member details changes
+    if (name.startsWith("family_member_name_") || name.startsWith("family_member_relation_")) {
       const index = parseInt(name.split('_')[3]);
-      let field;
-      if (name.includes("custom_relation")) {
-        field = "custom_relation";
-      } else if (name.includes("_name_")) {
-        field = "name";
-      } else {
-        field = "relation";
-      }
+      const field = name.includes("name") ? "name" : "relation";
       
       const updatedDetails = [...formData.family_members_details];
-      if (updatedDetails[index]) {
-        updatedDetails[index][field] = value;
-        // Clear custom_relation if relation not "others"
-        if (field === "relation" && value !== "others" && updatedDetails[index].custom_relation) {
-          updatedDetails[index].custom_relation = "";
-        }
+      if (!updatedDetails[index]) {
+        updatedDetails[index] = {};
       }
+      updatedDetails[index][field] = value;
       
       setFormData(prev => ({ ...prev, family_members_details: updatedDetails }));
       return;
@@ -382,13 +372,11 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       return;
     }
 
-    // Handle earning member details changes
-    if (name.startsWith("earning_member_name_") || name.startsWith("earning_member_relation_") || name.startsWith("earning_member_custom_relation_") || name.startsWith("earning_member_occ_")) {
+// Handle earning member details changes
+    if (name.startsWith("earning_member_name_") || name.startsWith("earning_member_relation_") || name.startsWith("earning_member_occ_")) {
       const index = parseInt(name.split('_')[3]);
       let field;
-      if (name.includes("custom_relation")) {
-        field = "custom_relation";
-      } else if (name.includes("relation")) {
+      if (name.includes("relation")) {
         field = "relation";
       } else if (name.includes("_name_")) {
         field = "name";
@@ -397,13 +385,10 @@ const [isSubmitting, setIsSubmitting] = useState(false);
       }
       
       const updatedDetails = [...formData.earning_members_details];
-      if (updatedDetails[index]) {
-        updatedDetails[index][field] = value;
-        // Clear custom_relation if relation not "others"
-        if (field === "relation" && value !== "others" && updatedDetails[index].custom_relation) {
-          updatedDetails[index].custom_relation = "";
-        }
+      if (!updatedDetails[index]) {
+        updatedDetails[index] = {};
       }
+      updatedDetails[index][field] = value;
       
       setFormData(prev => ({ ...prev, earning_members_details: updatedDetails }));
       return;
@@ -700,19 +685,16 @@ if (formData.has_scholarship === "YES" && !formData.scholarship.trim()) {
       // Process family_members_details
       updatedData.family_members_details = data.family_members_details?.map((member) => ({
         name: member.name || "",
-        relation: member.custom_relation ? "others" : (member.relation || ""),
-        custom_relation: member.custom_relation || ""
+        relation: member.relation || ""
       })) || [];
       updatedData.num_family_members = String(updatedData.family_members_details?.length || 0);
 
       // Process earning_members_details
       updatedData.earning_members_details = data.earning_members_details?.map((member) => ({
         name: member.name || "",
-        relation: member.custom_relation ? "others" : (member.relation || ""),
-        custom_relation: member.custom_relation || "",
+        relation: member.relation || "",
         occupation: member.occupation || ""
       })) || [];
-      updatedData.num_earning_members = String(updatedData.earning_members_details?.length || 0);
 
       // Parse earning members details if it exists
       updatedData.earning_members_details = data.earning_members_details || [];
@@ -1099,18 +1081,18 @@ has_scholarship: "",
     </div>
   );
 
-  const RELATION_OPTIONS = [
+const RELATION_OPTIONS = [
     "father",
     "mother",
     "sister",
     "brother",
     "grandfather",
     "grandmother",
-    "others"
+    "guardian"
   ];
 
-  // Render family members details dynamically
-    const renderFamilyMembers = () => {
+// Render family members details dynamically
+  const renderFamilyMembers = () => {
     const num = parseInt(formData.num_family_members) || 0;
     
     if (num <= 0) return null;
@@ -1120,7 +1102,6 @@ has_scholarship: "",
         <h3>Family Details</h3>
         {Array.from({ length: num }, (_, index) => {
           const member = formData.family_members_details[index] || {};
-          const showCustom = member.relation === "others";
           
           return (
             <div key={index} className="family-member-card">
@@ -1137,31 +1118,17 @@ has_scholarship: "",
                 </label>
                 <label>
                   <span className="field-label">Relationship with Applicant<span className="required">*</span></span>
-                  <div className="relation-wrapper">
-                    <select
-                      name={`family_member_relation_${index}`}
-                      value={member.relation || ""}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Select Relation</option>
-                      {RELATION_OPTIONS.map(option => (
-                        <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>
-                      ))}
-                    </select>
-                    {showCustom && (
-                      <input
-                        type="text"
-                        name={`family_member_custom_relation_${index}`}
-                        value={member.custom_relation || ""}
-                        onChange={handleInputChange}
-                        placeholder="Enter custom relation (e.g. uncle, cousin)"
-                        className="custom-relation-input"
-                        autoComplete="off"
-                        style={{marginTop: '8px', width: '100%', minHeight: '44px'}}
-                      />
-                    )}
-                  </div>
+                  <select
+                    name={`family_member_relation_${index}`}
+                    value={member.relation || ""}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">Select Relation</option>
+                    {RELATION_OPTIONS.map(option => (
+                      <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>
+                    ))}
+                  </select>
                 </label>
               </div>
             </div>
@@ -1171,7 +1138,7 @@ has_scholarship: "",
     );
   };
 
-  // Render earning members details dynamically
+// Render earning members details dynamically
   const renderEarningMembers = () => {
     const num = parseInt(formData.num_earning_members) || 0;
     
@@ -1182,38 +1149,23 @@ has_scholarship: "",
         <h3>Details of Earning Family Members</h3>
         {Array.from({ length: num }, (_, index) => {
           const member = formData.earning_members_details[index] || {};
-          const showCustom = member.relation === "others";
           
           return (
             <div key={index} className="earning-member-group">
               <div className="form-group">
                 <label>
                   <span className="field-label">Relation<span className="required">*</span></span>
-                  <div className="relation-wrapper">
-                    <select
-                      name={`earning_member_relation_${index}`}
-                      value={member.relation || ""}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Select Relation</option>
-                      {RELATION_OPTIONS.map(option => (
-                        <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>
-                      ))}
-                    </select>
-                    {showCustom && (
-                      <input
-                        type="text"
-                        name={`earning_member_custom_relation_${index}`}
-                        value={member.custom_relation || ""}
-                        onChange={handleInputChange}
-                        placeholder="Enter custom relation (e.g. uncle, cousin)"
-                        className="custom-relation-input"
-                        autoComplete="off"
-                        style={{marginTop: '8px', width: '100%', minHeight: '44px'}}
-                      />
-                    )}
-                  </div>
+                  <select
+                    name={`earning_member_relation_${index}`}
+                    value={member.relation || ""}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">Select Relation</option>
+                    {RELATION_OPTIONS.map(option => (
+                      <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   <span className="field-label">Name<span className="required">*</span></span>
