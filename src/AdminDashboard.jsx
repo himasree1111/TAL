@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   const [loadingCampOptions, setLoadingCampOptions] = useState(false);
   const [newCampName, setNewCampName] = useState("");
   const [newCampDate, setNewCampDate] = useState("");
+  const [newCampExtraDates, setNewCampExtraDates] = useState("");
   const [addingCamp, setAddingCamp] = useState(false);
   const [newDonorForm, setNewDonorForm] = useState({
     full_name: '',
@@ -178,40 +179,66 @@ export default function AdminDashboard() {
 
   const handleAddCamp = async () => {
     const campName = newCampName.trim();
+    const extraDates = newCampExtraDates
+      .split(/[\n,]/)
+      .map((date) => date.trim())
+      .filter(Boolean);
+    const campDates = [...new Set([newCampDate, ...extraDates])].filter(Boolean);
 
     if (!campName) {
       alert("Please enter a camp name.");
       return;
     }
 
-    if (!newCampDate) {
-      alert("Please select a camp date.");
+    if (campDates.length === 0) {
+      alert("Please select at least one camp date.");
+      return;
+    }
+
+    const invalidDate = campDates.find((date) => !/^\d{4}-\d{2}-\d{2}$/.test(date));
+    if (invalidDate) {
+      alert(`Invalid camp date: ${invalidDate}`);
       return;
     }
 
     setAddingCamp(true);
     try {
-      const { error } = await supabase
-        .from("camp_master")
-        .insert({
-          camp_name: campName,
-          camp_date: newCampDate,
-          created_by: currentUser?.email || null,
-        });
+      let addedCount = 0;
+      let duplicateCount = 0;
 
-      if (error) {
-        if (error.code === "23505") {
-          alert("This camp name and date already exists.");
-        } else {
-          alert("Failed to add camp: " + error.message);
+      for (const campDate of campDates) {
+        const { error } = await supabase
+          .from("camp_master")
+          .insert({
+            camp_name: campName,
+            camp_date: campDate,
+            created_by: currentUser?.email || null,
+          });
+
+        if (error) {
+          if (error.code === "23505") {
+            duplicateCount += 1;
+            continue;
+          }
+
+          throw error;
         }
-        return;
+
+        addedCount += 1;
       }
 
       setNewCampName("");
       setNewCampDate("");
+      setNewCampExtraDates("");
       await fetchCampOptions();
-      alert("Camp added successfully!");
+
+      if (addedCount > 0 && duplicateCount > 0) {
+        alert(`Added ${addedCount} camp date(s). Skipped ${duplicateCount} duplicate date(s).`);
+      } else if (addedCount > 0) {
+        alert("Camp added successfully!");
+      } else {
+        alert("All selected camp dates already exist.");
+      }
     } catch (err) {
       console.error("Error adding camp:", err);
       alert("Failed to add camp: " + err.message);
@@ -2093,6 +2120,15 @@ const handleEditDonor = (donor) => {
                         type="date"
                         value={newCampDate}
                         onChange={(e) => setNewCampDate(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span className="field-label">Additional Camp Dates (optional)</span>
+                      <textarea
+                        placeholder="2025-10-12, 2026-03-11"
+                        value={newCampExtraDates}
+                        onChange={(e) => setNewCampExtraDates(e.target.value)}
+                        rows={3}
                       />
                     </label>
                     <button
