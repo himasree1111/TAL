@@ -49,6 +49,7 @@ export default function AdminDashboard() {
   const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
   const [loadingNonEligible, setLoadingNonEligible] = useState(false);
   const [nonEligibleCount, setNonEligibleCount] = useState(0);
+  const [successMessage, setSuccessMessage] = useState('');
   const [showEligibleTable, setShowEligibleTable] = useState(false);
   const [showNonEligibleTable, setShowNonEligibleTable] = useState(false);
   const [showAddDonorModal, setShowAddDonorModal] = useState(false);
@@ -1271,101 +1272,26 @@ await fetchFeeTrackingRecords();
 */
 
 
-const handleApprove = async (student) => {
+const handleMoveToEligible = async (student) => {
   try {
-    // 1️⃣ Get full record from admin_student_info
-    const { data: record, error: fetchError } = await supabase
-      .from('admin_student_info')
-      .select('*')
-      .eq('id', student.student_id)
-      .single();
+    const { error } = await supabase.rpc(
+      'move_to_eligible_from_non_eligible',
+      { p_id: student.id }
+    );
 
-    if (fetchError || !record) {
-      console.error(fetchError);
-      alert("❌ Record not found in admin_student_info");
+    if (error) {
+      console.error(error);
+      alert("❌ Failed: " + error.message);
       return;
     }
 
-    // 2️⃣ Move to eligible_students
-    const { error: insertError } = await supabase
-      .from('eligible_students')
-      .upsert({
-        student_id: student.student_id,
-        student_name: record.student_name || record.full_name || student.full_name,
-        full_name: record.full_name || student.full_name,
-        age: record.age || student.age,
-        camp_name: record.camp_name || student.campName,
-        camp_date: record.camp_date || student.campDate || null,
-        school: record.school || student.school,
-        prev_percent: record.prev_percent || student.prev_percent,
-        present_percent: record.present_percent || student.present_percent,
-        class: record.class || student.year,
-        email: record.email || student.email,
-        contact: record.contact || student.contact,
-        parent_contact_2: record.parent_contact_2,
-        whatsapp: record.whatsapp || student.whatsapp,
-        student_contact: record.student_contact || student.student_contact,
-        scholarship: record.scholarship || student.scholarship,
-        has_scholarship: record.has_scholarship || student.has_scholarship,
-        does_work: record.does_work || student.does_work,
-        earning_members: record.earning_members || student.earning_members,
-        education: record.educationcategory || record.class || student.year,
-        volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
-        volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
-        created_at: record.created_at,
-        status: 'Eligible',
-        address: record.address,
-        camp: record.camp
-      }, { onConflict: 'email' });
+    // ✅ remove from UI instantly
+    setNonEligibleStudents(prev =>
+      prev.filter(s => s.student_id !== student.student_id)
+    );
+    setNonEligibleCount(prev => prev - 1);
 
-    if (insertError) {
-      console.error(insertError);
-      alert("❌ Failed to move to eligible: " + insertError.message);
-      return;
-    }
-
-    // 3️⃣ SEND EMAIL (IMPORTANT 🔥)
-    try {
-     const { data: { session } } = await supabase.auth.getSession();
-
-
-
-      const response = await fetch("https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}` // ✅ IMPORTANT
-        },
-        body: JSON.stringify({
-          email: record.email,
-          name: record.full_name || "Student",
-        }),
-      });
-
-
-      const result = await response.json();
-      console.log("📩 Email response:", result);
-    } catch (emailErr) {
-      console.error("❌ Email sending failed:", emailErr);
-      // Don't stop main flow
-    }
-
-    // 4️⃣ Delete from pending table
-    const { error: deleteError } = await supabase
-      .from('admin_student_info')
-      .delete()
-      .eq('id', student.student_id);
-
-    if (deleteError) {
-      console.error(deleteError);
-      alert("❌ Failed to remove from pending: " + deleteError.message);
-      return;
-    }
-
-    // 5️⃣ Update UI
-    setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
-
-    alert("✅ Student approved & email sent!");
+    alert("✅ Student moved to Eligible");
 
   } catch (err) {
     console.error(err);
@@ -1404,7 +1330,6 @@ const handleNotApprove = async (student) => {
         class: record.class || student.year,
         email: record.email || student.email,
         contact: record.contact || student.contact,
-        parent_contact_2: record.parent_contact_2,
         whatsapp: record.whatsapp || student.whatsapp,
         student_contact: record.student_contact || student.student_contact,
         scholarship: record.scholarship || student.scholarship,
@@ -1419,11 +1344,6 @@ const handleNotApprove = async (student) => {
         address: record.address,
         camp: record.camp
       });
-
-
-
-
-
 
     if (insertError) {
       console.error(insertError);
@@ -1453,6 +1373,7 @@ const handleNotApprove = async (student) => {
     alert("Error: " + err.message);
   }
 };
+
 const fetchStudents = async () => {
   const { data, error } = await supabase
     .from('admin_student_info')
@@ -2323,9 +2244,9 @@ const handleEditDonor = (donor) => {
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => {
                                 if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                                handleApprove(s);
-                              }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
-                              <span className="tooltiptext">Approve</span>
+                                // handleApprove(s);
+                              }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}} disabled>✅</button>
+                              <span className="tooltiptext">Approve (Coming Soon)</span>
                             </div>
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => {
@@ -2403,13 +2324,10 @@ const handleEditDonor = (donor) => {
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Name</th>
+                        <th>Student Name</th>
                         <th>Email</th>
-                        <th>Education</th>
-                        <th>Contact</th>
-                        <th>Camp Name</th>
-                        <th>Priority</th>
-                        <th>Percentage</th>
+                        <th>School</th>
+                        <th>Special Remarks</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -2418,16 +2336,8 @@ const handleEditDonor = (donor) => {
                         <tr key={student.student_id || student.id || student.email || Math.random()}>
                           <td>{student.student_name || student.full_name || student.name || '—'}</td>
                           <td>{student.email || '—'}</td>
-                          <td>{student.education || student.class || student.year || student.course || '—'}</td>
-                          <td className="nowrap-cell">{student.contact || student.whatsapp || student.student_contact || '—'}</td>
-                          <td>{student.camp_name || student.campName || '—'}</td>
-                          <td className={`priority-cell priority-${student.priority >= 80 ? 'high' : student.priority >= 50 ? 'medium' : 'low'}`}>
-                            <div><strong>{Math.round(student.priority)}</strong>/100</div>
-                            <div className="priority-label">
-                              {student.priority >= 80 ? 'High Need' : student.priority >= 50 ? 'Medium Need' : 'Low Need'}
-                            </div>
-                          </td>
-                          <td>{getAvgPercentage(student)}</td>
+                          <td>{student.school || '—'}</td>
+                          <td>{student.special_remarks || '—'}</td>
                           <td>
                             <div className="actions-flex" style={{justifyContent: 'center', gap: '6px'}}>
                               <div className="tooltip">
@@ -2435,11 +2345,11 @@ const handleEditDonor = (donor) => {
                                 <span className="tooltiptext">View</span>
                               </div>
                               <div className="tooltip">
-                                <button className="btn small icon-btn" onClick={() => {
-                                  if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                                  handleApprove(student);
+                                <button className="btn small icon-btn primary" onClick={() => {
+                                  if (!window.confirm('Move to Eligible?')) return;
+                                  handleMoveToEligible(student);
                                 }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
-                                <span className="tooltiptext">Approve</span>
+                                <span className="tooltiptext">Move to Eligible</span>
                               </div>
                             </div>
                           </td>
@@ -2527,16 +2437,17 @@ const handleEditDonor = (donor) => {
                       </div>
                     </div>
                     <div className="modal-footer">
-                      <button 
-                        className="btn primary" 
-                        onClick={() => {
-                          if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                          handleApprove(viewNonEligibleStudent);
-                          setViewNonEligibleStudent(null);
-                        }}
-                      >
-                        Approve & Move to Eligible
-                      </button>
+                        <button 
+                          className="btn" 
+                          onClick={() => {
+                            if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
+                            // handleApprove(viewNonEligibleStudent);
+                            setViewNonEligibleStudent(null);
+                          }}
+                          disabled
+                        >
+                          Approve & Move to Eligible (Coming Soon)
+                        </button>
                       <button className="btn secondary" onClick={() => setViewNonEligibleStudent(null)}>Close</button>
                     </div>
                   </div>
