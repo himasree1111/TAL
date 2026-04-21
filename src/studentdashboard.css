@@ -350,18 +350,23 @@
 }
 
 /* Documents */
-.documents-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(280px, 40vw, 420px), 1fr));
-  gap: clamp(1.75rem, 3vw, 1.75rem);
-}
+.documents-grid { 
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 1.5rem !important;
+  align-items: stretch !important;}
 
-.doc-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
-}
+.doc-card { 
+  background: #ffffff; 
+  border-radius: 20px; 
+  padding: 2rem;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08); 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: fit-content;}
+      .doc-card:hover {
+        transform: translateY(-8px); 
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+      }
 
 .doc-card-header {
   display: flex;

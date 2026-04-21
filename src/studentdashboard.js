@@ -21,7 +21,7 @@ const NAV_ITEMS = [
 
 const DOCUMENT_CATEGORIES = [
   { key: "academic", title: "Academic Documents", icon: "📚", placeholder: "Auto-generated from dropdown" },
-  { key: "fee", title: "Fee Receipts", icon: "💰", placeholder: "Enter Voucher Number" },
+
   { key: "personal", title: "Personal Documents", icon: "🆔", placeholder: "Select document type" },
   { key: "extracurricular", title: "Extracurricular", icon: "🏆", placeholder: "Enter Activity Name" },
 ];
@@ -108,10 +108,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);*/
   const [studentFormId, setStudentFormId] = useState(null);
   const [formIdLoading, setFormIdLoading] = useState(true);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
-  const [documentNames, setDocumentNames] = useState(DOCUMENT_CATEGORIES.reduce((acc, cat) => {
-    acc[cat.key] = cat.key === 'fee' ? '' : '';
-    return acc;
-  }, {}));
+const [documentNames, setDocumentNames] = useState(DOCUMENT_CATEGORIES.reduce((acc, cat) => {acc[cat.key] = '';    return acc;  }, {}));
 
 const [academicEducation, setAcademicEducation] = useState({
     educationcategory: '',
