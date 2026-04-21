@@ -88,6 +88,9 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({}); // <-- validation errors
   const [campOptions, setCampOptions] = useState([]);
   const [loadingCampOptions, setLoadingCampOptions] = useState(false);
+  const uniqueCampOptions = Array.from(
+    new Map(campOptions.map((camp) => [camp.camp_name, camp])).values()
+  );
 
   useEffect(() => {
     // fetch logged-in user email (volunteer)
@@ -522,23 +525,21 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   };
 
   const handleCampSelection = (e) => {
-    const selectedId = e.target.value;
+    const selectedCampName = e.target.value;
 
-    if (!selectedId) {
-      setFormData((prev) => ({ ...prev, camp_name: "", camp_date: "" }));
+    if (!selectedCampName) {
+      setFormData((prev) => ({ ...prev, camp_name: "" }));
       return;
     }
 
-    const selectedCamp = campOptions.find((camp) => String(camp.id) === selectedId);
-    if (!selectedCamp) return;
+    if (selectedCampName === "__legacy") return;
 
     setFormData((prev) => ({
       ...prev,
-      camp_name: selectedCamp.camp_name || "",
-      camp_date: selectedCamp.camp_date || "",
+      camp_name: selectedCampName,
     }));
 
-    setErrors((prev) => ({ ...prev, camp_name: "", camp_date: "" }));
+    setErrors((prev) => ({ ...prev, camp_name: "" }));
   };
 
   // Upload single file to Supabase storage bucket "student_documents"
@@ -1321,14 +1322,12 @@ const RELATION_OPTIONS = [
     return total;
   };
 
-  const selectedCampFromMaster = campOptions.find(
-    (camp) =>
-      camp.camp_name === formData.camp_name &&
-      (camp.camp_date || "") === (formData.camp_date || "")
+  const selectedCampFromMaster = uniqueCampOptions.find(
+    (camp) => camp.camp_name === formData.camp_name
   );
   const hasLegacyCampValue = Boolean(formData.camp_name) && !selectedCampFromMaster;
   const selectedCampValue = selectedCampFromMaster
-    ? String(selectedCampFromMaster.id)
+    ? selectedCampFromMaster.camp_name
     : hasLegacyCampValue
       ? "__legacy"
       : "";
@@ -1473,21 +1472,21 @@ const RELATION_OPTIONS = [
                 disabled={loadingCampOptions}
               >
                 <option value="">
-                  {loadingCampOptions ? "Loading camps..." : "Select Camp"}
+                  {loadingCampOptions ? "Loading camps..." : "Select Camp Name"}
                 </option>
                 {hasLegacyCampValue && (
                   <option value="__legacy">
-                    {formData.camp_name} {formData.camp_date ? `(${formData.camp_date})` : ""} (existing)
+                    {formData.camp_name} (existing)
                   </option>
                 )}
-                {campOptions.map((camp) => (
-                  <option key={camp.id} value={String(camp.id)}>
-                    {camp.camp_name} {camp.camp_date ? `(${camp.camp_date})` : ""}
+                {uniqueCampOptions.map((camp) => (
+                  <option key={camp.camp_name} value={camp.camp_name}>
+                    {camp.camp_name}
                   </option>
                 ))}
               </select>
-              {!loadingCampOptions && campOptions.length === 0 && (
-                <p className="error-text">No camps are available. Please ask admin to add a camp first.</p>
+              {!loadingCampOptions && uniqueCampOptions.length === 0 && (
+                <p className="error-text">No camp names are available. Please ask admin to add a camp first.</p>
               )}
             </label>
             <label>
@@ -1496,9 +1495,9 @@ const RELATION_OPTIONS = [
                 type="date"
                 name="camp_date"
                 value={formData.camp_date}
-                readOnly
+                onChange={handleInputChange}
                 required
-                className={errors.camp_date ? "input-error readonly-field" : "readonly-field"}
+                className={errors.camp_date ? "input-error" : ""}
               />
             </label>
           </div>
