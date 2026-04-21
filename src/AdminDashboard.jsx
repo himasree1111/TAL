@@ -486,7 +486,7 @@ const paidFeeRecords = useMemo(() => {
     return paidFeeRecords.filter((record) => !record.voucher_url);
   }, [paidFeeRecords]);
 
-  // Students with student-uploaded fee receipts (category='fee', not verified)
+  // Students with student-uploaded fee receipts (from fee_tracking where fee_receipt_url IS NOT NULL and fee_receipt_checked = 'false')
   const [studentFeeReceipts, setStudentFeeReceipts] = useState([]);
   const [loadingStudentReceipts, setLoadingStudentReceipts] = useState(false);
 
@@ -500,15 +500,11 @@ const paidFeeRecords = useMemo(() => {
     setLoadingStudentReceipts(true);
     try {
       const { data, error } = await supabase
-        .from('student_documents')
-        .select(`
-          *,
-          student_form_submissions!inner(full_name, email, student_public_id),
-          fee_tracking!student_id(*)
-        `)
-        .eq('category', 'fee')
-        .is('is_checked', false)
-        .order('uploaded_at', { ascending: false });
+        .from('fee_tracking')
+        .select('*')
+        .not('fee_receipt_url', 'is', null)
+        .eq('fee_receipt_checked', 'false')
+        .order('fee_receipt_url_updated_at', { ascending: false });
       
       if (error) throw error;
       setStudentFeeReceipts(data || []);
@@ -519,34 +515,22 @@ const paidFeeRecords = useMemo(() => {
     }
   };
 
-  const handleVerifyFeeReceipt = async (doc) => {
-    if (!window.confirm(`Verify fee receipt for ${doc.student_form_submissions.full_name}?`)) return;
+  const handleVerifyFeeReceipt = async (receipt) => {
+    if (!window.confirm(`Verify fee receipt for ${receipt.student_name}?`)) return;
     
     try {
-      // Mark student receipt as verified
-      const { error: docError } = await supabase
-        .from('student_documents')
-        .update({ is_checked: true })
-        .eq('id', doc.id);
+      // Mark fee receipt as verified in fee_tracking table
+      const { error: updateError } = await supabase
+        .from('fee_tracking')
+        .update({ 
+          fee_receipt_checked: 'true'
+        })
+        .eq('id', receipt.id);
       
-      if (docError) throw docError;
-
-      // Update latest fee_tracking voucher_url
-      if (doc.fee_tracking && doc.fee_tracking.length > 0) {
-        const latestRecord = doc.fee_tracking.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
-        const { error: ftError } = await supabase
-          .from('fee_tracking')
-          .update({ 
-            voucher_url: doc.file_url,
-            voucher_uploaded_at: new Date().toISOString()
-          })
-          .eq('id', latestRecord.id);
-        
-        if (ftError) console.error('Fee tracking update failed:', ftError);
-      }
+      if (updateError) throw updateError;
 
       await fetchStudentFeeReceipts();
-      alert('✅ Fee receipt verified & linked to fee tracking!');
+      alert('✅ Fee receipt verified successfully!');
     } catch (err) {
       console.error('Verification failed:', err);
       alert('Verification failed: ' + err.message);
@@ -554,8 +538,8 @@ const paidFeeRecords = useMemo(() => {
   };
 
   const feeReceiptRecords = useMemo(() => {
-    return paidFeeRecords.filter((record) => Boolean(record.voucher_url));
-  }, [paidFeeRecords]);
+    return feeTrackingRecords.filter((record) => record.fee_receipt_checked === 'true');
+  }, [feeTrackingRecords]);
 
 const totalFeeDue = useMemo(() => {
     return feeTrackingRecords.reduce((sum, record) => {
@@ -3174,41 +3158,54 @@ const handleEditDonor = (donor) => {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Student</th>
+                          <th>ID</th>
+                          <th>Student Name</th>
                           <th>Email</th>
-                          <th>Document</th>
-                          <th>Uploaded</th>
-                          <th>Fee Tracking</th>
+                          <th>Required Fee</th>
+                          <th>Paid by TAL</th>
+                          <th>Fee Receipt</th>
+                          <th>Uploaded At</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {studentFeeReceipts.map((doc) => (
-                          <tr key={doc.id}>
-                            <td>{doc.student_form_submissions?.full_name || '—'}</td>
-                            <td>{doc.student_form_submissions?.email || '—'}</td>
-                            <td>{doc.document_name || doc.file_name}</td>
-                            <td>{formatToIST(doc.uploaded_at)}</td>
-                            <td>{doc.fee_tracking?.length > 0 ? 'Linked' : 'No record'}</td>
-                            <td>
-                              <a href={doc.file_url} target="_blank" rel="noreferrer" className="btn small">View</a>
-                              <button 
-                                className="btn small primary" 
-                                onClick={() => handleVerifyFeeReceipt(doc)}
-                              >
-                                ✅ Verify
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {studentFeeReceipts.map((receipt) => {
+                          const requiredFee = parseMoney(receipt.total_educational_expenses || 0);
+                          const paidAmount = parseMoney(receipt.fee_paid_by_tal || 0);
+                          return (
+                            <tr key={receipt.id}>
+                              <td><strong>#{receipt.id}</strong></td>
+                              <td>{receipt.student_name || '—'}</td>
+                              <td>{receipt.email || '—'}</td>
+                              <td>₹{requiredFee.toLocaleString()}</td>
+                              <td>₹{paidAmount.toLocaleString()}</td>
+                              <td>
+                                {receipt.fee_receipt_url ? (
+                                  <a href={receipt.fee_receipt_url} target="_blank" rel="noreferrer" className="btn small">View Receipt</a>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td>{formatToIST(receipt.fee_receipt_url_updated_at)}</td>
+                              <td>
+                                <button 
+                                  className="btn small primary" 
+                                  onClick={() => handleVerifyFeeReceipt(receipt)}
+                                >
+                                  ✅ Verify
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
 
-                  {/* NEW: Completed Fee Receipts from fee_tracking (voucher_url NOT NULL) */}
+                  {/* Completed Fee Receipts from fee_tracking (fee_receipt_checked = 'true') */}
                   <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '2px solid #e5e7eb' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <h4>✅ Completed Fee Receipts ({feeReceiptRecords.length})</h4>
+                      <h4>✅ Verified Fee Receipts ({feeReceiptRecords.length})</h4>
                       <button 
                         className="btn primary" 
                         onClick={handleDownloadFeeReceiptsReport}
@@ -3219,7 +3216,7 @@ const handleEditDonor = (donor) => {
                     </div>
                     {feeReceiptRecords.length === 0 ? (
                       <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
-                        No completed fee receipts (voucher_url NOT NULL) found.
+                        No verified fee receipts found.
                       </p>
                     ) : (
                       <div className="table-wrap">
@@ -3233,8 +3230,8 @@ const handleEditDonor = (donor) => {
                               <th>Paid</th>
                               <th>Status</th>
                               <th>Voucher</th>
-                              <th>Uploaded</th>
-                              <th>Action</th>
+                              <th>Fee Receipt</th>
+                              <th>Verified At</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -3260,17 +3257,14 @@ const handleEditDonor = (donor) => {
                                       '—'
                                     )}
                                   </td>
-                                  <td>{record.voucher_uploaded_at ? formatToIST(record.voucher_uploaded_at) : '—'}</td>
                                   <td>
-                                    <button 
-                                      className="btn small primary" 
-                                      onClick={() => {
-                                        setViewingReceiptRecord(record);
-                                      }}
-                                    >
-                                      👁️ View Details
-                                    </button>
+                                    {record.fee_receipt_url ? (
+                                      <a href={record.fee_receipt_url} target="_blank" rel="noreferrer" className="btn small">View</a>
+                                    ) : (
+                                      '—'
+                                    )}
                                   </td>
+                                  <td>{formatToIST(record.fee_receipt_url_updated_at)}</td>
                                 </tr>
                               );
                             })}

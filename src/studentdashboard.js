@@ -701,7 +701,25 @@ const handleUpload = async (category, files, documentName) => {
         .from('student_documents')
         .getPublicUrl(filePath);
 
-      // Insert to DB
+      // Insert to DB - For fee category, also update fee_tracking table
+      if (category === 'fee') {
+        // Update fee_tracking with fee_receipt_url
+        const { error: feeUpdateError } = await supabase
+          .from('fee_tracking')
+          .update({
+            fee_receipt_url: publicUrl,
+            fee_receipt_url_updated_at: new Date().toISOString(),
+            fee_receipt_checked: 'false'
+          })
+          .eq('student_form_id', studentFormId);
+
+        if (feeUpdateError) {
+          console.error('[FEE_RECEIPT] Failed to update fee_tracking:', feeUpdateError);
+        } else {
+          console.log('[FEE_RECEIPT] Successfully updated fee_tracking with receipt');
+        }
+      }
+
       const { error: insertError, data: insertData } = await supabase
         .from('student_documents')
         .insert({
@@ -1044,8 +1062,28 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
                             'Not uploaded yet'
                           )}
                         </div>
+                        {feeHistory[0].fee_receipt_url && (
+                          <div style={{ marginTop: '8px' }}>
+                            <strong>Your Fee Receipt:</strong>{' '}
+                            <a href={feeHistory[0].fee_receipt_url} target="_blank" rel="noreferrer">View your uploaded receipt</a>
+                            {feeHistory[0].fee_receipt_checked === 'true' && (
+                              <span style={{ marginLeft: '8px', color: '#16a34a' }}>✅ Verified</span>
+                            )}
+                            {feeHistory[0].fee_receipt_checked === 'false' && (
+                              <span style={{ marginLeft: '8px', color: '#ca8a04' }}>⏳ Pending Verification</span>
+                            )}
+                          </div>
+                        )}
                         <div style={{ marginTop: '8px', color: '#475569' }}>
-                          Upload your fee receipt (name it with voucher number) here so the admin can verify payment and update your student dashboard status.
+                          {feeHistory[0].voucher_url ? (
+                            feeHistory[0].fee_receipt_url ? (
+                              'Your fee receipt has been uploaded. Waiting for admin verification.'
+                            ) : (
+                              'Upload your fee receipt (name it with voucher number) here so the admin can verify payment and update your student dashboard status.'
+                            )
+                          ) : (
+                            'Wait for admin to upload the voucher, then upload your fee receipt here.'
+                          )}
                         </div>
                       </div>
                     )}
@@ -2247,6 +2285,268 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
               <h3>📊 Current Fee Summary</h3>
               <p className="section-note">Latest record from {new Date(latest.updated_at).toLocaleDateString('en-IN')}</p>
             </div>
+            
+            {/* Action Alert: Voucher uploaded but student hasn't uploaded receipt */}
+            {latest.voucher_url && !latest.fee_receipt_url && (
+              <div style={{
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                border: '2px solid #f59e0b',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+                boxShadow: '0 4px 6px rgba(245, 158, 11, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ fontSize: '1.5rem' }}>⚠️</div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#92400e', fontSize: '1.1rem' }}>
+                      Action Required: Upload Your Fee Receipt
+                    </h4>
+                    <p style={{ margin: '0 0 16px 0', color: '#78350f', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                      Admin has uploaded a voucher for your fee payment. <strong>Please upload your fee receipt</strong> so the admin can verify your payment.
+                    </p>
+                    
+                    {/* Inline Upload Form */}
+                    <div style={{
+                      background: 'white',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      marginTop: '12px'
+                    }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#92400e', fontSize: '0.9rem' }}>
+                        Select Fee Receipt File:
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          // Validate file
+                          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                          const maxSize = 10 * 1024 * 1024; // 10MB
+
+                          if (!allowedTypes.includes(file.type)) {
+                            setError('Invalid file type. Allowed: PDF, JPG, PNG, GIF, WebP');
+                            return;
+                          }
+                          if (file.size > maxSize) {
+                            setError(`File too large (${(file.size/1024/1024).toFixed(1)}MB). Max 10MB`);
+                            return;
+                          }
+
+                          try {
+                            setError('');
+                            const safeEmail = studentEmail.replace(/[^a-zA-Z0-9@._-]/g, '_');
+                            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                            const filePath = `${safeEmail}/fee/${Date.now()}-${safeName}`;
+
+                            // Upload to storage
+                            const { error: uploadError } = await supabase.storage
+                              .from('student_documents')
+                              .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+                            if (uploadError) throw uploadError;
+
+                            // Get public URL
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('student_documents')
+                              .getPublicUrl(filePath);
+
+                            // Update fee_tracking table
+                            const { error: updateError } = await supabase
+                              .from('fee_tracking')
+                              .update({
+                                fee_receipt_url: publicUrl,
+                                fee_receipt_url_updated_at: new Date().toISOString(),
+                                fee_receipt_checked: 'false'
+                              })
+                              .eq('student_form_id', studentFormId);
+
+                            if (updateError) throw updateError;
+
+                            // Refresh fee history
+                            await fetchFeeHistory();
+                            alert('✅ Fee receipt uploaded successfully! Waiting for admin verification.');
+                          } catch (err) {
+                            console.error('Fee receipt upload error:', err);
+                            setError('Upload failed: ' + err.message);
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '2px dashed #f59e0b',
+                          borderRadius: '6px',
+                          background: '#fffbeb',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#92400e' }}>
+                        Accepted: PDF, JPG, PNG (Max 10MB)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Success Alert: Fee receipt verified */}
+            {latest.fee_receipt_url && latest.fee_receipt_checked === 'true' && (
+              <div style={{
+                background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+                border: '2px solid #10b981',
+                borderRadius: '12px',
+                padding: '1.25rem',
+                marginBottom: '1.5rem',
+                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ fontSize: '1.5rem' }}>✅</div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#065f46', fontSize: '1.1rem' }}>
+                      Fee Receipt Verified!
+                    </h4>
+                    <p style={{ margin: '0', color: '#047857', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                      Your fee receipt has been verified by the admin. Your payment status is up to date.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Info Alert: Receipt uploaded, pending verification */}
+            {latest.fee_receipt_url && latest.fee_receipt_checked === 'false' && (
+              <div style={{
+                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                border: '2px solid #3b82f6',
+                borderRadius: '12px',
+                padding: '1.5rem',
+                marginBottom: '1.5rem',
+                boxShadow: '0 4px 6px rgba(59, 130, 246, 0.1)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ fontSize: '1.5rem' }}>⏳</div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#1e40af', fontSize: '1.1rem' }}>
+                      Waiting for Admin Verification
+                    </h4>
+                    <p style={{ margin: '0 0 16px 0', color: '#1e3a8a', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                      Your fee receipt has been uploaded. The admin will verify it soon.
+                    </p>
+                    
+                    {/* Show uploaded receipt and option to re-upload */}
+                    <div style={{
+                      background: 'white',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      marginTop: '12px'
+                    }}>
+                      <div style={{ marginBottom: '12px' }}>
+                        <strong style={{ color: '#1e40af', fontSize: '0.9rem' }}>Your Uploaded Receipt:</strong>
+                        <div style={{ marginTop: '8px' }}>
+                          <a 
+                            href={latest.fee_receipt_url} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{
+                              display: 'inline-block',
+                              padding: '8px 16px',
+                              background: '#3b82f6',
+                              color: 'white',
+                              borderRadius: '6px',
+                              textDecoration: 'none',
+                              fontWeight: '600',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            👁️ View Receipt
+                          </a>
+                        </div>
+                      </div>
+                      
+                      <div style={{ borderTop: '1px solid #dbeafe', paddingTop: '12px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e40af', fontSize: '0.9rem' }}>
+                          Need to upload a different receipt?
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            // Validate file
+                            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                            const maxSize = 10 * 1024 * 1024; // 10MB
+
+                            if (!allowedTypes.includes(file.type)) {
+                              setError('Invalid file type. Allowed: PDF, JPG, PNG, GIF, WebP');
+                              return;
+                            }
+                            if (file.size > maxSize) {
+                              setError(`File too large (${(file.size/1024/1024).toFixed(1)}MB). Max 10MB`);
+                              return;
+                            }
+
+                            try {
+                              setError('');
+                              const safeEmail = studentEmail.replace(/[^a-zA-Z0-9@._-]/g, '_');
+                              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                              const filePath = `${safeEmail}/fee/${Date.now()}-${safeName}`;
+
+                              // Upload to storage
+                              const { error: uploadError } = await supabase.storage
+                                .from('student_documents')
+                                .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+                              if (uploadError) throw uploadError;
+
+                              // Get public URL
+                              const { data: { publicUrl } } = supabase.storage
+                                .from('student_documents')
+                                .getPublicUrl(filePath);
+
+                              // Update fee_tracking table
+                              const { error: updateError } = await supabase
+                                .from('fee_tracking')
+                                .update({
+                                  fee_receipt_url: publicUrl,
+                                  fee_receipt_url_updated_at: new Date().toISOString(),
+                                  fee_receipt_checked: 'false'
+                                })
+                                .eq('student_form_id', studentFormId);
+
+                              if (updateError) throw updateError;
+
+                              // Refresh fee history
+                              await fetchFeeHistory();
+                              alert('✅ Fee receipt updated successfully! Waiting for admin verification.');
+                            } catch (err) {
+                              console.error('Fee receipt upload error:', err);
+                              setError('Upload failed: ' + err.message);
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            border: '2px dashed #3b82f6',
+                            borderRadius: '6px',
+                            background: '#eff6ff',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#1e40af' }}>
+                          Accepted: PDF, JPG, PNG (Max 10MB)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="fee-summary-grid">
               <div className="fee-card fee-card-expenses">
                 <div className="fee-card-icon">📈</div>
@@ -2302,6 +2602,7 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
                       <th>Balance</th>
                       <th>Status</th>
                       {latest?.voucher_url && <th>Voucher</th>}
+                      <th>Fee Receipt</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2318,10 +2619,27 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
                         {record.voucher_url && (
                           <td className="voucher-cell">
                             <a href={record.voucher_url} target="_blank" rel="noreferrer" className="voucher-link">
-                              📎 Receipt
+                              📎 Voucher
                             </a>
                           </td>
                         )}
+                        <td>
+                          {record.fee_receipt_url ? (
+                            <div>
+                              <a href={record.fee_receipt_url} target="_blank" rel="noreferrer" className="voucher-link">
+                                📄 Receipt
+                              </a>
+                              {record.fee_receipt_checked === 'true' && (
+                                <div style={{ fontSize: '0.75rem', color: '#16a34a', marginTop: '4px' }}>✅ Verified</div>
+                              )}
+                              {record.fee_receipt_checked === 'false' && (
+                                <div style={{ fontSize: '0.75rem', color: '#ca8a04', marginTop: '4px' }}>⏳ Pending</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Not uploaded</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
