@@ -26,6 +26,7 @@ const [formData, setFormData] = useState({
     dob: "",
     age: "",
     camp_name: "",
+    camp_date: "",
     nationality: "",
     address: "",
     class: "",
@@ -85,6 +86,8 @@ const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [errors, setErrors] = useState({}); // <-- validation errors
+  const [campOptions, setCampOptions] = useState([]);
+  const [loadingCampOptions, setLoadingCampOptions] = useState(false);
 
   useEffect(() => {
     // fetch logged-in user email (volunteer)
@@ -114,6 +117,30 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     getUser();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [volunteer?.name, volunteer?.phone]);
+
+  useEffect(() => {
+    const fetchCampOptions = async () => {
+      setLoadingCampOptions(true);
+      try {
+        const { data, error } = await supabase
+          .from("camp_master")
+          .select("id, camp_name, camp_date")
+          .order("camp_date", { ascending: false })
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching camp options:", error);
+          return;
+        }
+
+        setCampOptions(data || []);
+      } finally {
+        setLoadingCampOptions(false);
+      }
+    };
+
+    fetchCampOptions();
+  }, []);
 
   const [files, setFiles] = useState({
     school_id: null,
@@ -507,6 +534,26 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     if (file) {
       setFiles({ ...files, [field]: file });
     }
+  };
+
+  const handleCampSelection = (e) => {
+    const selectedId = e.target.value;
+
+    if (!selectedId) {
+      setFormData((prev) => ({ ...prev, camp_name: "", camp_date: "" }));
+      return;
+    }
+
+    const selectedCamp = campOptions.find((camp) => String(camp.id) === selectedId);
+    if (!selectedCamp) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      camp_name: selectedCamp.camp_name || "",
+      camp_date: selectedCamp.camp_date || "",
+    }));
+
+    setErrors((prev) => ({ ...prev, camp_name: "", camp_date: "" }));
   };
 
   // Upload single file to Supabase storage bucket "student_documents"
@@ -1015,6 +1062,7 @@ scholarship: hasScholarship ? formData.scholarship : null,
         dob: "",
         age: "",
         camp_name: "",
+        camp_date: "",
         nationality: "",
         address: "",
         class: "",
@@ -1321,6 +1369,18 @@ has_scholarship: "",
     return total;
   };
 
+  const selectedCampFromMaster = campOptions.find(
+    (camp) =>
+      camp.camp_name === formData.camp_name &&
+      (camp.camp_date || "") === (formData.camp_date || "")
+  );
+  const hasLegacyCampValue = Boolean(formData.camp_name) && !selectedCampFromMaster;
+  const selectedCampValue = selectedCampFromMaster
+    ? String(selectedCampFromMaster.id)
+    : hasLegacyCampValue
+      ? "__legacy"
+      : "";
+
   return (
     <div>
       <button className="back-btn" onClick={() => navigate('/volunteer-dashboard')}>Back to Volunteer Dashboard</button>
@@ -1452,11 +1512,42 @@ has_scholarship: "",
             </label>
             <label>
               <span className="field-label">Name of Camp<span className="required">*</span></span>
-              <input type="text" name="camp_name" value={formData.camp_name} onChange={handleInputChange} />
+              <select
+                name="camp_name"
+                value={selectedCampValue}
+                onChange={handleCampSelection}
+                required
+                className={errors.camp_name ? "input-error" : ""}
+                disabled={loadingCampOptions}
+              >
+                <option value="">
+                  {loadingCampOptions ? "Loading camps..." : "Select Camp"}
+                </option>
+                {hasLegacyCampValue && (
+                  <option value="__legacy">
+                    {formData.camp_name} {formData.camp_date ? `(${formData.camp_date})` : ""} (existing)
+                  </option>
+                )}
+                {campOptions.map((camp) => (
+                  <option key={camp.id} value={String(camp.id)}>
+                    {camp.camp_name} {camp.camp_date ? `(${camp.camp_date})` : ""}
+                  </option>
+                ))}
+              </select>
+              {!loadingCampOptions && campOptions.length === 0 && (
+                <p className="error-text">No camps are available. Please ask admin to add a camp first.</p>
+              )}
             </label>
             <label>
               <span className="field-label">Date of Camp<span className="required">*</span></span>
-              <input type="date" name="camp_date" value={formData.camp_date} onChange={handleInputChange} required />
+              <input
+                type="date"
+                name="camp_date"
+                value={formData.camp_date}
+                readOnly
+                required
+                className={errors.camp_date ? "input-error readonly-field" : "readonly-field"}
+              />
             </label>
           </div>
 
