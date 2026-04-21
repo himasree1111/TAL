@@ -52,6 +52,11 @@ export default function AdminDashboard() {
   const [showEligibleTable, setShowEligibleTable] = useState(false);
   const [showNonEligibleTable, setShowNonEligibleTable] = useState(false);
   const [showAddDonorModal, setShowAddDonorModal] = useState(false);
+  const [campOptions, setCampOptions] = useState([]);
+  const [loadingCampOptions, setLoadingCampOptions] = useState(false);
+  const [newCampName, setNewCampName] = useState("");
+  const [newCampDate, setNewCampDate] = useState("");
+  const [addingCamp, setAddingCamp] = useState(false);
   const [newDonorForm, setNewDonorForm] = useState({
     full_name: '',
     gender: '',
@@ -148,6 +153,70 @@ export default function AdminDashboard() {
       }
     } finally {
       setLoadingDonors(false);
+    }
+  };
+
+  const fetchCampOptions = useCallback(async () => {
+    setLoadingCampOptions(true);
+    try {
+      const { data, error } = await supabase
+        .from("camp_master")
+        .select("id, camp_name, camp_date, created_at")
+        .order("camp_date", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching camp options:", error);
+        return;
+      }
+
+      setCampOptions(data || []);
+    } finally {
+      setLoadingCampOptions(false);
+    }
+  }, []);
+
+  const handleAddCamp = async () => {
+    const campName = newCampName.trim();
+
+    if (!campName) {
+      alert("Please enter a camp name.");
+      return;
+    }
+
+    if (!newCampDate) {
+      alert("Please select a camp date.");
+      return;
+    }
+
+    setAddingCamp(true);
+    try {
+      const { error } = await supabase
+        .from("camp_master")
+        .insert({
+          camp_name: campName,
+          camp_date: newCampDate,
+          created_by: currentUser?.email || null,
+        });
+
+      if (error) {
+        if (error.code === "23505") {
+          alert("This camp name and date already exists.");
+        } else {
+          alert("Failed to add camp: " + error.message);
+        }
+        return;
+      }
+
+      setNewCampName("");
+      setNewCampDate("");
+      await fetchCampOptions();
+      alert("Camp added successfully!");
+    } catch (err) {
+      console.error("Error adding camp:", err);
+      alert("Failed to add camp: " + err.message);
+    } finally {
+      setAddingCamp(false);
     }
   };
 
@@ -295,6 +364,7 @@ export default function AdminDashboard() {
 
         // Fetch donors
         await fetchDonors();
+        await fetchCampOptions();
         await fetchEligibleStudents();
         await fetchNonEligibleStudents();
 
@@ -317,9 +387,10 @@ export default function AdminDashboard() {
 
   // Unique values for dropdowns
   const uniqueCamps = useMemo(() => {
-    const camps = students.map(s => s.campName || 'Unknown').filter(Boolean);
-    return ['all', ...new Set(camps)];
-  }, [students]);
+    const campsFromStudents = students.map(s => s.campName || 'Unknown').filter(Boolean);
+    const campsFromMaster = campOptions.map((camp) => camp.camp_name).filter(Boolean);
+    return ['all', ...new Set([...campsFromMaster, ...campsFromStudents])];
+  }, [students, campOptions]);
 
   const uniqueEducations = useMemo(() => {
     const educations = [...students.map(s => s.course).filter(Boolean), ...students.map(s => s.year).filter(Boolean)];
@@ -1998,6 +2069,74 @@ const handleEditDonor = (donor) => {
                     <div className="card-trend positive">↑ 5% from last month</div>
                   </div>
                 </div>
+              </section>
+
+              <section className="manage-section" style={{ marginTop: "1.5rem" }}>
+                <div className="section-header" style={{ marginBottom: "1rem" }}>
+                  <h3>Camp Master</h3>
+                </div>
+
+                <div className="manage-controls" style={{ marginBottom: "1rem" }}>
+                  <div className="form-group" style={{ width: "100%", gridTemplateColumns: "2fr 1fr auto" }}>
+                    <label>
+                      <span className="field-label">Camp Name</span>
+                      <input
+                        type="text"
+                        placeholder="Enter camp name"
+                        value={newCampName}
+                        onChange={(e) => setNewCampName(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      <span className="field-label">Camp Date</span>
+                      <input
+                        type="date"
+                        value={newCampDate}
+                        onChange={(e) => setNewCampDate(e.target.value)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      style={{ alignSelf: "end", height: "42px" }}
+                      onClick={handleAddCamp}
+                      disabled={addingCamp}
+                    >
+                      {addingCamp ? "Adding..." : "Add Camp"}
+                    </button>
+                  </div>
+                </div>
+
+                {loadingCampOptions ? (
+                  <div style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
+                    Loading camps...
+                  </div>
+                ) : campOptions.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "1rem", color: "#666" }}>
+                    No camps added yet.
+                  </div>
+                ) : (
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Camp Name</th>
+                          <th>Camp Date</th>
+                          <th>Created On</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {campOptions.map((camp) => (
+                          <tr key={camp.id}>
+                            <td>{camp.camp_name || "—"}</td>
+                            <td>{camp.camp_date ? new Date(camp.camp_date).toLocaleDateString("en-IN") : "—"}</td>
+                            <td>{camp.created_at ? formatToIST(camp.created_at) : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
               
               {/*
