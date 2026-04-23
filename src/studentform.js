@@ -788,8 +788,12 @@ if (data.academic_achievements === false) updatedData.academic_achievements_choi
         "Other"
       ];
 
+      const isOtherEducationCategory =
+        !predefinedCategories.includes(data.educationcategory || "") ||
+        !!data.educationcategory_custom;
+
       // Education category restoration
-      if (!predefinedCategories.includes(data.educationcategory || '') || data.educationcategory_custom) {
+      if (isOtherEducationCategory) {
         updatedData.educationcategory = "Other";
         updatedData.educationcategory_custom = data.educationcategory_custom || data.educationcategory || "";
       } else {
@@ -797,22 +801,30 @@ if (data.academic_achievements === false) updatedData.academic_achievements_choi
         updatedData.educationcategory_custom = "";
       }
 
-      // Education subcategory restoration
-      if (data.educationsubcategory_custom || !data.educationsubcategory || data.educationsubcategory === "Other") {
+      // If category is Other, stream/year must also be restored into custom fields.
+      if (isOtherEducationCategory) {
         updatedData.educationsubcategory = "Other";
         updatedData.educationsubcategory_custom = data.educationsubcategory_custom || data.educationsubcategory || "";
-      } else {
-        updatedData.educationsubcategory = data.educationsubcategory || "";
-        updatedData.educationsubcategory_custom = "";
-      }
-
-      // Education year restoration
-      if (data.educationyear_custom || !data.educationyear || data.educationyear === "Other") {
         updatedData.educationyear = "Other";
         updatedData.educationyear_custom = data.educationyear_custom || data.educationyear || "";
       } else {
-        updatedData.educationyear = data.educationyear || "";
-        updatedData.educationyear_custom = "";
+        // Education subcategory restoration
+        if (data.educationsubcategory_custom || !data.educationsubcategory || data.educationsubcategory === "Other") {
+          updatedData.educationsubcategory = "Other";
+          updatedData.educationsubcategory_custom = data.educationsubcategory_custom || data.educationsubcategory || "";
+        } else {
+          updatedData.educationsubcategory = data.educationsubcategory || "";
+          updatedData.educationsubcategory_custom = "";
+        }
+
+        // Education year restoration
+        if (data.educationyear_custom || !data.educationyear || data.educationyear === "Other") {
+          updatedData.educationyear = "Other";
+          updatedData.educationyear_custom = data.educationyear_custom || data.educationyear || "";
+        } else {
+          updatedData.educationyear = data.educationyear || "";
+          updatedData.educationyear_custom = "";
+        }
       }
 
       updatedData.class = data.class || "";
