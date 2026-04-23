@@ -335,12 +335,20 @@ export default function AdminDashboard() {
           navigate('/');
         }
 
-        // Fetch ALL students from student_form_submissions (no status filter)
+        // Fetch ALL students with status='Pending' from admin_student_info
+        console.log('[DEBUG] Fetching students with status=Pending from admin_student_info...');
+        
         const { data: studentData, error: studentError } = await supabase
           .from('admin_student_info')
-          .select('*')
+          .select('*', { count: 'exact' })
           .eq('status', 'Pending')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(0, 10000); // Fetch up to 10,000 rows (override default 100 limit)
+        
+        console.log('[DEBUG] Fetched from admin_student_info:', studentData?.length || 0, 'students');
+        if (studentData) {
+          console.log('[DEBUG] Total count from database:', studentData.length);
+        }
 
         // Save raw fetch result for debugging
         setLastFetch({ data: studentData || null, error: studentError, fetchedAt: new Date().toISOString() });
@@ -350,7 +358,7 @@ export default function AdminDashboard() {
         } else {
           console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
-const transformedStudents = (studentData || []).map((student, index) => {
+          const transformedStudents = (studentData || []).map((student, index) => {
             const transformed = {
               id: student.id || index + 1,
               student_id: student.id,
@@ -391,6 +399,8 @@ const transformedStudents = (studentData || []).map((student, index) => {
           });
           const studentsWithPublicIds = await attachStudentPublicIds(transformedStudents);
           setStudents(studentsWithPublicIds);
+          console.log('✅ [DEBUG] Total students loaded:', studentsWithPublicIds.length);
+          console.log('✅ [DEBUG] Sample student:', studentsWithPublicIds[0]);
         }
 
         // Fetch donors
@@ -587,7 +597,11 @@ const calculatePriority = useCallback((s) => {
 
   // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
-const normalizeAchievementFlag = (value) => {
+    console.log('[DEBUG] filteredStudents recalculating...');
+    console.log('[DEBUG] Total students array length:', students.length);
+    console.log('[DEBUG] Current filters:', newFilters);
+    
+    const normalizeAchievementFlag = (value) => {
       if (value === true || value === 'true') {
         return true;
       }
@@ -599,7 +613,8 @@ const normalizeAchievementFlag = (value) => {
       const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
       const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
 
-      if (newFilters.achievements === 'all') return hasAcademic || hasNonAcademic;
+      // 'all' means show ALL students (no filter)
+      if (newFilters.achievements === 'all') return true;
       if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
       if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
       if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
@@ -631,6 +646,19 @@ const normalizeAchievementFlag = (value) => {
       .map(s => ({...s, priority: calculatePriority(s)}))
       .sort((a, b) => b.priority - a.priority);
 }, [students, newFilters, calculatePriority, getMaxPercent]);
+
+// After filtering, log the result
+useEffect(() => {
+  console.log('[DEBUG] Manage Beneficiaries will show:', filteredStudents.length, 'students');
+  console.log('[DEBUG] Filters status:', {
+    camp: newFilters.camp,
+    education: newFilters.education,
+    toppers: newFilters.toppers,
+    achievements: newFilters.achievements,
+    singleParent: newFilters.singleParent,
+    specialRemarks: newFilters.specialRemarks
+  });
+}, [filteredStudents, newFilters]);
 
 // Filtered non-eligible students with same filters
 const filteredNonEligibleStudents = useMemo(() => {
