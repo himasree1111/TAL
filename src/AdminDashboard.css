@@ -527,6 +527,11 @@ html {
   color: #c81e1e;
 }
 
+.card-trend.neutral {
+  background: #f0f2f5;
+  color: #6b7280;
+}
+
 /* Quick Stats Section */
 .quick-stats {
   display: grid;

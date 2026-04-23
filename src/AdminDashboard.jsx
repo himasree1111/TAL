@@ -94,6 +94,11 @@ export default function AdminDashboard() {
   const [showNotificationsList, setShowNotificationsList] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
+  // Real-time monthly stats for Students Under Review
+  const [studentsThisMonth, setStudentsThisMonth] = useState(0);
+  const [studentsLastMonth, setStudentsLastMonth] = useState(0);
+  const [studentTrend, setStudentTrend] = useState({ percent: 0, direction: 'neutral', label: '— from last month' });
+
   // Notification list handlers
   const handleToggleNotificationsList = async () => {
     if (!showNotificationsList) {
@@ -424,6 +429,7 @@ export default function AdminDashboard() {
     fetchEligibleCount();
     fetchNonEligibleCount();
     fetchFeeTrackingRecords();
+    fetchStudentMonthlyStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
@@ -735,6 +741,64 @@ const fetchNonEligibleCount = async () => {
     console.error("Error fetching non-eligible count:", error);
   } else {
     setNonEligibleCount(count || 0);
+  }
+};
+
+// Fetch real-time monthly stats for Students Under Review
+const fetchStudentMonthlyStats = async () => {
+  try {
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+
+    // Count students created this month (Pending status)
+    const { count: thisMonthCount, error: thisMonthError } = await supabase
+      .from('admin_student_info')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'Pending')
+      .gte('created_at', startOfThisMonth);
+
+    if (thisMonthError) {
+      console.error('Error fetching this month student count:', thisMonthError);
+    } else {
+      setStudentsThisMonth(thisMonthCount || 0);
+    }
+
+    // Count students created last month (Pending status)
+    const { count: lastMonthCount, error: lastMonthError } = await supabase
+      .from('admin_student_info')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'Pending')
+      .gte('created_at', startOfLastMonth)
+      .lt('created_at', startOfThisMonth);
+
+    if (lastMonthError) {
+      console.error('Error fetching last month student count:', lastMonthError);
+    } else {
+      setStudentsLastMonth(lastMonthCount || 0);
+    }
+
+    // Calculate trend
+    const thisMonth = thisMonthCount || 0;
+    const lastMonth = lastMonthCount || 0;
+
+    if (lastMonth === 0 && thisMonth === 0) {
+      setStudentTrend({ percent: 0, direction: 'neutral', label: 'No change from last month' });
+    } else if (lastMonth === 0) {
+      setStudentTrend({ percent: 100, direction: 'positive', label: '↑ 100% — New this month' });
+    } else {
+      const diff = thisMonth - lastMonth;
+      const percent = Math.round((diff / lastMonth) * 100);
+      if (percent > 0) {
+        setStudentTrend({ percent, direction: 'positive', label: `↑ ${percent}% from last month` });
+      } else if (percent < 0) {
+        setStudentTrend({ percent: Math.abs(percent), direction: 'negative', label: `↓ ${Math.abs(percent)}% from last month` });
+      } else {
+        setStudentTrend({ percent: 0, direction: 'neutral', label: 'No change from last month' });
+      }
+    }
+  } catch (err) {
+    console.error('Error in fetchStudentMonthlyStats:', err);
   }
 };
 
@@ -2036,7 +2100,7 @@ const handleEditDonor = (donor) => {
                   <div className="card-content">
                     <div className="card-title">Students Under Review</div>
                     <div className="card-value">{totals.totalStudents}</div>
-                    <div className="card-trend positive">↑ 12% from last month</div>
+                    <div className={`card-trend ${studentTrend.direction}`}>{studentTrend.label}</div>
                   </div>
                 </div>
                 <div className="card">
