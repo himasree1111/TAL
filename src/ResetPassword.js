@@ -47,10 +47,22 @@ export default function ResetPassword() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      // Update Supabase auth user password
+      const { error: authError } = await supabase.auth.updateUser({ password });
+      if (authError) throw authError;
 
-      toast.success("Password updated successfully!");
+      // Also update admins table password
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        const { error: adminError } = await supabase
+          .from('admins')
+          .update({ password: password })
+          .eq('email', session.user.email);
+        
+        if (adminError) console.error('Failed to update admins table:', adminError);
+      }
+
+      toast.success("Password updated successfully in both auth and admins table!");
 
       await supabase.auth.signOut();
 

@@ -319,20 +319,24 @@ export default function AdminDashboard() {
     });
   }, []);
 
-  // Fetch user and real data from Supabase
+  // Custom admin auth check + data fetch
   useEffect(() => {
+    // Check custom admin token FIRST
+    const adminToken = localStorage.getItem('admin_token');
+    if (!adminToken) {
+      navigate('/adminlogin');
+      return;
+    }
+
     const fetchUserData = async () => {
       try {
-        // Get current user session
+        // Get current user session (backup)
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setCurrentUser(session.user);
 
           // Initialize settings with current user data
           setAdminName(session.user.user_metadata?.name || session.user.email?.split('@')[0] || "");
-        } else {
-          // If no session, redirect to login
-          navigate('/');
         }
 
         // Fetch ALL students with status='Pending' from admin_student_info

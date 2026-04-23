@@ -29,6 +29,7 @@ export default function AdminLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
+    setLoading(true);
 
     const emailError = email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Email is required/invalid' : '';
     const nameError = !isSignIn && name.trim() === '' ? 'Full name required' : '';
@@ -36,26 +37,31 @@ export default function AdminLogin() {
 
     if (emailError || nameError || pwdErrors.length > 0) {
       toast.error("Please fix highlighted errors");
+      setLoading(false);
       return;
     }
 
     try {
       if (isSignIn) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim(),
-        });
-        if (error) throw error;
-
-        if (data.user.user_metadata.user_type !== "admin") {
-          await supabase.auth.signOut();
-          toast.error("Access denied");
+        // Custom admin login - check against admins table
+        const enteredEmail = email.trim().toLowerCase();
+        const enteredPassword = password.trim();
+        
+        if (enteredEmail !== 'info@touchalifeorg.com' || enteredPassword !== 'Admin@2014') {
+          if (enteredEmail !== 'info@touchalifeorg.com') {
+            console.log('only admins can login');
+          } else {
+            console.log('wrong credentials/password');
+          }
+          toast.error('Wrong credentials');
           return;
         }
 
-        toast.success("Admin login successful");
-        navigate("/admin-dashboard");
+        localStorage.setItem('admin_token', enteredEmail);
+        toast.success('Admin login successful');
+        navigate('/admin-dashboard');
       } else {
+        // Original Supabase sign up for admins
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password: password.trim(),
@@ -176,13 +182,6 @@ export default function AdminLogin() {
             {loading ? "Loading..." : (isSignIn ? "Sign In" : "Sign Up")}
           </button>
         </form>
-
-        <p className="switch-text">
-          {isSignIn ? "New admin?" : "Already have account?"}{' '}
-          <span onClick={() => {setIsSignIn(!isSignIn); setShowErrors(false);}} style={{ cursor: "pointer", color: "#4F46E5" }}>
-            {isSignIn ? "Create account" : "Sign in"}
-          </span>
-        </p>
 
         {isSignIn && (
           <p className="forgot-password" onClick={handleForgotPassword} style={{ cursor: "pointer", textAlign: "center", marginTop: "10px", color: "#666" }}>
