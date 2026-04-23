@@ -700,20 +700,34 @@ const handleUpload = async (category, files, documentName) => {
 
       // Insert to DB - For fee category, also update fee_tracking table
       if (category === 'fee') {
-        // Update fee_tracking with fee_receipt_url
-        const { error: feeUpdateError } = await supabase
+        // Update ONLY the latest fee_tracking row that has a voucher
+        const { data: latestFeeRecord, error: fetchError } = await supabase
           .from('fee_tracking')
-          .update({
-            fee_receipt_url: publicUrl,
-            fee_receipt_url_updated_at: new Date().toISOString(),
-            fee_receipt_checked: 'false'
-          })
-          .eq('student_form_id', studentFormId);
+          .select('id, fee_receipt_checked')
+          .eq('student_form_id', studentFormId)
+          .not('voucher_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-        if (feeUpdateError) {
-          console.error('[FEE_RECEIPT] Failed to update fee_tracking:', feeUpdateError);
-        } else {
-          console.log('[FEE_RECEIPT] Successfully updated fee_tracking with receipt');
+        if (fetchError) {
+          console.error('[FEE_RECEIPT] Failed to fetch fee_tracking record:', fetchError);
+        } else if (latestFeeRecord) {
+          // Only update fee_receipt_url, DO NOT reset fee_receipt_checked
+          const { error: feeUpdateError } = await supabase
+            .from('fee_tracking')
+            .update({
+              fee_receipt_url: publicUrl,
+              fee_receipt_url_updated_at: new Date().toISOString()
+              // Keep existing fee_receipt_checked value - don't reset it!
+            })
+            .eq('id', latestFeeRecord.id);
+
+          if (feeUpdateError) {
+            console.error('[FEE_RECEIPT] Failed to update fee_tracking:', feeUpdateError);
+          } else {
+            console.log('[FEE_RECEIPT] Successfully updated fee_tracking with receipt');
+          }
         }
       }
 
@@ -747,6 +761,23 @@ const handleUpload = async (category, files, documentName) => {
         ...prev, 
         [id]: { ...prev[id], progress: 100, status: 'success' } 
       }));
+
+      // When student uploads NEW documents (academic, personal, extracurricular),
+      // reset doc_verification_count to 0 so student reappears in Document Verification
+      if (category !== 'fee' && category !== 'admin_voucher') {
+        console.log('[UPLOAD] Resetting doc_verification_count to 0 for new document upload');
+        
+        const { error: resetError } = await supabase
+          .from('eligible_students')
+          .update({ doc_verification_count: 0 })
+          .eq('email', studentEmail);
+        
+        if (resetError) {
+          console.error('[UPLOAD] Error resetting doc_verification_count:', resetError);
+        } else {
+          console.log('[UPLOAD] doc_verification_count reset to 0 successfully');
+        }
+      }
 
       // Optimistic refresh
       fetchDocuments();
@@ -2351,15 +2382,31 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
                               .from('student_documents')
                               .getPublicUrl(filePath);
 
-                            // Update fee_tracking table
+                            // Update ONLY the latest fee_tracking row (the one with the voucher)
+                            // First, fetch the latest fee_tracking record that has a voucher
+                            const { data: latestFeeRecord, error: fetchError } = await supabase
+                              .from('fee_tracking')
+                              .select('id')
+                              .eq('student_form_id', studentFormId)
+                              .not('voucher_url', 'is', null)
+                              .order('created_at', { ascending: false })
+                              .limit(1)
+                              .single();
+
+                            if (fetchError) {
+                              console.error('[FEE_RECEIPT] Failed to fetch fee_tracking record:', fetchError);
+                              throw new Error('No voucher found for fee payment');
+                            }
+
+                            // Update ONLY this specific row by ID
                             const { error: updateError } = await supabase
                               .from('fee_tracking')
                               .update({
                                 fee_receipt_url: publicUrl,
-                                fee_receipt_url_updated_at: new Date().toISOString(),
-                                fee_receipt_checked: 'false'
+                                fee_receipt_url_updated_at: new Date().toISOString()
+                                // DO NOT reset fee_receipt_checked - keep existing value!
                               })
-                              .eq('student_form_id', studentFormId);
+                              .eq('id', latestFeeRecord.id);
 
                             if (updateError) throw updateError;
 

@@ -390,8 +390,10 @@ export default function AdminDashboard() {
               present_percent: student.present_percent,
               email: student.email,
               contact: student.contact,
+              parent_contact_2: student.parent_contact_2,
               whatsapp: student.whatsapp,
               student_contact: student.student_contact,
+              address: student.address,
               school: student.school,
               college: student.college,
               academic_achievements_choice: student.academic_achievements_choice || student.academic_achievements || '',
@@ -402,6 +404,9 @@ export default function AdminDashboard() {
               has_scholarship: student.has_scholarship,
               does_work: student.does_work,
               earning_members: student.earning_members,
+              volunteer_name: student.volunteer_name,
+              volunteer_contact: student.volunteer_contact,
+              status: student.status,
               created_at: student.created_at
             };
             return transformed;
@@ -469,12 +474,45 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
   const [loadingDocs, setLoadingDocs] = useState(false);
 
   const [feeSectionTab, setFeeSectionTab] = useState('tracking');
+  const [feeReceiptSubTab, setFeeReceiptSubTab] = useState('pending'); // 'pending' or 'verified'
   const [feeTrackingRecords, setFeeTrackingRecords] = useState([]);
   const [loadingFeeTracking, setLoadingFeeTracking] = useState(false);
   const [savingFeeRecord, setSavingFeeRecord] = useState(false);
   const [uploadingVoucherFor, setUploadingVoucherFor] = useState(null);
   const [feePaidInput, setFeePaidInput] = useState({});
   const [viewingFeeStudent, setViewingFeeStudent] = useState(null);
+  const [completeFeeStudentData, setCompleteFeeStudentData] = useState(null);
+
+  // Fetch complete student data from student_form_submissions when viewing fee details
+  useEffect(() => {
+    if (!viewingFeeStudent) {
+      setCompleteFeeStudentData(null);
+      return;
+    }
+
+    const fetchCompleteData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('student_form_submissions')
+          .select('*')
+          .eq('email', viewingFeeStudent.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching complete student data:', error);
+        } else {
+          console.log('[FEE_VIEW] Fetched complete student data:', data);
+          setCompleteFeeStudentData(data);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      }
+    };
+
+    fetchCompleteData();
+  }, [viewingFeeStudent]);
   const [viewingReceiptRecord, setViewingReceiptRecord] = useState(null);
 
   const totals = useMemo(() => {
@@ -482,12 +520,14 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
     const feesCollected = donors.reduce((s, d) => s + d.amount, 0);
     const pendingFees = students.filter((s) => s.feeStatus === "Pending").length;
     const activeDonors = donors.length;
+    console.log('[DEBUG] Dashboard Overview - Students Under Review count:', totalStudents);
     return { totalStudents, feesCollected, pendingFees, activeDonors };
   }, [students, donors]);
 
   const verifiedFeeStudents = useMemo(() => {
-    return eligibleStudentsRaw.filter((student) => (student.verified_count || 0) > 0);
-  }, [eligibleStudentsRaw]);
+    // Count students who have paid ANY fee (even partial) from fee_tracking table
+    return feeTrackingRecords.filter((record) => parseMoney(record.fee_paid_by_tal) > 0);
+  }, [feeTrackingRecords]);
 
   const getFeeTrackingRecord = (student) => {
     const studentFormId = student.student_form_id || student.student_id || student.id;
@@ -647,14 +687,21 @@ const calculatePriority = useCallback((s) => {
         // New filters
         if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
         if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
-        if (newFilters.toppers && getMaxPercent(s) < 90) return false;
+        // Toppers filter removed - now handled in sorting
         if (!filterAchievementMatch(s)) return false;
         if (newFilters.singleParent && !normalizeBoolean(s.is_single_parent)) return false;
         if (newFilters.specialRemarks && !hasText(s.special_remarks)) return false;
         return true;
       })
-      .map(s => ({...s, priority: calculatePriority(s)}))
-      .sort((a, b) => b.priority - a.priority);
+      .map(s => ({...s, priority: calculatePriority(s), avgPercent: ((parseFloat(s.prev_percent || 0) + parseFloat(s.present_percent || 0)) / 2)}))
+      .sort((a, b) => {
+        // If toppers filter is ON, sort by average percentage (highest first)
+        if (newFilters.toppers) {
+          return b.avgPercent - a.avgPercent;
+        }
+        // Otherwise sort by priority
+        return b.priority - a.priority;
+      });
 }, [students, newFilters, calculatePriority, getMaxPercent]);
 
 // After filtering, log the result
@@ -829,15 +876,27 @@ const fetchStudentMonthlyStats = async () => {
           const studentFormId = formData?.id;
           const { data: docs } = studentFormId ? await supabase
             .from('student_documents')
-            .select('category, is_checked')
+            .select('id, student_id, category, is_checked')
             .eq('student_id', studentFormId)
             : { data: [] };
 
           const academics = docs?.filter(d => d.category === 'academic')?.length || 0;
           const personal = docs?.filter(d => d.category === 'personal')?.length || 0;
           const extracurricular = docs?.filter(d => d.category === 'extracurricular')?.length || 0;
-          const verifiedCount = docs?.filter(d => d.is_checked).length || 0;
+          
+          // Count verified documents - handle boolean true only (not string)
+          const verifiedCount = docs?.filter(d => {
+            const isChecked = d.is_checked;
+            const isVerified = isChecked === true;
+            return isVerified;
+          }).length || 0;
+          
           const totalDocs = docs?.length || 0;
+          
+          // Debug log for each student
+          if (totalDocs > 0) {
+            console.log(`[ELIGIBLE] Student ${student.email}: ${totalDocs} docs, ${verifiedCount} verified, IDs:`, docs.map(d => ({ id: d.id, category: d.category, is_checked: d.is_checked })));
+          }
 
           return {
             ...student,
@@ -850,15 +909,42 @@ const fetchStudentMonthlyStats = async () => {
         }));
 
         const studentsWithPublicIds = await attachStudentPublicIds(studentsWithDocs);
-
-        const pendingVerificationStudents = (studentsWithPublicIds || []).filter((student) => {
-          const isFullyVerified = student.document_count > 0 && student.verified_count === student.document_count;
-          return !isFullyVerified;
+        
+        console.log('[ELIGIBLE] ========== STUDENT FILTERING DEBUG ==========');
+        console.log('[ELIGIBLE] Total students from eligible_students view:', studentsWithPublicIds?.length || 0);
+        
+        // Separate into pending and verified for debugging
+        // Use doc_verification_count to determine if student should be removed
+        const verifiedStudents = [];
+        const pendingStudents = [];
+        
+        studentsWithPublicIds?.forEach((student) => {
+          const docCount = student.document_count || 0;
+          const verificationCount = student.doc_verification_count || 0;
+          
+          // Student is "verified" if they have documents AND doc_verification_count > 0
+          // This means admin has clicked the green tick button
+          const isVerified = docCount > 0 && verificationCount > 0;
+          
+          if (isVerified) {
+            verifiedStudents.push({
+              email: student.email,
+              name: student.full_name || student.name,
+              docs: docCount,
+              verification_count: verificationCount
+            });
+          } else {
+            pendingStudents.push(student);
+          }
         });
-
+        
+        console.log('[ELIGIBLE] Verified students (doc_verification_count > 0, will be REMOVED):', verifiedStudents);
+        console.log('[ELIGIBLE] Pending verification students (will SHOW in list):', pendingStudents.length);
+        console.log('[ELIGIBLE] ========== END DEBUG ==========');
+        
         setEligibleStudentsRaw(studentsWithPublicIds || []);
-        setEligibleStudents(pendingVerificationStudents);
-        setEligibleCount(pendingVerificationStudents?.length || 0);
+        setEligibleStudents(pendingStudents);
+        setEligibleCount(pendingStudents?.length || 0);
       }
     } catch (err) {
       console.error('Error:', err);
@@ -930,6 +1016,8 @@ const fetchStudentMonthlyStats = async () => {
   const handleVerifyStudentDocuments = async (student) => {
     setLoadingEligible(true);
     try {
+      console.log('[DOC_VERIFY] Starting verification for student:', student.email);
+      
       const { data: formData, error: formError } = await supabase
         .from('student_form_submissions')
         .select('*')
@@ -942,6 +1030,16 @@ const fetchStudentMonthlyStats = async () => {
       }
 
       const studentFormId = formData.id;
+      console.log('[DOC_VERIFY] Student form ID:', studentFormId);
+
+      // Fetch ALL documents for this student BEFORE update to see current state
+      const { data: docsBefore } = await supabase
+        .from('student_documents')
+        .select('id, student_id, category, is_checked')
+        .eq('student_id', studentFormId);
+      
+      console.log('[DOC_VERIFY] Documents BEFORE update:', docsBefore?.length, 'total');
+      console.log('[DOC_VERIFY] Documents BEFORE update - is_checked values:', docsBefore?.map(d => ({ category: d.category, is_checked: d.is_checked })));
 
       const { error: updateError } = await supabase
         .from('student_documents')
@@ -954,27 +1052,52 @@ const fetchStudentMonthlyStats = async () => {
         alert('Unable to mark documents as verified: ' + updateError.message);
         return;
       }
+      
+      console.log('[DOC_VERIFY] Documents updated successfully');
+      
+      // Fetch documents AFTER update to confirm
+      const { data: docsAfter } = await supabase
+        .from('student_documents')
+        .select('id, student_id, category, is_checked')
+        .eq('student_id', studentFormId);
+      
+      console.log('[DOC_VERIFY] Documents AFTER update:', docsAfter?.length, 'total');
+      console.log('[DOC_VERIFY] Documents AFTER update - is_checked values:', docsAfter?.map(d => ({ category: d.category, is_checked: d.is_checked })));
+      
+      // Count how many docs are now verified
+      const verifiedAfterUpdate = docsAfter?.filter(d => d.is_checked === true).length || 0;
+      const totalAfterUpdate = docsAfter?.length || 0;
+      console.log(`[DOC_VERIFY] Verification summary: ${verifiedAfterUpdate}/${totalAfterUpdate} documents now verified`);
 
-      // Increment doc_verification_count in eligible_students
+      // Increment doc_verification_count to track verification progress
+      // This is used internally to move student to fee tracking
       const currentCount = student.doc_verification_count || 0;
       const newCount = currentCount + 1;
       
+      console.log(`[DOC_VERIFY] Incrementing doc_verification_count from ${currentCount} to ${newCount} for ${student.email}`);
+      
+      // Update doc_verification_count in eligible_students
       const { error: countError } = await supabase
         .from('eligible_students')
         .update({ doc_verification_count: newCount })
         .eq('email', student.email);
-
+      
       if (countError) {
-        console.error('Error updating verification count:', countError);
+        console.error('[DOC_VERIFY] Error updating doc_verification_count:', countError);
+        // Don't fail the verification if count update fails
       } else {
-        console.log(`Verification count incremented to ${newCount} for ${student.email}`);
+        console.log(`[DOC_VERIFY] doc_verification_count updated successfully to ${newCount}`);
       }
 
       // After verification, populate/update fee_tracking with latest student data
       await populateOrUpdateFeeTracking(studentFormId, formData);
 
+      // Refresh the eligible students list (this will automatically filter out fully verified students)
+      console.log('[DOC_VERIFY] Refreshing eligible students list...');
       await fetchEligibleStudents();
-      alert(`Documents verified successfully! Verification count: ${newCount}. Student updated in Fee Tracking.`);
+      console.log('[DOC_VERIFY] Eligible students list refreshed');
+      
+      alert('✅ Documents verified successfully!');
     } catch (err) {
       console.error('Error verifying documents:', err);
       alert('Error verifying documents: ' + err.message);
@@ -1115,6 +1238,13 @@ await fetchFeeTrackingRecords();
           setSortedYears(sortedYears);
         }
       }
+      
+      // Refresh the eligible students list to remove fully verified students
+      console.log('[DOC_VERIFY] Refreshing eligible students list...');
+      await fetchEligibleStudents();
+      console.log('[DOC_VERIFY] Eligible students list refreshed');
+      
+      alert('✅ Document verified successfully!');
     } catch (err) {
       console.error('Error verifying document:', err);
       alert('Error verifying document: ' + err.message);
@@ -3210,77 +3340,100 @@ const handleEditDonor = (donor) => {
              // ) : feeSectionTab === 'receipts' ? (
               ) : feeSectionTab === 'receipts' ? (
                 <div className="table-wrap">
-                  <h4>Student Fee Receipts for Admin Verification ({studentFeeReceipts.length})</h4>
-                  {loadingStudentReceipts ? (
-                    <p>Loading student receipts...</p>
-                  ) : studentFeeReceipts.length === 0 ? (
-                    <p>No unverified student fee receipts.</p>
-                  ) : (
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Student Name</th>
-                          <th>Email</th>
-                          <th>Required Fee</th>
-                          <th>Paid by TAL</th>
-                          <th>Fee Receipt</th>
-                          <th>Uploaded At</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {studentFeeReceipts.map((receipt) => {
-                          const requiredFee = parseMoney(receipt.total_educational_expenses || 0);
-                          const paidAmount = parseMoney(receipt.fee_paid_by_tal || 0);
-                          return (
-                            <tr key={receipt.id}>
-                              <td><strong>#{receipt.id}</strong></td>
-                              <td>{receipt.student_name || '—'}</td>
-                              <td>{receipt.email || '—'}</td>
-                              <td>₹{requiredFee.toLocaleString()}</td>
-                              <td>₹{paidAmount.toLocaleString()}</td>
-                              <td>
-                                {receipt.fee_receipt_url ? (
-                                  <a href={receipt.fee_receipt_url} target="_blank" rel="noreferrer" className="btn small">View Receipt</a>
-                                ) : (
-                                  '—'
-                                )}
-                              </td>
-                              <td>{formatToIST(receipt.fee_receipt_url_updated_at)}</td>
-                              <td>
-                                <button 
-                                  className="btn small primary" 
-                                  onClick={() => handleVerifyFeeReceipt(receipt)}
-                                >
-                                  ✅ Verify
-                                </button>
-                              </td>
+                  {/* Fee Receipt Sub-Tabs */}
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px' }}>
+                    <button
+                      className={`btn ${feeReceiptSubTab === 'pending' ? 'primary' : ''}`}
+                      onClick={() => setFeeReceiptSubTab('pending')}
+                      style={{ fontWeight: feeReceiptSubTab === 'pending' ? 'bold' : 'normal' }}
+                    >
+                      ⏳ Pending Verification ({studentFeeReceipts.length})
+                    </button>
+                    <button
+                      className={`btn ${feeReceiptSubTab === 'verified' ? 'primary' : ''}`}
+                      onClick={() => setFeeReceiptSubTab('verified')}
+                      style={{ fontWeight: feeReceiptSubTab === 'verified' ? 'bold' : 'normal' }}
+                    >
+                      ✅ Verified Receipts ({feeReceiptRecords.length})
+                    </button>
+                  </div>
+
+                  {/* Pending Fee Receipts Tab */}
+                  {feeReceiptSubTab === 'pending' && (
+                    <div>
+                      <h4>Student Fee Receipts for Admin Verification</h4>
+                      {loadingStudentReceipts ? (
+                        <p>Loading student receipts...</p>
+                      ) : studentFeeReceipts.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>No unverified student fee receipts.</p>
+                      ) : (
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Student Name</th>
+                              <th>Email</th>
+                              <th>Required Fee</th>
+                              <th>Paid by TAL</th>
+                              <th>Fee Receipt</th>
+                              <th>Uploaded At</th>
+                              <th>Actions</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                          </thead>
+                          <tbody>
+                            {studentFeeReceipts.map((receipt) => {
+                              const requiredFee = parseMoney(receipt.total_educational_expenses || 0);
+                              const paidAmount = parseMoney(receipt.fee_paid_by_tal || 0);
+                              return (
+                                <tr key={receipt.id}>
+                                  <td><strong>#{receipt.id}</strong></td>
+                                  <td>{receipt.student_name || '—'}</td>
+                                  <td>{receipt.email || '—'}</td>
+                                  <td>₹{requiredFee.toLocaleString()}</td>
+                                  <td>₹{paidAmount.toLocaleString()}</td>
+                                  <td>
+                                    {receipt.fee_receipt_url ? (
+                                      <a href={receipt.fee_receipt_url} target="_blank" rel="noreferrer" className="btn small">View Receipt</a>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </td>
+                                  <td>{formatToIST(receipt.fee_receipt_url_updated_at)}</td>
+                                  <td>
+                                    <button 
+                                      className="btn small primary" 
+                                      onClick={() => handleVerifyFeeReceipt(receipt)}
+                                    >
+                                      ✅ Verify
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
                   )}
 
-                  {/* Completed Fee Receipts from fee_tracking (fee_receipt_checked = 'true') */}
-                  <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '2px solid #e5e7eb' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <h4>✅ Verified Fee Receipts ({feeReceiptRecords.length})</h4>
-                      <button 
-                        className="btn primary" 
-                        onClick={handleDownloadFeeReceiptsReport}
-                        disabled={feeReceiptRecords.length === 0}
-                      >
-                        📥 Export CSV
-                      </button>
-                    </div>
-                    {feeReceiptRecords.length === 0 ? (
-                      <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
-                        No verified fee receipts found.
-                      </p>
-                    ) : (
-                      <div className="table-wrap">
+                  {/* Verified Fee Receipts Tab */}
+                  {feeReceiptSubTab === 'verified' && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h4>Verified Fee Receipts</h4>
+                        <button 
+                          className="btn primary" 
+                          onClick={handleDownloadFeeReceiptsReport}
+                          disabled={feeReceiptRecords.length === 0}
+                        >
+                          📥 Export CSV
+                        </button>
+                      </div>
+                      {feeReceiptRecords.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>
+                          No verified fee receipts found.
+                        </p>
+                      ) : (
                         <table className="data-table">
                           <thead>
                             <tr>
@@ -3331,9 +3484,9 @@ const handleEditDonor = (donor) => {
                             })}
                           </tbody>
                         </table>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="table-wrap">
@@ -3399,11 +3552,28 @@ const handleEditDonor = (donor) => {
                 <div className="modal-body">
                   {(() => {
                     const student = viewingFeeStudent;
+                    const fullData = completeFeeStudentData || {};
                     const record = getFeeTrackingRecord(student);
                     const paidAmount = parseMoney(record?.fee_paid_by_tal);
                     const requiredFee = parseMoney(record?.total_educational_expenses ?? student.fee);
                     const balance = requiredFee - paidAmount;
                     const status = record?.fee_status || 'Pending';
+
+                    // Use fullData (from student_form_submissions) for complete details
+                    const displayName = fullData.full_name || student.student_name || student.full_name || student.name || record?.student_name || '—';
+                    const displayEmail = fullData.email || student.email || '—';
+                    const displayContact = fullData.contact || student.contact || student.student_contact || '—';
+                    const displayParentContact = fullData.parent_contact_2 || '—';
+                    const displayWhatsapp = fullData.whatsapp || student.whatsapp || '—';
+                    const displayStudentContact = fullData.student_contact || '—';
+                    const displayAddress = fullData.address || '—';
+                    const displayAge = fullData.age || student.age || '—';
+                    const displayEducation = fullData.educationcategory || student.educationcategory || student.course || '—';
+                    const displayBranch = fullData.branch || student.branch || '—';
+                    const displayClass = fullData.class || student.year || student.class || '—';
+                    const displaySchool = fullData.school || student.school || '—';
+                    const displayPrevPercent = fullData.prev_percent || student.prev_percent || '—';
+                    const displayPresentPercent = fullData.present_percent || student.present_percent || '—';
 
                     return (
                       <div className="student-details-grid">
@@ -3411,27 +3581,39 @@ const handleEditDonor = (donor) => {
                           <h4>Personal Information</h4>
                           <div className="detail-row">
                             <span className="label">Student ID:</span>
-                            <span className="value">{student.student_public_id || '—'}</span>
+                            <span className="value">{fullData.student_public_id || student.student_public_id || '—'}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Full Name:</span>
-                            <span className="value">{student.student_name || student.full_name || student.name || record?.student_name || '—'}</span>
+                            <span className="value">{displayName}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Email:</span>
-                            <span className="value">{student.email || '—'}</span>
+                            <span className="value">{displayEmail}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Contact:</span>
-                            <span className="value">{student.contact || student.student_contact || '—'}</span>
+                            <span className="value">{displayContact}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Parent Contact 2:</span>
+                            <span className="value">{displayParentContact}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">WhatsApp:</span>
-                            <span className="value">{student.whatsapp || '—'}</span>
+                            <span className="value">{displayWhatsapp}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Student Contact:</span>
+                            <span className="value">{displayStudentContact}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Address:</span>
+                            <span className="value">{displayAddress}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Age:</span>
-                            <span className="value">{student.age || '—'}</span>
+                            <span className="value">{displayAge}</span>
                           </div>
                         </div>
 
@@ -3439,31 +3621,27 @@ const handleEditDonor = (donor) => {
                           <h4>Educational Information</h4>
                           <div className="detail-row">
                             <span className="label">Education:</span>
-                            <span className="value">{student.educationcategory || student.course || student.class || '—'}</span>
+                            <span className="value">{displayEducation}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Branch:</span>
-                            <span className="value">{student.branch || '—'}</span>
+                            <span className="value">{displayBranch}</span>
                           </div>
                           <div className="detail-row">
-                            <span className="label">Year:</span>
-                            <span className="value">{student.year || student.class || '—'}</span>
+                            <span className="label">Year/Class:</span>
+                            <span className="value">{displayClass}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">School:</span>
-                            <span className="value">{student.school || '—'}</span>
-                          </div>
-                          <div className="detail-row">
-                            <span className="label">College:</span>
-                            <span className="value">{student.college || '—'}</span>
+                            <span className="value">{displaySchool}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Previous Year %:</span>
-                            <span className="value">{student.prev_percent ? `${student.prev_percent}%` : '—'}</span>
+                            <span className="value">{displayPrevPercent !== '—' ? `${displayPrevPercent}%` : '—'}</span>
                           </div>
                           <div className="detail-row">
                             <span className="label">Current Year %:</span>
-                            <span className="value">{student.present_percent ? `${student.present_percent}%` : '—'}</span>
+                            <span className="value">{displayPresentPercent !== '—' ? `${displayPresentPercent}%` : '—'}</span>
                           </div>
                         </div>
 
@@ -3990,55 +4168,57 @@ const handleEditDonor = (donor) => {
 {viewStudent && (
   <div className="modal-overlay">
     <div className="modal">
-      <h3>Student Details</h3>
+      <h3>Student Details (from admin_student_info)</h3>
 
       <div className="view-grid">
-
-        {/* NAME */}
-        <p><strong>Full Name:</strong> {viewStudent.full_name}</p>
-
-        {/* BASIC INFO */}
-        <p><strong>Age:</strong> {viewStudent.age}</p>
-        {/* <p><strong>Address:</strong> {viewStudent.address}</p> */}
-        {/* <p><strong>School / College:</strong> {viewStudent.school}</p> */}
-
-        {/* CAMP INFO */}
-        <p><strong>Camp Name:</strong> {viewStudent.campName || viewStudent.camp || '—'}</p>
-        <p><strong>Camp Date:</strong> {viewStudent.campDate || '—'}</p>
-
-        {/* EDUCATION */}
-        <p><strong>Class / Year:</strong> {viewStudent.class || viewStudent.year || '—'}</p>
-        <p><strong>School/College:</strong> {viewStudent.school || viewStudent.college || '—'}</p>
-
-        {/* PERCENTAGES */}
+        {/* Basic Info */}
+        <p style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}><strong>Full Name:</strong> {viewStudent.full_name || '—'}</p>
+        <p><strong>Age:</strong> {viewStudent.age || '—'}</p>
+        <p style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}><strong>Email:</strong> {viewStudent.email || '—'}</p>
+        
+        {/* Contact Info */}
+        <p className="nowrap-cell" style={{ whiteSpace: 'normal' }}><strong>Contact:</strong> {viewStudent.contact || '—'}</p>
+        <p className="nowrap-cell" style={{ whiteSpace: 'normal' }}><strong>Parent Contact 2:</strong> {viewStudent.parent_contact_2 || '—'}</p>
+        <p className="nowrap-cell" style={{ whiteSpace: 'normal' }}><strong>WhatsApp:</strong> {viewStudent.whatsapp || '—'}</p>
+        <p className="nowrap-cell" style={{ whiteSpace: 'normal' }}><strong>Student Contact:</strong> {viewStudent.student_contact || '—'}</p>
+        
+        {/* Address */}
+        <p style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}><strong>Address:</strong> {viewStudent.address || '—'}</p>
+        
+        {/* Camp Info */}
+        <p><strong>Camp Name:</strong> {viewStudent.camp_name || viewStudent.campName || '—'}</p>
+        <p><strong>Camp Date:</strong> {viewStudent.camp_date || viewStudent.campDate || '—'}</p>
+        
+        {/* Education */}
+        <p><strong>School:</strong> {viewStudent.school || '—'}</p>
+        <p><strong>Class:</strong> {viewStudent.class || '—'}</p>
         <p><strong>Previous %:</strong> {viewStudent.prev_percent || '—'}</p>
         <p><strong>Present %:</strong> {viewStudent.present_percent || '—'}</p>
-
-        {/* CONTACT INFO */}
-        <p><strong>Email:</strong> {viewStudent.email || '—'}</p>
-        <p className="nowrap-cell"><strong>Contact:</strong> {viewStudent.contact || '—'}</p>
-        <p className="nowrap-cell"><strong>WhatsApp:</strong> {viewStudent.whatsapp || '—'}</p>
-        <p className="nowrap-cell"><strong>Student Contact:</strong> {viewStudent.student_contact || '—'}</p>
-
-        {/* SCHOLARSHIP */}
-        <p><strong>Scholarship Type:</strong> {viewStudent.scholarship}</p>
+        
+        {/* Family & Financial */}
         <p><strong>Has Scholarship:</strong> {viewStudent.has_scholarship ? "Yes" : "No"}</p>
-        <p><strong>Does Student Work?:</strong> {viewStudent.does_work ? "Yes" : "No"}</p>
-        <p><strong>Earning Members:</strong> {viewStudent.earning_members}</p>
-
-        {/* FEE DETAILS */}
-        {/* <p><strong>Fee Amount:</strong> {viewStudent.fee}</p>
-        <p><strong>Fee Structure:</strong> {viewStudent.fee_structure}</p>
-        <p><strong>Paid Date:</strong> {viewStudent.paidDate}</p> */}
-
-        {/* DONOR */}
-        <p><strong>Volunteer:</strong> {viewStudent.volunteer_name}</p>
-
-        {/* CREATED AT */}
-        <p><strong>Record Created:</strong> 
-          {formatToIST(viewStudent.created_at)}
-        </p>
-
+        <p><strong>Scholarship:</strong> {viewStudent.scholarship || '—'}</p>
+        <p><strong>Does Work:</strong> {viewStudent.does_work ? "Yes" : "No"}</p>
+        <p><strong>Earning Members:</strong> {viewStudent.earning_members || '—'}</p>
+        
+        {/* Achievements */}
+        <p><strong>Academic Achievements:</strong> {viewStudent.academic_achievements || '—'}</p>
+        <p><strong>Non-Academic Achievements:</strong> {viewStudent.non_academic_achievements || '—'}</p>
+        
+        {/* Special Info */}
+        <p><strong>Is Single Parent:</strong> {viewStudent.is_single_parent ? "Yes" : "No"}</p>
+        <p><strong>Special Remarks:</strong> {viewStudent.special_remarks || '—'}</p>
+        
+        {/* Volunteer */}
+        <p><strong>Volunteer Name:</strong> {viewStudent.volunteer_name || '—'}</p>
+        <p className="nowrap-cell"><strong>Volunteer Contact:</strong> {viewStudent.volunteer_contact || '—'}</p>
+        
+        {/* Public ID & Timestamps */}
+        <p><strong>Student Public ID:</strong> {viewStudent.student_public_id || '—'}</p>
+        <p><strong>Record Created:</strong> {formatToIST(viewStudent.created_at)}</p>
+        
+        {/* Status */}
+        <p><strong>Status:</strong> {viewStudent.status || '—'}</p>
       </div>
 
       <button 
@@ -4059,13 +4239,25 @@ const handleEditDonor = (donor) => {
         <div className="modal-overlay" onClick={() => setViewDonor(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Donor Details</h3>
-            <p><strong>Name:</strong> {viewDonor.name}</p>
-            <p><strong>Amount:</strong> ₹{viewDonor.amount}</p>
-            <p><strong>Duration:</strong> {viewDonor.years}</p>
+            <div className="view-grid" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+              {/* Personal Information */}
+              <p><strong>Full Name:</strong> {viewDonor.full_name || viewDonor.name || '—'}</p>
+              <p><strong>Email:</strong> {viewDonor.email || '—'}</p>
+              <p><strong>Phone:</strong> {viewDonor.phone || viewDonor.contact || '—'}</p>
+              
+              {/* Donation Information */}
+              <p><strong>Amount:</strong> ₹{viewDonor.amount?.toLocaleString() || '0'}</p>
+              <p><strong>Duration:</strong> {viewDonor.years || viewDonor.duration || '—'}</p>
+              <p><strong>Donation Date:</strong> {viewDonor.donation_date ? new Date(viewDonor.donation_date).toLocaleDateString('en-IN') : '—'}</p>
+              <p><strong>Payment Method:</strong> {viewDonor.payment_method || viewDonor.mode_of_payment || '—'}</p>
+              <p><strong>Transaction ID:</strong> {viewDonor.transaction_id || '—'}</p>
+              
+              {/* Timestamps */}
+              <p><strong>Created At:</strong> {viewDonor.created_at ? formatToIST(viewDonor.created_at) : '—'}</p>
+              <p><strong>Updated At:</strong> {viewDonor.updated_at ? formatToIST(viewDonor.updated_at) : '—'}</p>
+            </div>
             <div style={{display:'flex',gap:8,marginTop:12}}>
-              <button className="btn" onClick={() => setViewDonor(null)}>Close</button>
-              <button className="btn" onClick={() => setViewDonor(null)}>Close</button>
-
+              <button className="btn primary" onClick={() => setViewDonor(null)}>Close</button>
             </div>
           </div>
         </div>
