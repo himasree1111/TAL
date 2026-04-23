@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
@@ -271,7 +272,7 @@ export default function AdminDashboard() {
     if (rowStudentIds.length > 0) {
       const { data: byIdRows, error: byIdError } = await supabase
         .from('student_form_submissions')
-        .select('id, student_public_id')
+.select('id, student_public_id, is_single_parent, special_remarks')
         .in('id', rowStudentIds);
 
       if (byIdError) {
@@ -288,7 +289,7 @@ export default function AdminDashboard() {
     if (rowEmails.length > 0) {
       const { data: byEmailRows, error: byEmailError } = await supabase
         .from('student_form_submissions')
-        .select('email, student_public_id, created_at')
+.select('email, student_public_id, created_at, is_single_parent, special_remarks')
         .in('email', rowEmails)
         .order('created_at', { ascending: false });
 
@@ -349,12 +350,14 @@ export default function AdminDashboard() {
         } else {
           console.log('AdminDashboard: fetched studentData (count):', Array.isArray(studentData) ? studentData.length : 0);
           // Transform student data to match admin dashboard format
-          const transformedStudents = (studentData || []).map((student, index) => {
+const transformedStudents = (studentData || []).map((student, index) => {
             const transformed = {
               id: student.id || index + 1,
               student_id: student.id,
               student_form_id: student.student_id || null,
               student_public_id: student.student_public_id || null,
+              is_single_parent: student.is_single_parent ?? false,
+              special_remarks: student.special_remarks ?? null,
               name: student.full_name || "",
               full_name: student.full_name || "",
               year: student.class || student.year,
@@ -411,7 +414,7 @@ export default function AdminDashboard() {
   }, [navigate]);
 
   // New filters for replacement
-  const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: 'all' });
+const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: 'all', singleParent: false, specialRemarks: false });
 
   // Unique values for dropdowns
   const uniqueCamps = useMemo(() => {
@@ -426,7 +429,7 @@ export default function AdminDashboard() {
   }, [students]);
 
   const achievementsFilterOptions = [
-    { value: 'all', label: 'All Certificates' },
+    { value: 'all', label: 'Any Certificates' },
     { value: 'both', label: 'Academic + Non-Academic' },
     { value: 'academic_only', label: 'Academic Only' },
     { value: 'non_academic_only', label: 'Non-Academic Only' },
@@ -550,19 +553,21 @@ const totalFeeDue = useMemo(() => {
     }, 0);
   }, [feeTrackingRecords]);
 
-const getMaxPercent = React.useCallback((s) => {
+const getMaxPercent = useCallback((s) => {
   return Math.max(
     parseFloat(s.prev_percent || 0),
     parseFloat(s.present_percent || 0)
   );
-}, []);  const getAvgPercentage = (s) => {
-    const prev = parseFloat(s.prev_percent || 0);
-    const pres = parseFloat(s.present_percent || 0);
-    const avg = ((prev + pres) / 2).toFixed(1);
-    return avg > 0 ? avg + '%' : '—';
-  };
+}, []);
 
- const calculatePriority = React.useCallback((s) => {
+const getAvgPercentage = (s) => {
+  const prev = parseFloat(s.prev_percent || 0);
+  const pres = parseFloat(s.present_percent || 0);
+  const avg = ((prev + pres) / 2).toFixed(1);
+  return avg > 0 ? avg + '%' : '—';
+};
+
+const calculatePriority = useCallback((s) => {
   const incomeScore = Math.max(0, 40 - (parseInt(s.earning_members || 1) * 10));
   const academicScore = Math.min(25, getMaxPercent(s));
 
@@ -582,24 +587,34 @@ const getMaxPercent = React.useCallback((s) => {
 
   // Updated filteredStudents with new filters (old filters deprecated)
   const filteredStudents = useMemo(() => {
-    const normalizeAchievementFlag = (value) => {
-      if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
+const normalizeAchievementFlag = (value) => {
+      if (value === true || value === 'true') {
         return true;
       }
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return true;
-      }
-      return false;
+      const trimmed = (value || '').toString().trim();
+      return trimmed !== '' && trimmed !== 'false';
     };
 
     const filterAchievementMatch = (student) => {
       const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
       const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
 
+      if (newFilters.achievements === 'all') return hasAcademic || hasNonAcademic;
       if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
       if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
       if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
       return true;
+    };
+
+    const normalizeBoolean = (value) => {
+      if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
+        return true;
+      }
+      return !!value;
+    };
+
+    const hasText = (value) => {
+      return typeof value === 'string' && value.trim().length > 0;
     };
 
     return students
@@ -609,6 +624,8 @@ const getMaxPercent = React.useCallback((s) => {
         if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
         if (newFilters.toppers && getMaxPercent(s) < 90) return false;
         if (!filterAchievementMatch(s)) return false;
+        if (newFilters.singleParent && !normalizeBoolean(s.is_single_parent)) return false;
+        if (newFilters.specialRemarks && !hasText(s.special_remarks)) return false;
         return true;
       })
       .map(s => ({...s, priority: calculatePriority(s)}))
@@ -625,6 +642,17 @@ const filteredNonEligibleStudents = useMemo(() => {
       return true;
     }
     return false;
+  };
+
+  const normalizeBoolean = (value) => {
+    if (value === true || value === 'true' || value === 'YES' || value === 'yes' || value === 'Y' || value === 'y') {
+      return true;
+    }
+    return !!value;
+  };
+
+  const hasText = (value) => {
+    return typeof value === 'string' && value.trim().length > 0;
   };
 
   const filterAchievementMatch = (student) => {
@@ -646,6 +674,8 @@ const filteredNonEligibleStudents = useMemo(() => {
       if (newFilters.education !== 'all' && education !== newFilters.education) return false;
       if (newFilters.toppers && getMaxPercent(s) < 90) return false;
       if (!filterAchievementMatch(s)) return false;
+      if (newFilters.singleParent && !normalizeBoolean(s.is_single_parent)) return false;
+      if (newFilters.specialRemarks && !hasText(s.special_remarks)) return false;
       return true;
     })
     .map(s => ({...s, priority: calculatePriority(s)}))
@@ -2199,6 +2229,18 @@ const handleEditDonor = (donor) => {
                     value={newFilters.achievements} 
                     onChange={(val) => setNewFilters(f => ({...f, achievements: val}))} 
                   />
+                  <FilterToggle 
+                    title="Single Parent" 
+                    icon="👨‍👩‍👧" 
+                    checked={newFilters.singleParent} 
+                    onChange={(val) => setNewFilters(f => ({...f, singleParent: val}))} 
+                  />
+                  <FilterToggle 
+                    title="Special Remarks" 
+                    icon="📝" 
+                    checked={newFilters.specialRemarks} 
+                    onChange={(val) => setNewFilters(f => ({...f, specialRemarks: val}))} 
+                  />
                 </div>
 
                 <div className="manage-actions">
@@ -2274,7 +2316,7 @@ const handleEditDonor = (donor) => {
           {activeSection === "noneligible" && (
             <section className="manage-section">
               <div className="manage-controls">
-                <div className="new-filters-grid">
+<div className="new-filters-grid">
                   <FilterCard 
                     title="Camp" 
                     icon="🏕️" 
@@ -2301,6 +2343,18 @@ const handleEditDonor = (donor) => {
                     options={achievementsFilterOptions} 
                     value={newFilters.achievements} 
                     onChange={(val) => setNewFilters(f => ({...f, achievements: val}))} 
+                  />
+                  <FilterToggle 
+                    title="Single Parent" 
+                    icon="👨‍👩‍👧" 
+                    checked={newFilters.singleParent} 
+                    onChange={(val) => setNewFilters(f => ({...f, singleParent: val}))} 
+                  />
+                  <FilterToggle 
+                    title="Special Remarks" 
+                    icon="📝" 
+                    checked={newFilters.specialRemarks} 
+                    onChange={(val) => setNewFilters(f => ({...f, specialRemarks: val}))} 
                   />
                 </div>
 
