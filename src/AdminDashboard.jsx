@@ -27,6 +27,17 @@ const parseMoney = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toISODateString = (value) => {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10);
+  }
+  return date.toISOString().split('T')[0];
+};
+
+const buildCampScopeKey = (campName, campDate) => `${campName}__${campDate}`;
+
 const asComparableId = (value) => (value === null || value === undefined ? '' : String(value));
 
 export default function AdminDashboard() {
@@ -60,6 +71,7 @@ export default function AdminDashboard() {
   const [newCampDate, setNewCampDate] = useState("");
   const [newCampExtraDates, setNewCampExtraDates] = useState("");
   const [addingCamp, setAddingCamp] = useState(false);
+  const [reportCampScopeKey, setReportCampScopeKey] = useState("");
   const [newDonorForm, setNewDonorForm] = useState({
     full_name: '',
     gender: '',
@@ -453,6 +465,40 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
     return ['all', ...new Set(educations)];
   }, [students]);
 
+  const reportCampOptions = useMemo(() => {
+    const options = campOptions
+      .map((camp) => {
+        const campName = camp.camp_name?.trim();
+        const campDate = toISODateString(camp.camp_date);
+        if (!campName || !campDate) {
+          return null;
+        }
+
+        return {
+          key: buildCampScopeKey(campName, campDate),
+          campName,
+          campDate,
+          label: `${campName} - ${new Date(campDate).toLocaleDateString('en-IN')}`,
+        };
+      })
+      .filter(Boolean);
+
+    return [...new Map(options.map((option) => [option.key, option])).values()].sort((a, b) => {
+      const dateDiff = b.campDate.localeCompare(a.campDate);
+      return dateDiff !== 0 ? dateDiff : a.campName.localeCompare(b.campName);
+    });
+  }, [campOptions]);
+
+  useEffect(() => {
+    if (!reportCampScopeKey && reportCampOptions.length > 0) {
+      setReportCampScopeKey(reportCampOptions[0].key);
+    }
+  }, [reportCampScopeKey, reportCampOptions]);
+
+  const selectedReportCampScope = useMemo(() => {
+    return reportCampOptions.find((option) => option.key === reportCampScopeKey) || null;
+  }, [reportCampOptions, reportCampScopeKey]);
+
   const achievementsFilterOptions = [
     { value: 'all', label: 'Any Certificates' },
     { value: 'both', label: 'Academic + Non-Academic' },
@@ -604,6 +650,47 @@ const paidFeeRecords = useMemo(() => {
   const feeReceiptRecords = useMemo(() => {
     return feeTrackingRecords.filter((record) => record.fee_receipt_checked === 'true');
   }, [feeTrackingRecords]);
+
+  const matchesSelectedReportScope = useCallback((campName, campDate) => {
+    if (!selectedReportCampScope) {
+      return true;
+    }
+
+    return (
+      (campName || '').trim() === selectedReportCampScope.campName &&
+      toISODateString(campDate) === selectedReportCampScope.campDate
+    );
+  }, [selectedReportCampScope]);
+
+  const scopedEligibleStudents = useMemo(() => {
+    return eligibleStudents.filter((student) =>
+      matchesSelectedReportScope(student.camp_name || student.campName, student.camp_date || student.campDate)
+    );
+  }, [eligibleStudents, matchesSelectedReportScope]);
+
+  const scopedNonEligibleStudents = useMemo(() => {
+    return nonEligibleStudents.filter((student) =>
+      matchesSelectedReportScope(student.camp_name || student.campName, student.camp_date || student.campDate)
+    );
+  }, [nonEligibleStudents, matchesSelectedReportScope]);
+
+  const scopedFeeReceiptRecords = useMemo(() => {
+    return feeReceiptRecords.filter((record) =>
+      matchesSelectedReportScope(record.camp_name || record.campName, record.camp_date || record.campDate)
+    );
+  }, [feeReceiptRecords, matchesSelectedReportScope]);
+
+  const scopedFeeTrackingStudents = useMemo(() => {
+    return feeTrackingStudents.filter((record) =>
+      matchesSelectedReportScope(record.camp_name || record.campName, record.camp_date || record.campDate)
+    );
+  }, [feeTrackingStudents, matchesSelectedReportScope]);
+
+  const scopedPaidFeeRecords = useMemo(() => {
+    return paidFeeRecords.filter((record) =>
+      matchesSelectedReportScope(record.camp_name || record.campName, record.camp_date || record.campDate)
+    );
+  }, [paidFeeRecords, matchesSelectedReportScope]);
 
 const totalFeeDue = useMemo(() => {
     return feeTrackingRecords.reduce((sum, record) => {
@@ -1476,14 +1563,19 @@ await fetchFeeTrackingRecords();
   };
 
   const handleDownloadEligibleReport = () => {
-    if (eligibleStudents.length === 0) {
-      alert('No eligible students to export');
+    if (!selectedReportCampScope) {
+      alert('Please select a camp name and camp date for the report scope.');
+      return;
+    }
+
+    if (scopedEligibleStudents.length === 0) {
+      alert(`No eligible students found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
       return;
     }
 
     const rows = [
       "student_public_id,student_name,email,contact,education,year,school,college,created_at",
-      ...eligibleStudents.map(s => 
+      ...scopedEligibleStudents.map(s => 
         `"${s.student_public_id || ''}","${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
       )
     ];
@@ -1492,21 +1584,26 @@ await fetchFeeTrackingRecords();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'eligible-students-report.csv';
+    a.download = `eligible-students-${selectedReportCampScope.campName}-${selectedReportCampScope.campDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     alert('Report downloaded successfully!');
   };
 
   const handleDownloadNonEligibleReport = () => {
-    if (nonEligibleStudents.length === 0) {
-      alert('No non-eligible students to export');
+    if (!selectedReportCampScope) {
+      alert('Please select a camp name and camp date for the report scope.');
+      return;
+    }
+
+    if (scopedNonEligibleStudents.length === 0) {
+      alert(`No non-eligible students found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
       return;
     }
 
     const rows = [
       "student_public_id,student_name,email,contact,education,year,school,college,created_at",
-      ...nonEligibleStudents.map(s => 
+      ...scopedNonEligibleStudents.map(s => 
         `"${s.student_public_id || ''}","${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
       )
     ];
@@ -1515,7 +1612,7 @@ await fetchFeeTrackingRecords();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'non-eligible-students-report.csv';
+    a.download = `non-eligible-students-${selectedReportCampScope.campName}-${selectedReportCampScope.campDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     alert('Report downloaded successfully!');
@@ -1926,7 +2023,7 @@ const handleEditDonor = (donor) => {
 
   const handleDownloadFeeReport = () => {
     const sourceRows = feeSectionTab === 'tracking'
-      ? feeTrackingStudents.map((student) => {
+      ? scopedFeeTrackingStudents.map((student) => {
           const record = getFeeTrackingRecord(student);
           const requiredFee = parseMoney(record?.total_educational_expenses ?? student.fee);
           const paidAmount = parseMoney(record?.fee_paid_by_tal);
@@ -1942,7 +2039,7 @@ const handleEditDonor = (donor) => {
           };
         })
       : feeSectionTab === 'receipts'
-        ? feeReceiptRecords.map((record) => {
+        ? scopedFeeReceiptRecords.map((record) => {
             const requiredFee = parseMoney(record.total_educational_expenses);
             const paidAmount = parseMoney(record.fee_paid_by_tal);
             const balance = Math.max(requiredFee - paidAmount, 0);
@@ -1956,7 +2053,7 @@ const handleEditDonor = (donor) => {
               fee_status: record.fee_status || 'Pending',
             };
           })
-        : paidFeeRecords.map((record) => {
+        : scopedPaidFeeRecords.map((record) => {
             const requiredFee = parseMoney(record.total_educational_expenses);
             const paidAmount = parseMoney(record.fee_paid_by_tal);
             const balance = Math.max(requiredFee - paidAmount, 0);
@@ -1994,14 +2091,19 @@ const handleEditDonor = (donor) => {
   };
 
   const handleDownloadFeeReceiptsReport = () => {
-    if (feeReceiptRecords.length === 0) {
-      alert('No completed fee receipts found');
+    if (!selectedReportCampScope) {
+      alert('Please select a camp name and camp date for the report scope.');
+      return;
+    }
+
+    if (scopedFeeReceiptRecords.length === 0) {
+      alert(`No completed fee receipts found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
       return;
     }
 
     const rows = [
       'student_public_id,student_name,email,total_educational_expenses,paid_amount,balance,status,voucher_uploaded_at',
-      ...feeReceiptRecords.map((record) => {
+      ...scopedFeeReceiptRecords.map((record) => {
         const requiredFee = parseMoney(record.total_educational_expenses);
         const paidAmount = parseMoney(record.fee_paid_by_tal);
         const balance = Math.max(requiredFee - paidAmount, 0);
@@ -3885,6 +3987,43 @@ const handleEditDonor = (donor) => {
                 </div>
               </div>
 
+              <div className="report-scope-panel">
+                <div className="report-scope-copy">
+                  <div className="report-scope-title">Camp & Date Scope</div>
+                  <p>Select a camp master entry. Eligible, non-eligible, and fee receipt reports will export only rows for that camp/date pair.</p>
+                </div>
+                <div className="report-scope-controls">
+                  <label>
+                    <span className="field-label">Camp / Date</span>
+                    <select
+                      className="report-scope-select"
+                      value={reportCampScopeKey}
+                      onChange={(e) => setReportCampScopeKey(e.target.value)}
+                      disabled={reportCampOptions.length === 0}
+                    >
+                      {reportCampOptions.length === 0 ? (
+                        <option value="">No camp dates available</option>
+                      ) : (
+                        reportCampOptions.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                  <div className="report-scope-summary">
+                    {selectedReportCampScope ? (
+                      <>
+                        <strong>Active scope:</strong> {selectedReportCampScope.campName} on {new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}
+                      </>
+                    ) : (
+                      'No camp date pair selected yet.'
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="reports-grid">
                 <div className="report-card">
                   <h4>Financial Overview</h4>
@@ -3902,14 +4041,18 @@ const handleEditDonor = (donor) => {
                 <div className="report-card">
                   <h4>Fee Receipts</h4>
                   <div className="report-meta">
-                    <p>Completed Receipts: <strong>{feeReceiptRecords.length}</strong></p>
+                    <p>Completed Receipts: <strong>{scopedFeeReceiptRecords.length}</strong></p>
                   </div>
                   <div className="chart-container">
-                    <div className="chart-placeholder">Fee receipts completed and ready for export.</div>
+                    <div className="chart-placeholder">
+                      {selectedReportCampScope
+                        ? `Fee receipts for ${selectedReportCampScope.campName} on ${new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')} are ready for export.`
+                        : 'Select a camp/date pair to scope this report.'}
+                    </div>
                   </div>
                   <div className="report-actions">
                     <button className="btn small view-btn" onClick={() => setActiveSection('fees')}>View Page</button>
-                    <button className="btn small" onClick={handleDownloadFeeReceiptsReport} disabled={feeReceiptRecords.length === 0}>
+                    <button className="btn small" onClick={handleDownloadFeeReceiptsReport} disabled={!selectedReportCampScope || scopedFeeReceiptRecords.length === 0}>
                       Download Report
                     </button>
                   </div>
@@ -3931,10 +4074,14 @@ const handleEditDonor = (donor) => {
                 <div className="report-card">
                   <h4>Eligible Students</h4>
                   <div className="report-meta">
-                    <p>Total Eligible: <strong>{eligibleCount}</strong></p>
+                    <p>Total Eligible: <strong>{scopedEligibleStudents.length}</strong></p>
                   </div>
                   <div className="chart-container">
-                    <div className="chart-placeholder">Chart Coming Soon</div>
+                    <div className="chart-placeholder">
+                      {selectedReportCampScope
+                        ? `Eligible students for ${selectedReportCampScope.campName} on ${new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}.`
+                        : 'Select a camp/date pair to scope this report.'}
+                    </div>
                   </div>
                   <div className="report-actions">
                     <button
@@ -3947,11 +4094,11 @@ const handleEditDonor = (donor) => {
                         }
                         setShowEligibleTable(true);
                       }}
-                      disabled={loadingEligible}
+                      disabled={loadingEligible || !selectedReportCampScope}
                     >
                       {loadingEligible ? 'Loading...' : 'View Data'}
                     </button>
-                    <button className="btn small" onClick={handleDownloadEligibleReport} disabled={eligibleStudents.length === 0}>
+                    <button className="btn small" onClick={handleDownloadEligibleReport} disabled={!selectedReportCampScope || scopedEligibleStudents.length === 0}>
                       Download Report
                     </button>
                   </div>
@@ -3961,10 +4108,14 @@ const handleEditDonor = (donor) => {
                 <div className="report-card">
                   <h4>Non-Eligible Students</h4>
                   <div className="report-meta">
-                    <p>Total Non-Eligible: <strong>{nonEligibleCount}</strong></p>
+                    <p>Total Non-Eligible: <strong>{scopedNonEligibleStudents.length}</strong></p>
                   </div>
                   <div className="chart-container">
-                    <div className="chart-placeholder">Chart Coming Soon</div>
+                    <div className="chart-placeholder">
+                      {selectedReportCampScope
+                        ? `Non-eligible students for ${selectedReportCampScope.campName} on ${new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}.`
+                        : 'Select a camp/date pair to scope this report.'}
+                    </div>
                   </div>
                   <div className="report-actions">
                     <button
@@ -3977,11 +4128,11 @@ const handleEditDonor = (donor) => {
                         }
                         setShowNonEligibleTable(true);
                       }}
-                      disabled={loadingNonEligible}
+                      disabled={loadingNonEligible || !selectedReportCampScope}
                     >
                       {loadingNonEligible ? 'Loading...' : 'View Data'}
                     </button>
-                    <button className="btn small" onClick={handleDownloadNonEligibleReport} disabled={nonEligibleStudents.length === 0}>
+                    <button className="btn small" onClick={handleDownloadNonEligibleReport} disabled={!selectedReportCampScope || scopedNonEligibleStudents.length === 0}>
                       Download Report
                     </button>
                   </div>
@@ -3991,95 +4142,111 @@ const handleEditDonor = (donor) => {
               {/* Eligible Students Table */}
               {showEligibleTable && (
 <div className="table-wrap" style={{marginTop: '24px'}}>
-                  <h3>Eligible Students List ({eligibleStudents.length})</h3>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Contact</th>
-                        <th>Education</th>
-                        <th>School/College</th>
-                        <th>Date Added</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {eligibleStudents.map(s => (
-                        <tr key={s.id}>
-                          <td>{s.student_public_id || '-'}</td>
-                          <td>{s.student_name || s.full_name}</td>
-                          <td>{s.email}</td>
-                          <td className="nowrap-cell">{s.contact || '-'}</td>
-                          <td>{s.education || s.class}</td>
-                          <td>{s.school || s.college || '-'}</td>
-                          <td>
-                            {s.created_at 
-                              ? new Date(s.created_at).toLocaleDateString('en-IN') 
-                              : '-'
-                            }
-                          </td>
-                          <td>
-                            <button 
-                              className="btn small outline view-btn" 
-                              style={{minWidth: '44px'}}
-                              onClick={() => setViewEligibleStudent(s)}
-                            >
-                              View
-                            </button>
-                          </td>
+                  <h3>
+                    Eligible Students List ({selectedReportCampScope ? scopedEligibleStudents.length : eligibleStudents.length})
+                  </h3>
+                  {selectedReportCampScope && scopedEligibleStudents.length === 0 ? (
+                    <div style={{padding: '1.25rem', color: '#666'}}>
+                      No eligible students found for {selectedReportCampScope.campName} on {new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}.
+                    </div>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Student ID</th>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Contact</th>
+                          <th>Education</th>
+                          <th>School/College</th>
+                          <th>Date Added</th>
+                          <th>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(selectedReportCampScope ? scopedEligibleStudents : eligibleStudents).map(s => (
+                          <tr key={s.id}>
+                            <td>{s.student_public_id || '-'}</td>
+                            <td>{s.student_name || s.full_name}</td>
+                            <td>{s.email}</td>
+                            <td className="nowrap-cell">{s.contact || '-'}</td>
+                            <td>{s.education || s.class}</td>
+                            <td>{s.school || s.college || '-'}</td>
+                            <td>
+                              {s.created_at 
+                                ? new Date(s.created_at).toLocaleDateString('en-IN') 
+                                : '-'
+                              }
+                            </td>
+                            <td>
+                              <button 
+                                className="btn small outline view-btn" 
+                                style={{minWidth: '44px'}}
+                                onClick={() => setViewEligibleStudent(s)}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
 
               {/* Non-Eligible Students Table */}
               {showNonEligibleTable && (
 <div className="table-wrap" style={{marginTop: '24px'}}>
-                  <h3>Non-Eligible Students List ({nonEligibleStudents.length})</h3>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Contact</th>
-                        <th>Education</th>
-                        <th>School/College</th>
-                        <th>Date Added</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {nonEligibleStudents.map(s => (
-                        <tr key={s.id}>
-                          <td>{s.student_public_id || '-'}</td>
-                          <td>{s.student_name || s.full_name}</td>
-                          <td>{s.email}</td>
-                          <td className="nowrap-cell">{s.contact || '-'}</td>
-                          <td>{s.education || s.class}</td>
-                          <td>{s.school || s.college || '-'}</td>
-                          <td>
-                            {s.created_at 
-                              ? new Date(s.created_at).toLocaleDateString('en-IN') 
-                              : '-'
-                            }
-                          </td>
-                          <td>
-                            <button 
-                              className="btn small view-btn" 
-                              onClick={() => setViewNonEligibleStudent(s)}
-                            >
-                              View
-                            </button>
-                          </td>
+                  <h3>
+                    Non-Eligible Students List ({selectedReportCampScope ? scopedNonEligibleStudents.length : nonEligibleStudents.length})
+                  </h3>
+                  {selectedReportCampScope && scopedNonEligibleStudents.length === 0 ? (
+                    <div style={{padding: '1.25rem', color: '#666'}}>
+                      No non-eligible students found for {selectedReportCampScope.campName} on {new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}.
+                    </div>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Student ID</th>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Contact</th>
+                          <th>Education</th>
+                          <th>School/College</th>
+                          <th>Date Added</th>
+                          <th>Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(selectedReportCampScope ? scopedNonEligibleStudents : nonEligibleStudents).map(s => (
+                          <tr key={s.id}>
+                            <td>{s.student_public_id || '-'}</td>
+                            <td>{s.student_name || s.full_name}</td>
+                            <td>{s.email}</td>
+                            <td className="nowrap-cell">{s.contact || '-'}</td>
+                            <td>{s.education || s.class}</td>
+                            <td>{s.school || s.college || '-'}</td>
+                            <td>
+                              {s.created_at 
+                                ? new Date(s.created_at).toLocaleDateString('en-IN') 
+                                : '-'
+                              }
+                            </td>
+                            <td>
+                              <button 
+                                className="btn small view-btn" 
+                                onClick={() => setViewNonEligibleStudent(s)}
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </section>
