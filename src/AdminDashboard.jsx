@@ -3187,7 +3187,7 @@ const handleEditDonor = (donor) => {
               <div className="fee-summary">
                 <div className="fee-card">
                   <div className="amount">{verifiedFeeStudents.length}</div>
-                  <div className="label">Verified Students</div>
+                  <div className="label">Students whose Fee is paid</div>
                 </div>
                 <div className="fee-card">
                   <div className="amount">₹{totalFeeDue.toLocaleString()}</div>
@@ -3195,7 +3195,7 @@ const handleEditDonor = (donor) => {
                 </div>
                 <div className="fee-card">
                   <div className="amount">{paidFeeRecords.length}</div>
-                  <div className="label">Students with Fee Records</div>
+                  <div className="label">Students who uploaded Fee Receipt</div>
                 </div>
               </div>
 
