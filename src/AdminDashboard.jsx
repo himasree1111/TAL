@@ -27,6 +27,8 @@ const parseMoney = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const escapeCsvValue = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
 const toISODateString = (value) => {
   if (!value) return '';
   const date = value instanceof Date ? value : new Date(value);
@@ -2203,7 +2205,101 @@ const handleEditDonor = (donor) => {
   };
 
   const handleGenerateReport = () => {
-    alert('Custom report generated (demo)');
+    if (!selectedReportCampScope) {
+      alert('Please select a camp name and camp date for the report scope.');
+      return;
+    }
+
+    const scopedAllFeeRecords = [...scopedFeeTrackingStudents, ...scopedPaidFeeRecords];
+    const totalFunds = donors.reduce((sum, donor) => sum + parseMoney(donor.amount), 0);
+    const totalRequiredInScope = scopedAllFeeRecords.reduce(
+      (sum, record) => sum + parseMoney(record.total_educational_expenses),
+      0
+    );
+    const totalPaidInScope = scopedAllFeeRecords.reduce(
+      (sum, record) => sum + parseMoney(record.fee_paid_by_tal),
+      0
+    );
+    const totalBalanceInScope = Math.max(totalRequiredInScope - totalPaidInScope, 0);
+
+    const rows = [
+      ['Custom Report', ''],
+      ['Generated At', new Date().toISOString()],
+      ['Camp Name', selectedReportCampScope.campName],
+      ['Camp Date', selectedReportCampScope.campDate],
+      [],
+      ['Summary', 'Value'],
+      ['Total Donors', donors.length],
+      ['Total Funds Raised', totalFunds],
+      ['Eligible Students (Scoped)', scopedEligibleStudents.length],
+      ['Non-Eligible Students (Scoped)', scopedNonEligibleStudents.length],
+      ['Fee Receipts Verified (Scoped)', scopedFeeReceiptRecords.length],
+      ['Fee Required (Scoped)', totalRequiredInScope],
+      ['Fee Paid (Scoped)', totalPaidInScope],
+      ['Fee Balance (Scoped)', totalBalanceInScope],
+      [],
+      ['Eligible Students', ''],
+      ['student_public_id', 'student_name', 'email', 'contact', 'education', 'year', 'school', 'college', 'created_at'],
+      ...scopedEligibleStudents.map((student) => [
+        student.student_public_id || '',
+        student.student_name || student.full_name || '',
+        student.email || '',
+        student.contact || '',
+        student.education || student.course || '',
+        student.year || student.class || '',
+        student.school || '',
+        student.college || '',
+        student.created_at || '',
+      ]),
+      [],
+      ['Non-Eligible Students', ''],
+      ['student_public_id', 'student_name', 'email', 'contact', 'education', 'year', 'school', 'college', 'created_at'],
+      ...scopedNonEligibleStudents.map((student) => [
+        student.student_public_id || '',
+        student.student_name || student.full_name || '',
+        student.email || '',
+        student.contact || '',
+        student.education || student.course || '',
+        student.year || student.class || '',
+        student.school || '',
+        student.college || '',
+        student.created_at || '',
+      ]),
+      [],
+      ['Fee Receipts (Verified)', ''],
+      ['student_public_id', 'student_name', 'email', 'total_educational_expenses', 'fee_paid_by_tal', 'balance', 'voucher_uploaded_at'],
+      ...scopedFeeReceiptRecords.map((record) => {
+        const requiredFee = parseMoney(record.total_educational_expenses);
+        const paidFee = parseMoney(record.fee_paid_by_tal);
+        return [
+          record.student_public_id || '',
+          record.student_name || '',
+          record.email || '',
+          requiredFee,
+          paidFee,
+          Math.max(requiredFee - paidFee, 0),
+          record.voucher_uploaded_at || '',
+        ];
+      }),
+    ];
+
+    const csvContent = rows
+      .map((row) => row.map((cell) => escapeCsvValue(cell)).join(','))
+      .join('\n');
+
+    const safeCampName = selectedReportCampScope.campName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `custom-report-${safeCampName || 'camp'}-${selectedReportCampScope.campDate}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('Custom report downloaded successfully!');
   };
 
   const handleDownloadFeeReceiptsReport = () => {
