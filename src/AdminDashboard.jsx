@@ -156,21 +156,45 @@ export default function AdminDashboard() {
         .from('donor_details')
         .select('*')
         .order('donation_date', { ascending: false });
+
       if (donorError) {
-        console.error('Error fetching donors:', donorError);
-      } else {
-        const mappedDonors = (donorDetails || []).map(d => ({
-          ...d,
-          name: d.full_name,
-          formattedAmount: new Intl.NumberFormat('en-IN', { 
-            style: 'currency', 
-            currency: 'INR',
-            maximumFractionDigits: 0 
-          }).format(d.amount || 0),
-          formattedDate: d.donation_date ? formatToIST(d.donation_date) : '—'
-        }));
-        setDonors(mappedDonors);
+        console.error('[DONORS] Error fetching donors:', donorError);
+        console.error('[DONORS] Error details:', donorError.message, donorError.code, donorError.details);
+        alert('Error fetching donors: ' + donorError.message + ' (Code: ' + (donorError.code || 'N/A') + ')');
+        setDonors([]);
+        return;
       }
+
+      if (!donorDetails) {
+        console.warn('[DONORS] donorDetails is null/undefined — possible RLS policy blocking access or network issue');
+        setDonors([]);
+        return;
+      }
+
+      if (donorDetails.length === 0) {
+        console.warn('[DONORS] donor_details table returned 0 rows — table may be empty or RLS may be blocking access');
+      }
+
+      console.log('[DONORS] Fetched from donor_details:', donorDetails.length, 'donors');
+      console.log('[DONORS] Donor data sample:', donorDetails[0]);
+
+      const mappedDonors = donorDetails.map(d => ({
+        ...d,
+        name: d.full_name,
+        formattedAmount: new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency: 'INR',
+          maximumFractionDigits: 0
+        }).format(d.amount || 0),
+        formattedDate: d.donation_date ? formatToIST(d.donation_date) : '—'
+      }));
+      setDonors(mappedDonors);
+      console.log('[DONORS] Mapped donors count:', mappedDonors.length);
+    } catch (err) {
+      console.error('[DONORS] Unexpected error in fetchDonors:', err);
+      console.error('[DONORS] Stack trace:', err.stack);
+      alert('Unexpected error fetching donors: ' + err.message);
+      setDonors([]);
     } finally {
       setLoadingDonors(false);
     }
@@ -563,10 +587,18 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
 
   const totals = useMemo(() => {
     const totalStudents = students.length;
-    const feesCollected = donors.reduce((s, d) => s + d.amount, 0);
+    const feesCollected = donors.reduce((s, d) => s + (d.amount || 0), 0);
     const pendingFees = students.filter((s) => s.feeStatus === "Pending").length;
     const activeDonors = donors.length;
-    console.log('[DEBUG] Dashboard Overview - Students Under Review count:', totalStudents);
+    
+    console.log('[TOTALS] Dashboard Overview Calculation:');
+    console.log('[TOTALS] - Total Students:', totalStudents);
+    console.log('[TOTALS] - Donors array length:', donors.length);
+    console.log('[TOTALS] - Fees Collected:', feesCollected);
+    console.log('[TOTALS] - Pending Fees:', pendingFees);
+    console.log('[TOTALS] - Active Donors:', activeDonors);
+    console.log('[TOTALS] - Sample donor:', donors[0]);
+    
     return { totalStudents, feesCollected, pendingFees, activeDonors };
   }, [students, donors]);
 
@@ -1402,8 +1434,15 @@ await fetchFeeTrackingRecords();
     const normalizedStudentFormId = Number(studentFormId);
     const recordStudentFormId = Number.isFinite(normalizedStudentFormId) ? normalizedStudentFormId : studentFormId;
     const existingRecord = getFeeTrackingRecord(student);
-const requiredFee = parseMoney(existingRecord?.total_educational_expenses || 0);
+    const requiredFee = parseMoney(existingRecord?.total_educational_expenses || 0);
     const paidValue = parseMoney(feePaidInput[studentFormId] ?? existingRecord?.fee_paid_by_tal ?? 0);
+    
+    // VALIDATION: fee_paid_by_tal should NEVER exceed total_educational_expenses
+    if (paidValue > requiredFee && requiredFee > 0) {
+      alert(`Error: Paid amount (₹${paidValue.toLocaleString()}) cannot exceed required fee (₹${requiredFee.toLocaleString()})`);
+      return;
+    }
+    
     const feeStatus = paidValue === 0 ? 'Pending' : paidValue >= requiredFee && requiredFee > 0 ? 'Paid' : 'Partial';
     const studentName = student.student_name || student.full_name || student.name || existingRecord?.student_name;
     const studentEmail = student.email || existingRecord?.email;
@@ -2332,23 +2371,23 @@ const handleEditDonor = (donor) => {
                   <div className="card-content">
                     <div className="card-title">Students Under Review</div>
                     <div className="card-value">{totals.totalStudents}</div>
-                    <div className={`card-trend ${studentTrend.direction}`}>{studentTrend.label}</div>
+                    <div className="card-trend positive">Live data</div>
                   </div>
                 </div>
                 <div className="card">
                   <div className="card-icon money-icon">💰</div>
                   <div className="card-content">
-                    <div className="card-title">Donation  Collected</div>
-                    <div className="card-value">₹{totals.feesCollected}</div>
-                    <div className="card-trend positive">↑ 8% from last month</div>
+                    <div className="card-title">Donation Collected</div>
+                    <div className="card-value">₹{totals.feesCollected.toLocaleString('en-IN')}</div>
+                    <div className="card-trend positive">Live data</div>
                   </div>
                 </div>
                 <div className="card">
-                  <div className="card-icon pending-icon">⏳</div>
+                  <div className="card-icon pending-icon">✅</div>
                   <div className="card-content">
-                    <div className="card-title">Pending Fees</div>
-                    <div className="card-value">{totals.pendingFees}</div>
-                    <div className="card-trend negative">↑ 2% from last month</div>
+                    <div className="card-title">Students with Fees Paid</div>
+                    <div className="card-value">{verifiedFeeStudents.length}</div>
+                    <div className="card-trend positive">Live data</div>
                   </div>
                 </div>
                 <div className="card">
@@ -2356,7 +2395,7 @@ const handleEditDonor = (donor) => {
                   <div className="card-content">
                     <div className="card-title">Active Donors</div>
                     <div className="card-value">{totals.activeDonors}</div>
-                    <div className="card-trend positive">↑ 5% from last month</div>
+                    <div className="card-trend positive">Live data</div>
                   </div>
                 </div>
               </section>
@@ -2366,9 +2405,9 @@ const handleEditDonor = (donor) => {
                   <h3>Camp Master</h3>
                 </div>
 
-                <div className="manage-controls" style={{ marginBottom: "1rem" }}>
-                  <div className="form-group" style={{ width: "100%", gridTemplateColumns: "2fr 1fr auto" }}>
-                    <label>
+                <div className="manage-controls camp-master-controls" style={{ marginBottom: "1rem" }}>
+                  <div className="form-group camp-master-form" style={{ width: "100%" }}>
+                    <label className="camp-name-field">
                       <span className="field-label">Camp Name</span>
                       <input
                         type="text"
@@ -2377,7 +2416,7 @@ const handleEditDonor = (donor) => {
                         onChange={(e) => setNewCampName(e.target.value)}
                       />
                     </label>
-                    <label>
+                    <label className="camp-date-field">
                       <span className="field-label">Camp Date</span>
                       <input
                         type="date"
@@ -2385,7 +2424,7 @@ const handleEditDonor = (donor) => {
                         onChange={(e) => setNewCampDate(e.target.value)}
                       />
                     </label>
-                    <label>
+                    <label className="camp-extra-field">
                       <span className="field-label">Additional Camp Dates (optional)</span>
                       <textarea
                         placeholder="2025-10-12, 2026-03-11"
@@ -2396,8 +2435,7 @@ const handleEditDonor = (donor) => {
                     </label>
                     <button
                       type="button"
-                      className="btn primary"
-                      style={{ alignSelf: "end", height: "42px" }}
+                      className="btn primary camp-add-btn"
                       onClick={handleAddCamp}
                       disabled={addingCamp}
                     >
@@ -3917,9 +3955,8 @@ const handleEditDonor = (donor) => {
                       value={notificationAudience}
                       onChange={(e) => setNotificationAudience(e.target.value)}
                     >
-                      <option value="all">All Students</option>
                       <option value="eligible">Eligible Students Only</option>
-                      <option value="non-eligible">Non-Eligible Students Only</option>
+                      <option value="volunteers">Volunteers Only</option>
                     </select>
                   </label>
                 </div>

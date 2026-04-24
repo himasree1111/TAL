@@ -1018,14 +1018,20 @@ fee: parseFloat(profileForm.fee) || null,        educational_expenses: profileFo
     </aside>
   );
 
-  const renderStatsBar = () => (
-    <div className="stats-bar">
-      <StatCard icon="🆔" label="Student ID" value={profileForm.student_public_id || 'Pending'} />
-      <StatCard icon="�" label="Fee Status" value={feeInfo.fee_status || 'Pending'} />
-      <StatCard icon="📄" label="Voucher" value={feeInfo.voucher_url ? 'Uploaded' : 'Not uploaded'} />
-      <StatCard icon="�🔔" label="Notifications" value={totalNotifications} />
-    </div>
-  );
+  const renderStatsBar = () => {
+    const latestFee = feeHistory[0] || {};
+    const feeStatus = latestFee.fee_status || feeInfo.fee_status || 'Pending';
+    const voucherStatus = latestFee.voucher_url ? 'Uploaded' : (feeInfo.voucher_url ? 'Uploaded' : 'Not uploaded');
+
+    return (
+      <div className="stats-bar">
+        <StatCard icon="🆔" label="Student ID" value={profileForm.student_public_id || 'Pending'} />
+        <StatCard icon="💰" label="Fee Status" value={feeStatus} />
+        <StatCard icon="📄" label="Voucher" value={voucherStatus} />
+        <StatCard icon="🔔" label="Notifications" value={totalNotifications} />
+      </div>
+    );
+  };
 
   // renderNotificationFilters removed
 
@@ -2258,13 +2264,21 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
         </div>
       </div>
 
-{(['Paid', 'Partial'].includes(feeInfo.fee_status || '') && feeInfo.fee_paid_by_tal > 0) && (
-          <div className="success-banner" style={{marginBottom: '20px'}}>
-            ✅ <strong>Fee Verified!</strong> Your fee status is now <strong>{feeInfo.fee_status}</strong>. 
-            <br/>📝 <strong>Next Step:</strong> Update your <strong>total_educational_expenses</strong> in <em>Profile → Expenses tab</em> 
-            so it shows correctly in Admin Fee Tracking after next document verification.
-          </div>
-        )}
+      {(() => {
+          const latestFee = feeHistory[0] || {};
+          const status = latestFee.fee_status || feeInfo.fee_status || '';
+          const paid = latestFee.fee_paid_by_tal || feeInfo.fee_paid_by_tal || 0;
+          if (['Paid', 'Partial'].includes(status) && paid > 0) {
+            return (
+              <div className="success-banner" style={{marginBottom: '20px'}}>
+                ✅ <strong>Fee Verified!</strong> Your fee status is now <strong>{status}</strong>. 
+                <br/>📝 <strong>Next Step:</strong> Update your <strong>total_educational_expenses</strong> in <em>Profile → Expenses tab</em> 
+                so it shows correctly in Admin Fee Tracking after next document verification.
+              </div>
+            );
+          }
+          return null;
+        })()}
         {renderStatsBar()}
 
       <div className="section-block">
@@ -2305,6 +2319,15 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
         {/*<div className="hero-header" style={{ textAlign: 'center', padding: '1.25rem 1rem', background: 'linear-gradient(135deg, #7fc74a 0%, #6bb43f 100%)', color: 'white', borderRadius: '16px', marginBottom: '1.25rem' }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>💰</div>
         </div>*/}
+
+        {/* Educational Expenses Update Prompt */}
+        {latest && ['Paid', 'Partial'].includes(latest.fee_status) && latest.fee_paid_by_tal > 0 && (
+          <div className="success-banner" style={{marginBottom: '20px'}}>
+            ✅ <strong>Fee {latest.fee_status === 'Paid' ? 'Paid' : 'Partially Paid'}!</strong> Your fee status is now <strong>{latest.fee_status}</strong>. 
+            <br/>📝 <strong>Next Step:</strong> Please <strong>update your educational expenses</strong> in <em>Profile → Expenses tab</em> immediately 
+            so your current expenses reflect correctly in Admin Fee Tracking.
+          </div>
+        )}
 
         {/* Current Summary */}
         {latest && (
