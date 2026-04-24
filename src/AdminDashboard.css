@@ -418,39 +418,35 @@ html {
 
 .cards-row{
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: clamp(12px, 2vw, 24px);
   width: 100%;
   margin: 0;
   padding: 0;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1024px) {
   .cards-row {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 560px) {
   .cards-row {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .cards-row .card {
-    padding: clamp(16px, 6vw, 20px);
+    gap: 12px;
   }
 }
 
 .card {
   background: #fff;
-  padding: 20px;
+  padding: clamp(14px, 2vw, 20px);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(20,24,40,0.06);
   transition: transform 0.2s ease;
   position: relative;
-  min-width: clamp(250px, 85vw, 300px);
+  min-width: 0;
 }
 
 .card:hover {
@@ -693,6 +689,72 @@ html {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(20,24,40,0.04);
   flex-wrap: wrap;
+}
+
+/* Camp Master form responsive layout */
+.camp-master-form {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr 1.5fr auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.camp-master-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.camp-master-form input,
+.camp-master-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
+
+.camp-master-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.camp-master-form .btn.camp-add-btn {
+  height: 42px;
+  white-space: nowrap;
+  align-self: end;
+}
+
+@media (max-width: 1024px) {
+  .camp-master-form {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .camp-master-form .camp-name-field {
+    grid-column: 1 / -1;
+  }
+  .camp-master-form .camp-add-btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 600px) {
+  .camp-master-form {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .camp-master-form .camp-name-field,
+  .camp-master-form .camp-date-field,
+  .camp-master-form .camp-extra-field,
+  .camp-master-form .camp-add-btn {
+    grid-column: 1 / -1;
+  }
+  .camp-master-form .btn.camp-add-btn {
+    width: 100%;
+    justify-self: stretch;
+  }
 }
 
 .new-filters-grid {
@@ -1070,6 +1132,88 @@ html {
   flex-direction: column;
   gap: 24px;
 }
+
+/* Donor table compact styles to prevent horizontal scrolling */
+.donor-details-section .data-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.donor-details-section .data-table th,
+.donor-details-section .data-table td {
+  padding: 12px 10px !important;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.donor-details-section .data-table th {
+  font-size: 16px !important;
+  min-height: 48px !important;
+}
+
+/* Donor table column widths */
+.donor-details-section .data-table th:nth-child(1),
+.donor-details-section .data-table td:nth-child(1) { width: 16%; } /* Name */
+.donor-details-section .data-table th:nth-child(2),
+.donor-details-section .data-table td:nth-child(2) { width: 20%; } /* Email */
+.donor-details-section .data-table th:nth-child(3),
+.donor-details-section .data-table td:nth-child(3) { width: 10%; } /* Phone */
+.donor-details-section .data-table th:nth-child(4),
+.donor-details-section .data-table td:nth-child(4) { width: 10%; } /* Donor Type */
+.donor-details-section .data-table th:nth-child(5),
+.donor-details-section .data-table td:nth-child(5) { width: 11%; } /* Amount */
+.donor-details-section .data-table th:nth-child(6),
+.donor-details-section .data-table td:nth-child(6) { width: 10%; } /* Payment Method */
+.donor-details-section .data-table th:nth-child(7),
+.donor-details-section .data-table td:nth-child(7) { width: 11%; } /* Donation Date */
+.donor-details-section .data-table th:nth-child(8),
+.donor-details-section .data-table td:nth-child(8) { width: 12%; } /* Actions */
+
+/* Actions column flex wrapping */
+.donor-details-section .data-table td:nth-child(8) > div,
+.donor-details-section .data-table td:nth-child(8) .actions-flex {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.donor-details-section .data-table td .btn.small {
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 32px;
+  min-width: 0;
+}
+
+/* Responsive: further reduce padding on smaller screens */
+@media (max-width: 1024px) {
+  .donor-details-section .data-table th,
+  .donor-details-section .data-table td {
+    padding: 10px 8px !important;
+    font-size: 13px;
+  }
+  .donor-details-section .data-table th {
+    font-size: 15px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .donor-details-section {
+    padding: 16px;
+  }
+  .donor-details-section .data-table th,
+  .donor-details-section .data-table td {
+    padding: 8px 6px !important;
+    font-size: 12px;
+  }
+  .donor-details-section .data-table td .btn.small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
 .mapping-stats{
   display: grid;
   grid-template-columns: repeat(3, 1fr);
