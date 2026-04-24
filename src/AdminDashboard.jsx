@@ -1625,6 +1625,83 @@ await fetchFeeTrackingRecords();
 */
 
 
+const handleApprove = async (student) => {
+  try {
+    // Get full record first from admin_student_info table
+    const { data: record } = await supabase
+      .from('admin_student_info')
+      .select('*')
+      .eq('id', student.student_id)
+      .single();
+
+    if (!record) {
+      alert("❌ Record not found in admin_student_info");
+      return;
+    }
+
+    // Insert to eligible_students with ALL fields mapped
+    const { error: insertError } = await supabase
+      .from('eligible_students')
+      .insert({
+        student_id: student.student_id,
+        student_name: record.student_name || record.full_name || student.full_name,
+        full_name: record.full_name || student.full_name,
+        age: record.age || student.age,
+        camp_name: record.camp_name || student.campName,
+        camp_date: record.camp_date || student.campDate || null,
+        school: record.school || student.school,
+        prev_percent: record.prev_percent || student.prev_percent,
+        present_percent: record.present_percent || student.present_percent,
+        class: record.class || student.year,
+        email: record.email || student.email,
+        contact: record.contact || student.contact,
+        whatsapp: record.whatsapp || student.whatsapp,
+        student_contact: record.student_contact || student.student_contact,
+        scholarship: record.scholarship || student.scholarship,
+        has_scholarship: record.has_scholarship || student.has_scholarship,
+        does_work: record.does_work || student.does_work,
+        earning_members: record.earning_members || student.earning_members,
+        education: record.educationcategory || record.class || student.year,
+        volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
+        volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
+        created_at: record.created_at,
+        status: 'Eligible',
+        address: record.address,
+        camp: record.camp,
+        doc_verification_count: 0
+      });
+
+    if (insertError) {
+      console.error(insertError);
+      alert("❌ Failed to move to eligible: " + insertError.message);
+      return;
+    }
+
+    // Delete from admin_student_info
+    const { error: deleteError } = await supabase
+      .from('admin_student_info')
+      .delete()
+      .eq('id', student.student_id);
+
+    if (deleteError) {
+      console.error(deleteError);
+      alert("❌ Failed to remove from pending: " + deleteError.message);
+      return;
+    }
+
+    // Refresh lists
+    fetchStudents();
+    fetchEligibleStudents();
+    fetchEligibleCount();
+
+    alert("✅ Student moved to Eligible successfully!");
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error: " + err.message);
+  }
+};
+
 const handleMoveToEligible = async (student) => {
   try {
     const { error } = await supabase.rpc(
@@ -2614,9 +2691,9 @@ const handleEditDonor = (donor) => {
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => {
                                 if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                                // handleApprove(s);
-                              }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}} disabled>✅</button>
-                              <span className="tooltiptext">Approve (Coming Soon)</span>
+                                handleApprove(s);
+                              }} style={{backgroundColor: '#e8f5e8', color: '#2e7d32', borderColor: '#2e7d32'}}>✅</button>
+                              <span className="tooltiptext">Approve</span>
                             </div>
                             <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => {
@@ -2820,15 +2897,14 @@ const handleEditDonor = (donor) => {
                     </div>
                     <div className="modal-footer">
                         <button 
-                          className="btn" 
+                          className="btn primary" 
                           onClick={() => {
                             if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
-                            // handleApprove(viewNonEligibleStudent);
+                            handleMoveToEligible(viewNonEligibleStudent);
                             setViewNonEligibleStudent(null);
                           }}
-                          disabled
                         >
-                          Approve & Move to Eligible (Coming Soon)
+                          Approve & Move to Eligible
                         </button>
                       <button className="btn secondary" onClick={() => setViewNonEligibleStudent(null)}>Close</button>
                     </div>
