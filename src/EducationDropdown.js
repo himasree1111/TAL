@@ -1,6 +1,8 @@
 import React from "react";
 
 const EducationDropdown = ({ educationcategory, educationsubcategory, educationyear, educationcategory_custom, educationsubcategory_custom, educationyear_custom, onChange }) => {
+  const isOtherValue = (value) => String(value || "").trim().toLowerCase() === "other";
+
   // Education dropdown data with hierarchical structure
   const educationData = {
     "SCHOOL": {
@@ -82,11 +84,17 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
   };
 
   const educationCategories = Object.keys(educationData);
+  const showCategoryCustom = isOtherValue(educationcategory) || Boolean(educationcategory_custom);
+  const normalizedEducationCategory = showCategoryCustom ? "Other" : (educationcategory || "");
+  const showSubcategoryCustom = isOtherValue(educationsubcategory) || Boolean(educationsubcategory_custom);
+  const normalizedEducationSubcategory = showSubcategoryCustom ? "Other" : (educationsubcategory || "");
+  const showYearCustom = isOtherValue(educationyear) || Boolean(educationyear_custom);
+  const normalizedEducationYear = showYearCustom ? "Other" : (educationyear || "");
 
-  const currentData = educationData[educationcategory];
+  const currentData = educationData[normalizedEducationCategory];
   const hassubcategories = currentData && currentData.subcategories;
   const subcategories = hassubcategories && currentData.subcategories ? (Array.isArray(currentData.subcategories) ? currentData.subcategories : Object.keys(currentData.subcategories)) : [];
-  const years = hassubcategories && educationsubcategory && typeof currentData.subcategories === 'object' && currentData.subcategories[educationsubcategory] ? currentData.subcategories[educationsubcategory] : (currentData && currentData.years ? currentData.years : []);
+  const years = hassubcategories && normalizedEducationSubcategory && typeof currentData.subcategories === 'object' && currentData.subcategories[normalizedEducationSubcategory] ? currentData.subcategories[normalizedEducationSubcategory] : (currentData && currentData.years ? currentData.years : []);
 
   return (
     <div className="form-group">
@@ -94,7 +102,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
         <span className="field-label">Education Level<span className="required">*</span></span>
         <select
           name="educationcategory"
-          value={educationcategory || ""}
+          value={normalizedEducationCategory}
           onChange={onChange}
           required
         >
@@ -107,7 +115,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
         </select>
       </label>
 
-{(educationcategory === "Other" || educationcategory_custom) ? (
+{showCategoryCustom ? (
         <>
           <label style={{ marginTop: "12px" }}>
             <span className="field-label">Specify Education Level<span className="required">*</span></span>
@@ -150,7 +158,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
               <span className="field-label">Stream/Branch/Course<span className="required">*</span></span>
               <select
                 name="educationsubcategory"
-                value={educationsubcategory || ""}
+                value={normalizedEducationSubcategory}
                 onChange={onChange}
                 required
               >
@@ -164,7 +172,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
             </label>
           )}
 
-          {educationsubcategory === "Other" && (
+          {showSubcategoryCustom && (
             <label style={{ marginTop: "12px" }}>
               <span className="field-label">Specify Stream/Branch/Course<span className="required">*</span></span>
               <input
@@ -178,12 +186,12 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
             </label>
           )}
 
-          {educationcategory && (!hassubcategories || educationsubcategory) && (
+          {normalizedEducationCategory && (!hassubcategories || normalizedEducationSubcategory) && (
             <label style={{ marginTop: "12px" }}>
               <span className="field-label">Currently Pursuing Year<span className="required">*</span></span>
               <select
                 name="educationyear"
-                value={educationyear || ""}
+                value={normalizedEducationYear}
                 onChange={onChange}
                 required
               >
@@ -197,7 +205,7 @@ const EducationDropdown = ({ educationcategory, educationsubcategory, educationy
             </label>
           )}
 
-          {educationyear === "Other" && (
+          {showYearCustom && (
             <label style={{ marginTop: "12px" }}>
               <span className="field-label">Specify Academic Year<span className="required">*</span></span>
               <input

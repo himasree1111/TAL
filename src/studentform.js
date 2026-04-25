@@ -500,9 +500,15 @@ const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Handle custom inputs
     if (name === "educationcategory_custom" || name === "educationsubcategory_custom" || name === "educationyear_custom") {
-      const categoryValue = formData.educationcategory_custom;
-      const subcategoryValue = formData.educationsubcategory_custom;
-      const yearValue = formData.educationyear_custom;
+      const nextEducationData = {
+        educationcategory_custom: formData.educationcategory_custom,
+        educationsubcategory_custom: formData.educationsubcategory_custom,
+        educationyear_custom: formData.educationyear_custom,
+        [name]: value
+      };
+      const categoryValue = nextEducationData.educationcategory_custom;
+      const subcategoryValue = nextEducationData.educationsubcategory_custom;
+      const yearValue = nextEducationData.educationyear_custom;
       const subcategoryPart = subcategoryValue ? ` - ${subcategoryValue}` : "";
       const combinedClass = yearValue ? `${categoryValue}${subcategoryPart} - ${yearValue}` : "";
       setFormData(prev => ({ ...prev, [name]: value, class: combinedClass }));
@@ -788,41 +794,60 @@ if (data.academic_achievements === false) updatedData.academic_achievements_choi
         "Other"
       ];
 
+      const categoryRaw = (data.educationcategory || "").trim();
+      const subcategoryRaw = (data.educationsubcategory || "").trim();
+      const yearRaw = (data.educationyear || "").trim();
+      const classRaw = (data.class || "").trim();
+      const classParts = classRaw ? classRaw.split(" - ").map((part) => part.trim()).filter(Boolean) : [];
+      const parsedCategoryFromClass = classParts[0] || "";
+      const parsedSubcategoryFromClass = classParts.length >= 3 ? classParts[1] : "";
+      const parsedYearFromClass = classParts.length >= 3
+        ? classParts.slice(2).join(" - ")
+        : (classParts.length === 2 ? classParts[1] : "");
+
       const isOtherEducationCategory =
-        !predefinedCategories.includes(data.educationcategory || "") ||
-        !!data.educationcategory_custom;
+        categoryRaw.toLowerCase() === "other" ||
+        (categoryRaw && !predefinedCategories.includes(categoryRaw));
 
       // Education category restoration
       if (isOtherEducationCategory) {
         updatedData.educationcategory = "Other";
-        updatedData.educationcategory_custom = data.educationcategory_custom || data.educationcategory || "";
+        updatedData.educationcategory_custom = categoryRaw.toLowerCase() === "other" ? parsedCategoryFromClass : categoryRaw;
       } else {
-        updatedData.educationcategory = data.educationcategory || "";
+        updatedData.educationcategory = categoryRaw;
         updatedData.educationcategory_custom = "";
       }
 
       // If category is Other, stream/year must also be restored into custom fields.
       if (isOtherEducationCategory) {
         updatedData.educationsubcategory = "Other";
-        updatedData.educationsubcategory_custom = data.educationsubcategory_custom || data.educationsubcategory || "";
+        updatedData.educationsubcategory_custom = subcategoryRaw.toLowerCase() === "other"
+          ? parsedSubcategoryFromClass
+          : subcategoryRaw;
         updatedData.educationyear = "Other";
-        updatedData.educationyear_custom = data.educationyear_custom || data.educationyear || "";
+        updatedData.educationyear_custom = yearRaw.toLowerCase() === "other"
+          ? parsedYearFromClass
+          : yearRaw;
       } else {
         // Education subcategory restoration
-        if (data.educationsubcategory_custom || !data.educationsubcategory || data.educationsubcategory === "Other") {
+        if (!subcategoryRaw || subcategoryRaw.toLowerCase() === "other") {
           updatedData.educationsubcategory = "Other";
-          updatedData.educationsubcategory_custom = data.educationsubcategory_custom || data.educationsubcategory || "";
+          updatedData.educationsubcategory_custom = subcategoryRaw.toLowerCase() === "other"
+            ? parsedSubcategoryFromClass
+            : "";
         } else {
-          updatedData.educationsubcategory = data.educationsubcategory || "";
+          updatedData.educationsubcategory = subcategoryRaw;
           updatedData.educationsubcategory_custom = "";
         }
 
         // Education year restoration
-        if (data.educationyear_custom || !data.educationyear || data.educationyear === "Other") {
+        if (!yearRaw || yearRaw.toLowerCase() === "other") {
           updatedData.educationyear = "Other";
-          updatedData.educationyear_custom = data.educationyear_custom || data.educationyear || "";
+          updatedData.educationyear_custom = yearRaw.toLowerCase() === "other"
+            ? parsedYearFromClass
+            : "";
         } else {
-          updatedData.educationyear = data.educationyear || "";
+          updatedData.educationyear = yearRaw;
           updatedData.educationyear_custom = "";
         }
       }
@@ -947,18 +972,16 @@ full_name: fullName,
 
   educationcategory:
     formData.educationcategory === "Other"
-      ? formData.educationcategory_custom
-      : formData.educationcategory || null,
-
+      ? "Other"
+      : (formData.educationcategory || null),
   educationsubcategory:
     formData.educationsubcategory === "Other"
-      ? formData.educationsubcategory_custom
-      : formData.educationsubcategory || null,
-
+      ? "Other"
+      : (formData.educationsubcategory || null),
   educationyear:
     formData.educationyear === "Other"
-      ? formData.educationyear_custom
-      : formData.educationyear || null,
+      ? "Other"
+      : (formData.educationyear || null),
 
   school: formData.school,
   branch: formData.branch || null,
