@@ -811,22 +811,20 @@ const calculatePriority = useCallback((s) => {
         // New filters
         if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
         if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
-        // Toppers filter removed - now handled in sorting
         if (!filterAchievementMatch(s)) return false;
         if (newFilters.singleParent && !normalizeBoolean(s.is_single_parent)) return false;
         if (newFilters.specialRemarks && !hasText(s.special_remarks)) return false;
         return true;
       })
-      .map(s => ({...s, priority: calculatePriority(s), avgPercent: ((parseFloat(s.prev_percent || 0) + parseFloat(s.present_percent || 0)) / 2)}))
+      .map(s => ({...s, avgPercent: ((parseFloat(s.prev_percent || 0) + parseFloat(s.present_percent || 0)) / 2)}))
       .sort((a, b) => {
         // If toppers filter is ON, sort by average percentage (highest first)
         if (newFilters.toppers) {
           return b.avgPercent - a.avgPercent;
         }
-        // Otherwise sort by priority
-        return b.priority - a.priority;
+        return 0;
       });
-}, [students, newFilters, calculatePriority]);
+}, [students, newFilters]);
 
 // After filtering, log the result
 useEffect(() => {
@@ -2732,9 +2730,8 @@ const handleEditDonor = (donor) => {
                       <th>Email</th>
                       <th>Education</th>
                       <th>Contact</th>
-                      <th>CampName</th>
-                      <th>Priority</th>
-                      <th>Percentage</th> {/* Academic performance */}
+                              <th>CampName</th>
+                              <th>Percentage</th> {/* Academic performance */}
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -2745,14 +2742,8 @@ const handleEditDonor = (donor) => {
                         <td>{s.email}</td>
                         <td>{s.course || '—'}</td>
                         <td className="nowrap-cell">{s.contact || '—'}</td>
-                        <td>{s.campName || '—'}</td>
-                        <td className={`priority-cell priority-${s.priority >= 80 ? 'high' : s.priority >= 50 ? 'medium' : 'low'}`}>
-                          <div><strong>{Math.round(s.priority)}</strong>/100</div>
-                          <div className="priority-label">
-                            {s.priority >= 80 ? 'High Need' : s.priority >= 50 ? 'Medium Need' : 'Low Need'}
-                          </div>
-                        </td>
-                        <td>{getAvgPercentage(s)}</td>
+                            <td>{s.campName || '—'}</td>
+                            <td>{getAvgPercentage(s)}</td>
                         <td>
                           <div className="actions-flex" style={{justifyContent: 'center', gap: '6px'}}>
                             <div className="tooltip">
