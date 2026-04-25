@@ -2387,6 +2387,38 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
                             return;
                           }
 
+                          // Double verification: Show file details and ask for confirmation
+                          const fileDetails = `
+File Name: ${file.name}
+File Type: ${file.type}
+File Size: ${(file.size/1024/1024).toFixed(2)} MB
+
+Please verify this is the correct fee receipt file before uploading.`;
+
+                          const isConfirmed = window.confirm(fileDetails + '\n\nClick OK to confirm upload, or Cancel to select a different file.');
+                          
+                          if (!isConfirmed) {
+                            // User cancelled - clear the file input
+                            e.target.value = '';
+                            return;
+                          }
+
+                          // For image files, show a preview confirmation
+                          if (file.type.startsWith('image/')) {
+                            const imageUrl = URL.createObjectURL(file);
+                            const previewConfirmed = window.confirm(
+                              'File preview loaded.\n\n'
+                              + 'If this is NOT the correct file, click Cancel now.\n'
+                              + 'Click OK to proceed with upload.'
+                            );
+                            URL.revokeObjectURL(imageUrl);
+                            
+                            if (!previewConfirmed) {
+                              e.target.value = '';
+                              return;
+                            }
+                          }
+
                           try {
                             setError('');
                             const safeEmail = studentEmail.replace(/[^a-zA-Z0-9@._-]/g, '_');
@@ -2857,3 +2889,4 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
   );
 };
 export default StudentDashboard;
+

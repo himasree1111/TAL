@@ -1,4 +1,5 @@
 
+/* eslint-disable no-unused-vars */
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
@@ -57,15 +58,17 @@ export default function AdminDashboard() {
   const [systemNotifications, setSystemNotifications] = useState(true);
 
   const [eligibleStudents, setEligibleStudents] = useState([]);
-  const [eligibleStudentsRaw, setEligibleStudentsRaw] = useState([]);
+  const [_eligibleStudentsRaw, setEligibleStudentsRaw] = useState([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
-  const [eligibleCount, setEligibleCount] = useState(0);
+  const [_eligibleCount, setEligibleCount] = useState(0);
   const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
   const [loadingNonEligible, setLoadingNonEligible] = useState(false);
-  const [nonEligibleCount, setNonEligibleCount] = useState(0);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [_nonEligibleCount, setNonEligibleCount] = useState(0);
+  const [_successMessage, _setSuccessMessage] = useState('');
   const [showEligibleTable, setShowEligibleTable] = useState(false);
   const [showNonEligibleTable, setShowNonEligibleTable] = useState(false);
+  const [showFeeReceiptsReportTable, setShowFeeReceiptsReportTable] = useState(false);
+  const [showDonorContributionsReportTable, setShowDonorContributionsReportTable] = useState(false);
   const [showAddDonorModal, setShowAddDonorModal] = useState(false);
   const [campOptions, setCampOptions] = useState([]);
   const [loadingCampOptions, setLoadingCampOptions] = useState(false);
@@ -109,9 +112,9 @@ export default function AdminDashboard() {
   const [deletingId, setDeletingId] = useState(null);
 
   // Real-time monthly stats for Students Under Review
-  const [studentsThisMonth, setStudentsThisMonth] = useState(0);
-  const [studentsLastMonth, setStudentsLastMonth] = useState(0);
-  const [studentTrend, setStudentTrend] = useState({ percent: 0, direction: 'neutral', label: '— from last month' });
+  const [_studentsThisMonth, setStudentsThisMonth] = useState(0);
+  const [_studentsLastMonth, setStudentsLastMonth] = useState(0);
+  const [_studentTrend, setStudentTrend] = useState({ percent: 0, direction: 'neutral', label: '— from last month' });
 
   // Notification list handlers
   const handleToggleNotificationsList = async () => {
@@ -823,7 +826,7 @@ const calculatePriority = useCallback((s) => {
         // Otherwise sort by priority
         return b.priority - a.priority;
       });
-}, [students, newFilters, calculatePriority, getMaxPercent]);
+}, [students, newFilters, calculatePriority]);
 
 // After filtering, log the result
 useEffect(() => {
@@ -2332,6 +2335,29 @@ const handleEditDonor = (donor) => {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadDonorContributionsReport = () => {
+    if (donors.length === 0) {
+      alert('No donor data to export');
+      return;
+    }
+
+    const rows = [
+      'donor_id,donor_name,amount,donation_date,camp_name,email,contact',
+      ...donors.map(d => 
+        `"${d.id || ''}","${d.name || ''}",${d.amount || 0},"${d.donation_date || ''}","${d.camp_name || ''}","${d.email || ''}","${d.contact || ''}"`
+      )
+    ];
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'donor-contributions-report.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('Donor contributions report downloaded successfully!');
+  };
+
   const handleDownloadSpecificReport = (key) => {
     const blob = new Blob([key + ' report (demo)'], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -3403,11 +3429,19 @@ const handleEditDonor = (donor) => {
                         <th>Education Documents</th>
                         <th>Personal Documents</th>
                         <th>Achievements Documents</th>
+                        <th>Last Fee Paid Date</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {eligibleStudents.map((student) => (
+                      {eligibleStudents.map((student) => {
+                        // Find the latest fee tracking record for this student
+                        const feeRecord = getFeeTrackingRecord(student);
+                        const lastFeePaidDate = feeRecord?.fee_paid_by_tal > 0 
+                          ? feeRecord?.updated_at || feeRecord?.created_at 
+                          : null;
+                        
+                        return (
                         <tr key={student.id}>
                           <td>{student.student_name || student.full_name || '—'}</td>
                           <td>{student.email || '—'}</td>
@@ -3439,6 +3473,27 @@ const handleEditDonor = (donor) => {
                               {student.extracurricular_count || 0} files
                             </span>
                           </td>
+                          <td>
+                            {lastFeePaidDate ? (
+                              <div style={{ fontSize: '12px' }}>
+                                <div style={{ fontWeight: '600', color: '#16a34a' }}>
+                                  {new Date(lastFeePaidDate).toLocaleDateString('en-IN', { 
+                                    day: '2-digit', 
+                                    month: 'short', 
+                                    year: 'numeric' 
+                                  })}
+                                </div>
+                                <div style={{ color: '#6b7280', fontSize: '11px' }}>
+                                  {new Date(lastFeePaidDate).toLocaleTimeString('en-IN', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>No fee paid</span>
+                            )}
+                          </td>
                           <td className="actions-flex">
                             <button
                               className="btn small icon-only view-btn"
@@ -3457,7 +3512,8 @@ const handleEditDonor = (donor) => {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -4271,12 +4327,30 @@ const handleEditDonor = (donor) => {
                   <h4>Donor Contributions</h4>
                   <div className="report-meta">
                     <p>Total Donors: <strong>{donors.length}</strong></p>
+                    <p>Total Amount: <strong>₹{donors.reduce((sum, d) => sum + (d.amount || 0), 0).toLocaleString()}</strong></p>
                   </div>
                   <div className="chart-container">
-                    <div className="chart-placeholder">Chart Coming Soon</div>
+                    <div className="chart-placeholder">
+                      {selectedReportCampScope
+                        ? `Donor contributions report is ready for export.`
+                        : 'Select a camp/date pair to scope this report.'}
+                    </div>
                   </div>
                   <div className="report-actions">
-                    <button className="btn small" onClick={() => handleDownloadSpecificReport('donor')}>Download Report</button>
+                    <button 
+                      className="btn small view-btn" 
+                      onClick={() => {
+                        setShowFeeReceiptsReportTable(false);
+                        setShowDonorContributionsReportTable(true);
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+                      }}
+                      disabled={!selectedReportCampScope}
+                    >
+                      View Data
+                    </button>
+                    <button className="btn small" onClick={() => handleDownloadDonorContributionsReport()}>
+                      Download Report
+                    </button>
                   </div>
                 </div>
                 {/* Eligible Students Report */}
@@ -4456,6 +4530,126 @@ const handleEditDonor = (donor) => {
                       </tbody>
                     </table>
                   )}
+                </div>
+              )}
+
+              {/* Fee Receipts Report Table */}
+              {showFeeReceiptsReportTable && (
+                <div className="table-wrap" style={{marginTop: '24px'}}>
+                  <h3>
+                    Fee Receipts Report Data ({scopedFeeReceiptRecords.length} records)
+                  </h3>
+                  {scopedFeeReceiptRecords.length === 0 ? (
+                    <div style={{padding: '1.25rem', color: '#666'}}>
+                      No fee receipts found for {selectedReportCampScope.campName} on {new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}.
+                    </div>
+                  ) : (
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Student Public ID</th>
+                          <th>Student Name</th>
+                          <th>Email</th>
+                          <th>Total Expenses</th>
+                          <th>Paid by TAL</th>
+                          <th>Balance</th>
+                          <th>Status</th>
+                          <th>Voucher Uploaded At</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scopedFeeReceiptRecords.map((record) => {
+                          const requiredFee = parseMoney(record.total_educational_expenses);
+                          const paidAmount = parseMoney(record.fee_paid_by_tal);
+                          const balance = Math.max(requiredFee - paidAmount, 0);
+                          return (
+                            <tr key={record.id}>
+                              <td>{record.student_public_id || '—'}</td>
+                              <td>{record.student_name || '—'}</td>
+                              <td>{record.email || '—'}</td>
+                              <td>₹{requiredFee.toLocaleString()}</td>
+                              <td>₹{paidAmount.toLocaleString()}</td>
+                              <td>₹{balance.toLocaleString()}</td>
+                              <td>{record.fee_status || 'Pending'}</td>
+                              <td>
+                                {record.voucher_uploaded_at 
+                                  ? new Date(record.voucher_uploaded_at).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                  : '—'
+                                }
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                  <div style={{marginTop: '1rem', display: 'flex', gap: '12px'}}>
+                    <button className="btn primary" onClick={handleDownloadFeeReceiptsReport}>📥 Download CSV</button>
+                    <button className="btn" onClick={() => setShowFeeReceiptsReportTable(false)}>✕ Close</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Donor Contributions Report Table */}
+              {showDonorContributionsReportTable && (
+                <div className="table-wrap" style={{marginTop: '24px'}}>
+                  <h3>
+                    Donor Contributions Report Data ({donors.length} donors)
+                  </h3>
+                  {donors.length === 0 ? (
+                    <div style={{padding: '1.25rem', color: '#666'}}>
+                      No donor contributions available for reporting.
+                    </div>
+                  ) : (
+                    <>
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Donor ID</th>
+                            <th>Donor Name</th>
+                            <th>Amount</th>
+                            <th>Donation Date</th>
+                            <th>Camp Name</th>
+                            <th>Email</th>
+                            <th>Contact</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {donors.map((donor) => (
+                            <tr key={donor.id}>
+                              <td>#{donor.id}</td>
+                              <td>{donor.name || '—'}</td>
+                              <td>₹{(donor.amount || 0).toLocaleString()}</td>
+                              <td>
+                                {donor.donation_date 
+                                  ? new Date(donor.donation_date).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                  : '—'
+                                }
+                              </td>
+                              <td>{donor.camp_name || '—'}</td>
+                              <td>{donor.email || '—'}</td>
+                              <td>{donor.contact || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+                        <strong>Summary:</strong> Total {donors.length} donor(s) contributed ₹{donors.reduce((sum, d) => sum + (d.amount || 0), 0).toLocaleString()}
+                      </div>
+                    </>
+                  )}
+                  <div style={{marginTop: '1rem', display: 'flex', gap: '12px'}}>
+                    <button className="btn primary" onClick={() => handleDownloadDonorContributionsReport()}>📥 Download CSV</button>
+                    <button className="btn" onClick={() => setShowDonorContributionsReportTable(false)}>✕ Close</button>
+                  </div>
                 </div>
               )}
             </section>
@@ -4998,3 +5192,8 @@ const handleEditDonor = (donor) => {
     </div>
   );
 }
+
+
+
+
+
