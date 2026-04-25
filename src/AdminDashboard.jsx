@@ -1671,74 +1671,27 @@ await fetchFeeTrackingRecords();
 
 const handleApprove = async (student) => {
   try {
-    // Get full record first from admin_student_info table
-    const { data: record } = await supabase
+    // Update status to 'Eligible' - trigger will handle moving to eligible_students table
+    const { error: updateError } = await supabase
       .from('admin_student_info')
-      .select('*')
-      .eq('id', student.student_id)
-      .single();
-
-    if (!record) {
-      alert("❌ Record not found in admin_student_info");
-      return;
-    }
-
-    // Insert to eligible_students with ALL fields mapped
-    const { error: insertError } = await supabase
-      .from('eligible_students')
-      .insert({
-        student_id: student.student_id,
-        student_name: record.student_name || record.full_name || student.full_name,
-        full_name: record.full_name || student.full_name,
-        age: record.age || student.age,
-        camp_name: record.camp_name || student.campName,
-        camp_date: record.camp_date || student.campDate || null,
-        school: record.school || student.school,
-        prev_percent: record.prev_percent || student.prev_percent,
-        present_percent: record.present_percent || student.present_percent,
-        class: record.class || student.year,
-        email: record.email || student.email,
-        contact: record.contact || student.contact,
-        whatsapp: record.whatsapp || student.whatsapp,
-        student_contact: record.student_contact || student.student_contact,
-        scholarship: record.scholarship || student.scholarship,
-        has_scholarship: record.has_scholarship || student.has_scholarship,
-        does_work: record.does_work || student.does_work,
-        earning_members: record.earning_members || student.earning_members,
-        education: record.educationcategory || record.class || student.year,
-        volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
-        volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
-        created_at: record.created_at,
-        status: 'Eligible',
-        address: record.address,
-        camp: record.camp,
-        doc_verification_count: 0
-      });
-
-    if (insertError) {
-      console.error(insertError);
-      alert("❌ Failed to move to eligible: " + insertError.message);
-      return;
-    }
-
-    // Delete from admin_student_info
-    const { error: deleteError } = await supabase
-      .from('admin_student_info')
-      .delete()
+      .update({ status: 'Eligible' })
       .eq('id', student.student_id);
 
-    if (deleteError) {
-      console.error(deleteError);
-      alert("❌ Failed to remove from pending: " + deleteError.message);
+    if (updateError) {
+      console.error(updateError);
+      alert("❌ Failed to approve student: " + updateError.message);
       return;
     }
 
-    // Refresh lists
-    fetchStudents();
-    fetchEligibleStudents();
-    fetchEligibleCount();
+    // Remove from UI instantly
+    setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
 
-    alert("✅ Student moved to Eligible successfully!");
+    // Refresh lists in background
+    await fetchStudents();
+    await fetchEligibleStudents();
+    await fetchEligibleCount();
+
+    alert("✅ Student approved and moved to Eligible successfully!");
 
   } catch (err) {
     console.error(err);
@@ -1776,69 +1729,23 @@ const handleMoveToEligible = async (student) => {
 
 const handleNotApprove = async (student) => {
   try {
-    // Get full record first from admin_student_info table
-    const { data: record } = await supabase
+    // Update status to 'Not Eligible' - trigger will handle moving to non_eligible_students table
+    const { error: updateError } = await supabase
       .from('admin_student_info')
-      .select('*')
-      .eq('id', student.student_id)
-      .single();
-
-    if (!record) {
-      alert("❌ Record not found in admin_student_info");
-      return;
-    }
-
-    // Insert to non_eligible_students with ALL fields mapped
-    const { error: insertError } = await supabase
-      .from('non_eligible_students')
-      .insert({
-        student_id: student.student_id,
-        student_name: record.student_name || record.full_name || student.full_name,
-        full_name: record.full_name || student.full_name,
-        age: record.age || student.age,
-        camp_name: record.camp_name || student.campName,
-        camp_date: record.camp_date || student.campDate || null,
-        school: record.school || student.school,
-        prev_percent: record.prev_percent || student.prev_percent,
-        present_percent: record.present_percent || student.present_percent,
-        class: record.class || student.year,
-        email: record.email || student.email,
-        contact: record.contact || student.contact,
-        whatsapp: record.whatsapp || student.whatsapp,
-        student_contact: record.student_contact || student.student_contact,
-        scholarship: record.scholarship || student.scholarship,
-        has_scholarship: record.has_scholarship || student.has_scholarship,
-        does_work: record.does_work || student.does_work,
-        earning_members: record.earning_members || student.earning_members,
-        education: record.educationcategory || record.class || student.year,
-        volunteer_name: record.volunteer_email || record.volunteer_name || 'Admin',
-        volunteer_contact: record.volunteer_contact || record.volunteer_phone || record.volunteer_email || 'N/A',
-        created_at: record.created_at,
-        status: 'Not Eligible',
-        address: record.address,
-        camp: record.camp
-      });
-
-    if (insertError) {
-      console.error(insertError);
-      alert("❌ Failed to move to non-eligible: " + insertError.message);
-      return;
-    }
-
-    // Delete from admin_student_info
-    const { error: deleteError } = await supabase
-      .from('admin_student_info')
-      .delete()
+      .update({ status: 'Not Eligible' })
       .eq('id', student.student_id);
 
-    if (deleteError) {
-      console.error(deleteError);
-      alert("❌ Failed to remove from pending: " + deleteError.message);
+    if (updateError) {
+      console.error(updateError);
+      alert("❌ Failed to reject student: " + updateError.message);
       return;
     }
 
-    // Refresh list
-    fetchStudents();
+    // Remove from UI instantly
+    setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
+
+    // Refresh list in background
+    await fetchStudents();
 
     alert("✅ Student moved to Non-Eligible successfully!");
 
