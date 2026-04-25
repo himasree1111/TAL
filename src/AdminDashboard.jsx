@@ -1670,6 +1670,9 @@ await fetchFeeTrackingRecords();
 
 
 const handleApprove = async (student) => {
+  // Remove from UI instantly for better UX
+  setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
+  
   try {
     // Update status to 'Eligible' - trigger will handle moving to eligible_students table
     const { error: updateError } = await supabase
@@ -1680,22 +1683,22 @@ const handleApprove = async (student) => {
     if (updateError) {
       console.error(updateError);
       alert("❌ Failed to approve student: " + updateError.message);
+      // Revert UI change if database operation failed
+      await fetchStudents();
       return;
     }
 
-    // Remove from UI instantly
-    setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
-
-    // Refresh lists in background
-    await fetchStudents();
-    await fetchEligibleStudents();
-    await fetchEligibleCount();
+    // Refresh eligible students count in background (don't block UI)
+    fetchEligibleStudents();
+    fetchEligibleCount();
 
     alert("✅ Student approved and moved to Eligible successfully!");
 
   } catch (err) {
     console.error(err);
     alert("❌ Error: " + err.message);
+    // Revert UI change if error occurred
+    await fetchStudents();
   }
 };
 
@@ -1728,6 +1731,9 @@ const handleMoveToEligible = async (student) => {
 
 
 const handleNotApprove = async (student) => {
+  // Remove from UI instantly for better UX
+  setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
+  
   try {
     // Update status to 'Not Eligible' - trigger will handle moving to non_eligible_students table
     const { error: updateError } = await supabase
@@ -1738,20 +1744,18 @@ const handleNotApprove = async (student) => {
     if (updateError) {
       console.error(updateError);
       alert("❌ Failed to reject student: " + updateError.message);
+      // Revert UI change if database operation failed
+      await fetchStudents();
       return;
     }
-
-    // Remove from UI instantly
-    setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
-
-    // Refresh list in background
-    await fetchStudents();
 
     alert("✅ Student moved to Non-Eligible successfully!");
 
   } catch (err) {
     console.error(err);
     alert("Error: " + err.message);
+    // Revert UI change if error occurred
+    await fetchStudents();
   }
 };
 
@@ -5099,6 +5103,8 @@ const handleEditDonor = (donor) => {
     </div>
   );
 }
+
+
 
 
 
