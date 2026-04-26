@@ -112,22 +112,11 @@ export default function VolunteerLogin() {
       toast.error("Enter email first");
       return;
     }
-
-    const redirectUrl =
-      process.env.REACT_APP_RESET_PASSWORD_URL ||
-      window.location.origin + "/reset-password?role=volunteer";
-    console.log("Volunteer reset redirect URL:", redirectUrl);
-
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: redirectUrl,
+      redirectTo: window.location.origin + "/reset-password",
     });
-
-    if (error) {
-      console.error("resetPasswordForEmail error:", error);
-      toast.error(error.message);
-    } else {
-      toast.success("Reset email sent");
-    }
+    if (error) toast.error(error.message);
+    else toast.success("Reset email sent");
   };
 
   return (
@@ -227,3 +216,4 @@ export default function VolunteerLogin() {
     </div>
   );
 }
+

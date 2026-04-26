@@ -22,32 +22,51 @@ export default function ResetPassword() {
   useEffect(() => {
     const init = async () => {
       try {
+        console.log("Reset page loaded. Full URL:", window.location.href);
+        console.log("Search params:", window.location.search);
+        console.log("Hash:", window.location.hash);
+
+        // PKCE flow: code is in query params
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get("code");
+        console.log("Code from URL:", code);
 
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          console.log("Attempting PKCE exchange with code...");
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
             console.error("exchangeCodeForSession error:", error);
             toast.error("Invalid or expired reset link");
+          } else {
+            console.log("PKCE exchange successful:", data);
           }
-        } else if (window.location.hash.includes("access_token")) {
+        }
+        // Implicit flow: tokens are in hash fragment
+        else if (window.location.hash.includes("access_token")) {
+          console.log("Attempting implicit flow with hash tokens...");
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           const access_token = hashParams.get("access_token");
           const refresh_token = hashParams.get("refresh_token");
+          console.log("Access token exists:", !!access_token);
+          console.log("Refresh token exists:", !!refresh_token);
           if (access_token && refresh_token) {
-            const { error } = await supabase.auth.setSession({
+            const { data, error } = await supabase.auth.setSession({
               access_token,
               refresh_token,
             });
             if (error) {
               console.error("setSession error:", error);
               toast.error("Invalid or expired reset link");
+            } else {
+              console.log("Implicit flow session set:", data);
             }
           }
+        } else {
+          console.log("No code or tokens found in URL");
         }
 
         const { data } = await supabase.auth.getSession();
+        console.log("Session after init:", data.session ? "EXISTS" : "NONE");
         setHasSession(!!data.session);
       } catch (err) {
         console.error("Session init error:", err);
@@ -60,6 +79,9 @@ export default function ResetPassword() {
     init();
   }, []);
 
+  /**
+   * Validate password strength
+   */
   const validatePassword = (value) => {
     const errors = [];
     if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
@@ -74,6 +96,7 @@ export default function ResetPassword() {
     e.preventDefault();
     setShowErrors(true);
 
+    // Check session on submit
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       toast.error("No valid session found. Please use the reset link from your email.");
@@ -94,21 +117,28 @@ export default function ResetPassword() {
     setIsSubmitting(true);
 
     try {
+      // Update Supabase auth user password
       const { error: authError } = await supabase.auth.updateUser({ password });
       if (authError) throw authError;
 
+      // Also update admins table password if role is admin
       if (role === "admin") {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.user?.email) {
           const { error: adminError } = await supabase
             .from("admins")
             .update({ password: password })
             .eq("email", session.user.email);
-          if (adminError) console.error("Failed to update admins table:", adminError);
+
+          if (adminError)
+            console.error("Failed to update admins table:", adminError);
         }
       }
 
       toast.success("Password updated successfully!");
+
       await supabase.auth.signOut();
 
       setTimeout(() => {
@@ -116,8 +146,6 @@ export default function ResetPassword() {
           navigate("/adminlogin");
         } else if (role === "student") {
           navigate("/student-login");
-        } else if (role === "volunteer") {
-          navigate("/volunteerlogin");
         } else {
           navigate("/volunteerlogin");
         }
@@ -130,7 +158,8 @@ export default function ResetPassword() {
   };
 
   const currentPasswordErrors = showErrors ? validatePassword(password) : [];
-  const passwordsMatch = password && confirmPassword && password === confirmPassword;
+  const passwordsMatch =
+    password && confirmPassword && password === confirmPassword;
 
   if (loading) {
     return (
@@ -153,11 +182,12 @@ export default function ResetPassword() {
 
         {!hasSession && (
           <p style={{ color: "#ef4444", fontSize: "14px", marginBottom: "15px" }}>
-            Invalid or expired link. Please use the reset link from your email.
+            ⚠️ Invalid or expired link. Please use the reset link from your email.
           </p>
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* New Password */}
           <div style={{ position: "relative", marginBottom: "15px" }}>
             <input
               type={showPassword ? "text" : "password"}
@@ -190,6 +220,7 @@ export default function ResetPassword() {
             </span>
           </div>
 
+          {/* Password Requirements */}
           {currentPasswordErrors.length > 0 && (
             <div className="password-requirements" aria-live="polite">
               <p className="password-requirements-title">Password must include</p>
@@ -201,6 +232,7 @@ export default function ResetPassword() {
             </div>
           )}
 
+          {/* Confirm Password */}
           <div style={{ position: "relative", marginBottom: "15px" }}>
             <input
               type={showConfirmPassword ? "text" : "password"}
@@ -208,7 +240,9 @@ export default function ResetPassword() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={isSubmitting}
-              className={confirmPassword && !passwordsMatch ? "input-error" : ""}
+              className={
+                confirmPassword && !passwordsMatch ? "input-error" : ""
+              }
               style={{
                 padding: "10px 42px 10px 10px",
                 margin: "10px 0",
@@ -233,6 +267,7 @@ export default function ResetPassword() {
             </span>
           </div>
 
+          {/* Password Match Indicator */}
           {confirmPassword && passwordsMatch && (
             <p style={{ color: "#10b981", fontSize: "12px", marginBottom: "10px" }}>
               ✓ Passwords match
@@ -245,6 +280,7 @@ export default function ResetPassword() {
             </p>
           )}
 
+          {/* Submit - ALWAYS clickable, session check happens on submit */}
           <button
             type="submit"
             disabled={isSubmitting || currentPasswordErrors.length > 0}
@@ -252,8 +288,14 @@ export default function ResetPassword() {
               padding: "10px 20px",
               width: "100%",
               marginTop: "20px",
-              opacity: isSubmitting || currentPasswordErrors.length > 0 ? 0.6 : 1,
-              cursor: isSubmitting || currentPasswordErrors.length > 0 ? "not-allowed" : "pointer",
+              opacity:
+                isSubmitting || currentPasswordErrors.length > 0
+                  ? 0.6
+                  : 1,
+              cursor:
+                isSubmitting || currentPasswordErrors.length > 0
+                  ? "not-allowed"
+                  : "pointer",
             }}
           >
             {isSubmitting ? "Updating..." : "Update Password"}
