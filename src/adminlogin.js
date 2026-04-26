@@ -106,12 +106,21 @@ export default function AdminLogin() {
       return;
     }
 
+    const redirectUrl =
+      process.env.REACT_APP_RESET_PASSWORD_URL ||
+      window.location.origin + "/reset-password?role=admin";
+    console.log("Admin reset redirect URL:", redirectUrl);
+
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin + "/reset-password",
+      redirectTo: redirectUrl,
     });
 
-    if (error) toast.error(error.message);
-    else toast.success("Password reset email sent");
+    if (error) {
+      console.error("resetPasswordForEmail error:", error);
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset email sent");
+    }
   };
 
   return (
@@ -194,4 +203,3 @@ export default function AdminLogin() {
     </div>
   );
 }
-

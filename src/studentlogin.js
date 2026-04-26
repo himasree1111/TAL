@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { checkEligibility, handleLogin, handleSignup } from "./authService";
+import supabase from "./supabaseClient";
 import "./studentlogin.css";
 
 export default function StudentLogin() {
@@ -166,9 +167,22 @@ export default function StudentLogin() {
         return;
       }
 
-      // Note: Supabase will send password reset email
-      toast.info("Password reset functionality coming soon");
-      // TODO: Implement password reset flow
+      const redirectUrl =
+        process.env.REACT_APP_RESET_PASSWORD_URL ||
+        window.location.origin + "/reset-password?role=student";
+      console.log("Student reset redirect URL:", redirectUrl);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: redirectUrl }
+      );
+
+      if (error) {
+        console.error("resetPasswordForEmail error:", error);
+        toast.error(error.message);
+      } else {
+        toast.success("Password reset email sent. Check your inbox.");
+      }
     } catch (err) {
       console.error("Forgot password error:", err);
       toast.error("Error processing request");
@@ -270,10 +284,9 @@ export default function StudentLogin() {
           </p>
 
           <p
+            className="forgot-password"
             style={{
-              color: "#6b7280",
-              cursor: "pointer",
-              fontSize: "14px",
+              textAlign: "center",
               margin: "8px 0",
             }}
             onClick={handleForgotPassword}
