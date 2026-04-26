@@ -17,12 +17,32 @@ export default function ResetPassword() {
   useEffect(() => {
     const init = async () => {
       try {
-        if (
-          window.location.href.includes("access_token") ||
-          window.location.href.includes("refresh_token") ||
-          window.location.href.includes("type=recovery")
-        ) {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
+        // Supabase sends recovery tokens in URL hash fragment: #access_token=xxx&refresh_token=yyy&type=recovery
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const type = hashParams.get("type");
+
+        if (accessToken && refreshToken && type === "recovery") {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (error) {
+            console.error("setSession error:", error);
+            toast.error("Invalid or expired reset link");
+          }
+        } else {
+          // Fallback: check if there's already a valid session (e.g. from code exchange)
+          const urlParams = new URLSearchParams(window.location.search);
+          const code = urlParams.get("code");
+          if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) {
+              console.error("exchangeCodeForSession error:", error);
+              toast.error("Invalid or expired reset link");
+            }
+          }
         }
 
         const { data } = await supabase.auth.getSession();
@@ -69,6 +89,8 @@ export default function ResetPassword() {
       setTimeout(() => {
         if (role === "admin") {
           navigate("/adminlogin");
+        } else if (role === "student") {
+          navigate("/student-login");
         } else {
           navigate("/volunteerlogin");
         }

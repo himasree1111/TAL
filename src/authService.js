@@ -178,20 +178,21 @@ export const handleLogout = async () => {
 };
 
 /**
- * Get the currently signed-in user
- * @returns {Promise<Object|null>} - User object or null
+ * Send password reset email
+ * @param {string} email - User email
+ * @returns {Promise<void>}
  */
-export const getCurrentUser = async () => {
+export const resetPassword = async (email) => {
   try {
-    const { data, error } = await supabase.auth.getUser();
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password?role=student`,
+    });
 
-    if (error || !data.user) {
-      return null;
+    if (error) {
+      throw new Error(error.message || "Failed to send reset email");
     }
-
-    return data.user;
   } catch (err) {
-    console.error("getCurrentUser error:", err);
-    return null;
+    console.error("resetPassword error:", err);
+    throw err;
   }
 };

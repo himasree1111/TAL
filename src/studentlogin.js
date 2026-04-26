@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { checkEligibility, handleLogin, handleSignup } from "./authService";
+import { checkEligibility, handleLogin, handleSignup, resetPassword } from "./authService";
 import "./studentlogin.css";
 
 export default function StudentLogin() {
@@ -159,6 +159,13 @@ export default function StudentLogin() {
       return;
     }
 
+    const emailError = validateEmail(email);
+    if (emailError) {
+      toast.error(emailError);
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const student = await checkEligibility(email.trim());
       if (!student) {
@@ -166,12 +173,19 @@ export default function StudentLogin() {
         return;
       }
 
-      // Note: Supabase will send password reset email
-      toast.info("Password reset functionality coming soon");
-      // TODO: Implement password reset flow
+      // Only allow reset for existing users (those with auth_id)
+      if (!student.auth_id) {
+        toast.info("You haven't set a password yet. Please log in and create one.");
+        return;
+      }
+
+      await resetPassword(email.trim());
+      toast.success("Password reset email sent! Check your inbox.");
     } catch (err) {
       console.error("Forgot password error:", err);
-      toast.error("Error processing request");
+      toast.error(err.message || "Error sending reset email");
+    } finally {
+      setIsLoading(false);
     }
   };
 
