@@ -2264,22 +2264,7 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
         </div>
       </div>
 
-      {(() => {
-          const latestFee = feeHistory[0] || {};
-          const status = latestFee.fee_status || feeInfo.fee_status || '';
-          const paid = latestFee.fee_paid_by_tal || feeInfo.fee_paid_by_tal || 0;
-          if (['Paid', 'Partial'].includes(status) && paid > 0) {
-            return (
-              <div className="success-banner" style={{marginBottom: '20px'}}>
-                ✅ <strong>Fee Verified!</strong> Your fee status is now <strong>{status}</strong>. 
-                <br/>📝 <strong>Next Step:</strong> Update your <strong>total_educational_expenses</strong> in <em>Profile → Expenses tab</em> 
-                so it shows correctly in Admin Fee Tracking after next document verification.
-              </div>
-            );
-          }
-          return null;
-        })()}
-        {renderStatsBar()}
+      {renderStatsBar()}
 
       <div className="section-block">
         <div className="section-header">
@@ -2319,15 +2304,6 @@ while (newDetails.length < num) newDetails.push({ name: '', relation: '', custom
         {/*<div className="hero-header" style={{ textAlign: 'center', padding: '1.25rem 1rem', background: 'linear-gradient(135deg, #7fc74a 0%, #6bb43f 100%)', color: 'white', borderRadius: '16px', marginBottom: '1.25rem' }}>
           <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>💰</div>
         </div>*/}
-
-        {/* Educational Expenses Update Prompt */}
-        {latest && ['Paid', 'Partial'].includes(latest.fee_status) && latest.fee_paid_by_tal > 0 && (
-          <div className="success-banner" style={{marginBottom: '20px'}}>
-            ✅ <strong>Fee {latest.fee_status === 'Paid' ? 'Paid' : 'Partially Paid'}!</strong> Your fee status is now <strong>{latest.fee_status}</strong>. 
-            <br/>📝 <strong>Next Step:</strong> Please <strong>update your educational expenses</strong> in <em>Profile → Expenses tab</em> immediately 
-            so your current expenses reflect correctly in Admin Fee Tracking.
-          </div>
-        )}
 
         {/* Current Summary */}
         {latest && (
@@ -2544,7 +2520,7 @@ Please verify this is the correct fee receipt file before uploading.`;
                     }}>
                       <div style={{ marginBottom: '12px' }}>
                         <strong style={{ color: '#1e40af', fontSize: '0.9rem' }}>Your Uploaded Receipt:</strong>
-                        <div style={{ marginTop: '8px' }}>
+                        <div style={{ marginTop: '8px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                           <a 
                             href={latest.fee_receipt_url} 
                             target="_blank" 
@@ -2562,6 +2538,23 @@ Please verify this is the correct fee receipt file before uploading.`;
                           >
                             👁️ View Receipt
                           </a>
+                          <button
+                            onClick={() => handleDeleteFeeReceipt(latest.fee_receipt_url)}
+                            style={{
+                              display: 'inline-block',
+                              padding: '8px 16px',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              borderRadius: '6px',
+                              fontWeight: '600',
+                              fontSize: '0.9rem',
+                              cursor: 'pointer'
+                            }}
+                            title="Delete uploaded receipt"
+                          >
+                            🗑️ Delete Receipt
+                          </button>
                         </div>
                       </div>
                       
@@ -2749,6 +2742,46 @@ Please verify this is the correct fee receipt file before uploading.`;
         </div>
       </>
     );
+  };
+
+  const handleDeleteFeeReceipt = async (receiptUrl) => {
+    if (!window.confirm('Are you sure you want to delete your uploaded fee receipt?')) return;
+
+    try {
+      setError('');
+
+      // 1. Delete from storage if possible
+      if (receiptUrl) {
+        const path = receiptUrl.split('/student_documents/')[1];
+        if (path) {
+          const { error: storageError } = await supabase.storage
+            .from('student_documents')
+            .remove([path]);
+          if (storageError) {
+            console.error('[FEE_RECEIPT_DELETE] Storage error:', storageError);
+          }
+        }
+      }
+
+      // 2. Clear fee_receipt_url from fee_tracking
+      const { error: updateError } = await supabase
+        .from('fee_tracking')
+        .update({
+          fee_receipt_url: null,
+          fee_receipt_url_updated_at: null,
+          fee_receipt_checked: null
+        })
+        .eq('student_form_id', studentFormId);
+
+      if (updateError) throw updateError;
+
+      // 3. Refresh
+      await fetchFeeHistory();
+      alert('✅ Fee receipt deleted successfully. You can now upload a new one.');
+    } catch (err) {
+      console.error('Fee receipt delete error:', err);
+      setError('Failed to delete fee receipt: ' + err.message);
+    }
   };
 
   const fetchFeeHistory = useCallback(async () => {
