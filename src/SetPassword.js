@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
-import supabase from "./supabaseClient";
+import { handleSignup } from "./authService";
 import "./studentlogin.css";
 
 export default function SetPassword() {
@@ -10,14 +10,22 @@ export default function SetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
   const email = location.state?.email;
+  const initialPassword = location.state?.password;
 
-  // 🚨 if user directly opens page
+  // Pre-fill password if coming from student login
+  useEffect(() => {
+    if (initialPassword) {
+      setPassword(initialPassword);
+    }
+  }, [initialPassword]);
+
+  // 🚨 If user directly opens page without email from login
   useEffect(() => {
     if (!email) {
       toast.error("Invalid access. Please login first.");
@@ -25,7 +33,9 @@ export default function SetPassword() {
     }
   }, [email, navigate]);
 
-  // eslint-disable-next-line no-undef
+  /**
+   * Validate password strength
+   */
   const validatePassword = (value) => {
     const errors = [];
     if (!/[a-z]/.test(value)) errors.push("Must include lowercase letter");
@@ -39,74 +49,97 @@ export default function SetPassword() {
   const handlePasswordChange = (e) => {
     const value = e.target.value;
     setPassword(value);
-
   };
 
   const handleConfirmPasswordChange = (e) => {
     setConfirmPassword(e.target.value);
   };
 
+  /**
+   * Handle password creation and signup
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
-
-    const pwdErrors = validatePassword(password);
-    if (pwdErrors.length > 0) {
-      toast.error("Please fix password requirements");
-      return;
-    }
-
-    if (!password || !confirmPassword) {
-      toast.error("Please fill all fields");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
+    setIsLoading(true);
 
     try {
-      const { error } = await supabase
-        .from("eligible_students")
-        .update({
-          password: password,
-          is_verified: true,
-        })
-        .eq("email", email);
-
-      if (error) {
-        toast.error("Error setting password");
+      // Validate password
+      const pwdErrors = validatePassword(password);
+      if (pwdErrors.length > 0) {
+        toast.error("Please fix password requirements");
+        setIsLoading(false);
         return;
       }
 
-      toast.success("Password set successfully 🎉");
+      // Check if fields are filled
+      if (!password || !confirmPassword) {
+        toast.error("Please fill all fields");
+        setIsLoading(false);
+        return;
+      }
 
-      setTimeout(() => {
-        navigate("/student-login");
-      }, 1500);
+      // Check if passwords match
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match");
+        setIsLoading(false);
+        return;
+      }
 
+      // Sign up user with Supabase Auth
+      const { user, session } = await handleSignup(email, password);
+
+      if (user && session) {
+        // Store session info
+        localStorage.setItem("studentEmail", email);
+        localStorage.setItem("studentId", user.id);
+        localStorage.setItem("isStudentLoggedIn", "true");
+        localStorage.setItem("studentAuthToken", session.access_token);
+
+        toast.success("Account created successfully! 🎉");
+
+        // Redirect to dashboard
+        setTimeout(() => {
+          navigate("/student-dashboard");
+        }, 1500);
+      }
     } catch (err) {
-      toast.error("Something went wrong");
+      console.error("Signup error:", err);
+      const errorMessage = err.message || "Error creating account. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const currentPasswordErrors = showErrors ? validatePassword(password) : [];
+  const passwordsMatch = password && confirmPassword && password === confirmPassword;
 
   return (
     <div className="auth-container">
       <div className="auth-box">
-        <h1>Set Your Password</h1>
+        <h1>Create Your Password</h1>
+        <p style={{ color: "#6b7280", fontSize: "14px", marginBottom: "20px" }}>
+          Secure your account with a strong password
+        </p>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ position: "relative" }}>
+          {/* New Password Input */}
+          <div style={{ position: "relative", marginBottom: "15px" }}>
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Enter new password"
               value={password}
               onChange={handlePasswordChange}
-className={currentPasswordErrors.length > 0 ? "input-error" : ""}
-              style={{ padding: "10px 42px 10px 10px", margin: "10px 0", width: "250px" }}
+              disabled={isLoading}
+              className={currentPasswordErrors.length > 0 ? "input-error" : ""}
+              style={{
+                padding: "10px 42px 10px 10px",
+                margin: "10px 0",
+                width: "100%",
+                boxSizing: "border-box",
+              }}
+              autoComplete="new-password"
             />
             <span
               onClick={() => setShowPassword(!showPassword)}
@@ -120,27 +153,40 @@ className={currentPasswordErrors.length > 0 ? "input-error" : ""}
                 fontSize: "18px",
               }}
             >
-              {showPassword ? "👁" : "👁"}
+              {showPassword ? "👁️" : "👁️‍🗨️"}
             </span>
           </div>
 
+          {/* Password Requirements */}
           {currentPasswordErrors.length > 0 && (
             <div className="password-requirements" aria-live="polite">
               <p className="password-requirements-title">Password must include</p>
               <ul className="password-requirements-list">
-                {currentPasswordErrors.map((err, i) => <li key={i}>{err}</li>)}
+                {currentPasswordErrors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
               </ul>
             </div>
           )}
 
-          <div style={{ position: "relative" }}>
+          {/* Confirm Password Input */}
+          <div style={{ position: "relative", marginBottom: "15px" }}>
             <input
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm password"
               value={confirmPassword}
               onChange={handleConfirmPasswordChange}
-              className="input-error"
-              style={{ padding: "10px 42px 10px 10px", margin: "10px 0", width: "250px" }}
+              disabled={isLoading}
+              className={
+                confirmPassword && !passwordsMatch ? "input-error" : ""
+              }
+              style={{
+                padding: "10px 42px 10px 10px",
+                margin: "10px 0",
+                width: "100%",
+                boxSizing: "border-box",
+              }}
+              autoComplete="new-password"
             />
             <span
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -154,16 +200,44 @@ className={currentPasswordErrors.length > 0 ? "input-error" : ""}
                 fontSize: "18px",
               }}
             >
-              {showConfirmPassword ? "👁" : "👁"}
+              {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
             </span>
           </div>
 
-          <button type="submit" style={{ padding: "10px 20px", width: "250px" }}>
-            Set Password
+          {/* Password Match Indicator */}
+          {confirmPassword && passwordsMatch && (
+            <p style={{ color: "#10b981", fontSize: "12px", marginBottom: "10px" }}>
+              ✓ Passwords match
+            </p>
+          )}
+
+          {confirmPassword && !passwordsMatch && (
+            <p style={{ color: "#ef4444", fontSize: "12px", marginBottom: "10px" }}>
+              ✗ Passwords do not match
+            </p>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isLoading || currentPasswordErrors.length > 0}
+            style={{
+              padding: "10px 20px",
+              width: "100%",
+              marginTop: "20px",
+              opacity:
+                isLoading || currentPasswordErrors.length > 0 ? 0.6 : 1,
+              cursor:
+                isLoading || currentPasswordErrors.length > 0
+                  ? "not-allowed"
+                  : "pointer",
+            }}
+          >
+            {isLoading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
-        <ToastContainer position="top-center" />
+        <ToastContainer position="top-center" autoClose={3000} />
       </div>
     </div>
   );
