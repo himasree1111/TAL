@@ -2417,7 +2417,7 @@ const handleEditDonor = (donor) => {
               <li className={activeSection === "fees" ? "active" : ""} onClick={() => setActiveSection("fees")}>Fee Tracking</li>
               <li className={activeSection === "broadcast" ? "active" : ""} onClick={() => setActiveSection("broadcast")}>Alerts & Broadcast</li>
               <li className={activeSection === "reports" ? "active" : ""} onClick={() => setActiveSection("reports")}>Reports & Exports</li>
-              <li className={activeSection === "settings" ? "active" : ""} onClick={() => setActiveSection("settings")}>Settings</li>
+              {/* <li className={activeSection === "settings" ? "active" : ""} onClick={() => setActiveSection("settings")}>Settings</li> */}
             </ul>
           </nav>
         </div>
@@ -4557,7 +4557,7 @@ const handleEditDonor = (donor) => {
             </section>
           )}
 
-          {/* Settings */}
+          {/* Settings — commented out
           {activeSection === "settings" && (
             <section className="settings-section">
               <div className="section-header">
@@ -4630,9 +4630,12 @@ const handleEditDonor = (donor) => {
                     </label>
                   </div>
                 </div>
+
+
               </div>
             </section>
           )}
+          */}
         </main>
       </div>
 
