@@ -1692,10 +1692,12 @@ await fetchFeeTrackingRecords();
     }
 
     const rows = [
-      "student_public_id,student_name,email,contact,education,year,school,college,created_at",
-      ...scopedEligibleStudents.map(s => 
-        `"${s.student_public_id || ''}","${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
-      )
+      "Student ID,Name,email,contact,Education details,School/College,created_at",
+      ...scopedEligibleStudents.map(s => {
+        const studentName = s.full_name || s.student_name || s.name || '';
+        const classVal = s.class || s.year || '';
+        return `"${s.student_public_id || ''}","${studentName}","${s.email || ''}","${s.contact || ''}","${classVal}","${s.school || ''}","${s.created_at || ''}"`;
+      })
     ];
     
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
@@ -1720,10 +1722,12 @@ await fetchFeeTrackingRecords();
     }
 
     const rows = [
-      "student_public_id,student_name,email,contact,education,year,school,college,created_at",
-      ...scopedNonEligibleStudents.map(s => 
-        `"${s.student_public_id || ''}","${s.student_name || ''}","${s.email || ''}","${s.contact || ''}","${s.education || ''}","${s.year || ''}","${s.school || ''}","${s.college || ''}","${s.created_at || ''}"`
-      )
+      "Student ID,Name,email,contact,Education details,School/College,created_at",
+      ...scopedNonEligibleStudents.map(s => {
+        const studentName = s.full_name || s.student_name || s.name || '';
+        const classVal = s.class || s.year || '';
+        return `"${s.student_public_id || ''}","${studentName}","${s.email || ''}","${s.contact || ''}","${classVal}","${s.school || ''}","${s.created_at || ''}"`;
+      })
     ];
     
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
@@ -1876,8 +1880,12 @@ const fetchStudents = async () => {
   const exportCSV = () => {
     // include new fields campName,campDate,course,paidDate
     const rows = [
-      "student_public_id,name,college,year,donor,feeStatus,course,campName,campDate,paidDate",
-      ...students.map(s => `"${s.student_public_id || ""}","${s.name}","${s.college}",${s.year},${s.donor},${s.feeStatus},${s.course || ""},"${s.campName || ""}",${s.campDate || ""},${s.paidDate || ""}`)
+      "Student ID,Name,email,contact,Education details,School/College,created_at,donor,feeStatus,course,campName,campDate,paidDate",
+      ...students.map(s => {
+        const studentName = s.full_name || s.student_name || s.name || '';
+        const classVal = s.class || s.year || '';
+        return `"${s.student_public_id || ""}","${studentName}","${s.email || ''}","${s.contact || ''}","${classVal}","${s.school || ''}","${s.created_at || ''}",${s.donor},${s.feeStatus},"${s.course || ""}","${s.campName || ""}",${s.campDate || ""},${s.paidDate || ""}`;
+      })
     ];
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
