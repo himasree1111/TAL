@@ -482,12 +482,43 @@ export default function AdminDashboard() {
   // New filters for replacement
 const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: 'all', singleParent: false, specialRemarks: false });
 
-  // Unique values for dropdowns
+  // Unique values for dropdowns - now with camp_master data showing dates
   const uniqueCamps = useMemo(() => {
-    const campsFromStudents = students.map(s => s.campName || 'Unknown').filter(Boolean);
-    const campsFromMaster = campOptions.map((camp) => camp.camp_name).filter(Boolean);
-    return ['all', ...new Set([...campsFromMaster, ...campsFromStudents])];
-  }, [students, campOptions]);
+    // Format camps from camp_master with dates - showing ALL camp+date combinations
+    const campsWithDates = campOptions
+      .map((camp) => {
+        const campName = camp.camp_name?.trim();
+        const campDate = camp.camp_date;
+        if (!campName || !campDate) {
+          return null;
+        }
+        // Use both camp_name and camp_date as unique key
+        const uniqueKey = `${campName}__${campDate}`;
+        return {
+          value: uniqueKey,
+          label: `${campName} - ${new Date(campDate).toLocaleDateString('en-IN')}`,
+          campName: campName,
+          campDate: campDate
+        };
+      })
+      .filter(Boolean);
+
+    // Get unique camps by name+date combination (remove exact duplicates)
+    const uniqueByNameAndDate = [...new Map(campsWithDates.map(camp => [camp.value, camp])).values()];
+    
+    // Sort by date (newest first)
+    uniqueByNameAndDate.sort((a, b) => new Date(b.campDate) - new Date(a.campDate));
+    
+    const result = [
+      { value: 'all', label: 'All' },
+      ...uniqueByNameAndDate
+    ];
+    
+    console.log('[UNIQUE_CAMPS_DEBUG] Generated camps:', result.map(c => ({value: c.value, label: c.label})));
+    
+    // Add 'all' option first
+    return result;
+  }, [campOptions]);
 
   const uniqueEducations = useMemo(() => {
     const educations = [...students.map(s => s.course).filter(Boolean), ...students.map(s => s.year).filter(Boolean)];
@@ -775,6 +806,16 @@ const calculatePriority = useCallback((s) => {
     console.log('[DEBUG] Total students array length:', students.length);
     console.log('[DEBUG] Current filters:', newFilters);
     
+    if (students.length > 0) {
+      const studentsWithCampData = students.filter(s => s.campName && s.campDate);
+      console.log(`[DEBUG] Students with camp data: ${studentsWithCampData.length}/${students.length}`);
+      console.log('[DEBUG] Sample student data:', {
+        name: students[0].name,
+        campName: students[0].campName,
+        campDate: students[0].campDate,
+      });
+    }
+    
     const normalizeAchievementFlag = (value) => {
       if (value === true || value === 'true') {
         return true;
@@ -807,9 +848,33 @@ const calculatePriority = useCallback((s) => {
     };
 
     return students
-      .filter((s) => {
+      .filter((s, idx) => {
         // New filters
-        if (newFilters.camp !== 'all' && s.campName !== newFilters.camp) return false;
+        if (newFilters.camp !== 'all') {
+          // Parse the camp filter value (format: "campName__campDate")
+          const [filterCampName, filterCampDate] = newFilters.camp.split('__');
+          // Student has campName and campDate (already formatted as YYYY-MM-DD)
+          
+          const nameMatches = s.campName === filterCampName;
+          const dateMatches = s.campDate === filterCampDate;
+          
+          if (idx < 3 || (!nameMatches || !dateMatches)) {
+            console.log(`[CAMP_FILTER_DEBUG] Student #${idx} - ${s.name || 'Unknown'}:`, {
+              filter: newFilters.camp,
+              filterCampName,
+              filterCampDate,
+              studentCampName: s.campName || 'EMPTY',
+              studentCampDate: s.campDate || 'EMPTY',
+              nameMatch: nameMatches,
+              dateMatch: dateMatches,
+              willShow: nameMatches && dateMatches
+            });
+          }
+          
+          if (!nameMatches || !dateMatches) {
+            return false;
+          }
+        }
         if (newFilters.education !== 'all' && s.course !== newFilters.education && s.year !== newFilters.education) return false;
         if (!filterAchievementMatch(s)) return false;
         if (newFilters.singleParent && !normalizeBoolean(s.is_single_parent)) return false;
@@ -837,6 +902,10 @@ useEffect(() => {
     singleParent: newFilters.singleParent,
     specialRemarks: newFilters.specialRemarks
   });
+  
+  if (newFilters.camp !== 'all') {
+    console.log(`[DEBUG] Camp filter applied: showing ${filteredStudents.length} students matching "${newFilters.camp}"`);
+  }
 }, [filteredStudents, newFilters]);
 
 // Filtered non-eligible students with same filters
@@ -877,7 +946,14 @@ const filteredNonEligibleStudents = useMemo(() => {
       // New filters
       const campName = s.camp_name || s.campName;
       const education = s.education || s.course || s.class || s.year;
-      if (newFilters.camp !== 'all' && campName !== newFilters.camp) return false;
+      if (newFilters.camp !== 'all') {
+        // Parse the camp filter value (format: "campName__campDate")
+        const [filterCampName, filterCampDate] = newFilters.camp.split('__');
+        const studentCampDate = s.camp_date ? new Date(s.camp_date).toISOString().split('T')[0] : s.campDate;
+        if (campName !== filterCampName || studentCampDate !== filterCampDate) {
+          return false;
+        }
+      }
       if (newFilters.education !== 'all' && education !== newFilters.education) return false;
       if (newFilters.toppers && getMaxPercent(s) < 90) return false;
       if (!filterAchievementMatch(s)) return false;
@@ -2787,7 +2863,7 @@ const handleEditDonor = (donor) => {
                   <FilterCard 
                     title="Camp" 
                     icon="🏕️" 
-                    options={['all', ...new Set(nonEligibleStudents.map(s => s.camp_name || s.campName || 'Unknown').filter(Boolean))]} 
+                    options={uniqueCamps} 
                     value={newFilters.camp} 
                     onChange={(val) => setNewFilters(f => ({...f, camp: val}))} 
                   />
