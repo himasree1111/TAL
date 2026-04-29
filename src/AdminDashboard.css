@@ -5,7 +5,7 @@ html {
 }
 .admin-root{
   display: flex;
-  align-items: stretch; /* ADD THIS LINE */
+  align-items: stretch;
   min-height: 100vh;
   width: 100%;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
@@ -27,14 +27,16 @@ html {
   padding-bottom: clamp(1rem, 3vw, 1.5rem);
   box-shadow:2px 0 12px rgba(13,20,40,0.08);
 
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
   height: 100vh;
   display:flex;
   flex-direction:column;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  z-index: 999;
 }
 
 .admin-sidebar::-webkit-scrollbar {
@@ -105,11 +107,10 @@ html {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  width: 100%;
-  margin-left: 0;
+  width: calc(100% - clamp(240px, 25vw, 280px));
+  margin-left: clamp(240px, 25vw, 280px);
   position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 
@@ -124,7 +125,8 @@ html {
   border-bottom: 1px solid rgba(0,0,0,0.08);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 50;
+  flex-shrink: 0;
 }
 .admin-header h2{
   margin: 0;
@@ -351,11 +353,11 @@ html {
   padding: clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 5vw, 2rem);
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: clamp(1rem, 3vw, 1.5rem);
-  min-height: 0;
 }
 
 /* Override for settings section to allow full expansion */
@@ -1712,7 +1714,7 @@ html {
     left: 0;
   }
 
-  /* Main content full width */
+  /* Main content full width on tablets/mobile */
   .admin-main {
     width: 100%;
     margin-left: 0;
