@@ -1748,38 +1748,65 @@ await fetchFeeTrackingRecords();
 
 
 const handleApprove = async (student) => {
-  // Remove from UI instantly for better UX
-  setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
-  
   try {
-    // Update status to 'Eligible' - trigger will handle moving to eligible_students table
-    const { error: updateError } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Eligible' })
-      .eq('id', student.student_id);
+    // 🔐 Get current session (for auth token)
+    const { data: { session } } = await supabase.auth.getSession();
 
-    if (updateError) {
-      console.error(updateError);
-      alert("❌ Failed to approve student: " + updateError.message);
-      // Revert UI change if database operation failed
-      await fetchStudents();
+    if (!session) {
+      alert("❌ You are not logged in");
       return;
     }
 
-    // Refresh eligible students count in background (don't block UI)
-    fetchEligibleStudents();
-    fetchEligibleCount();
+    // 🟢 1. Update student status to Eligible
+    const { error: updateError } = await supabase
+      .from('admin_student_info')
+      .update({ status: 'Eligible' })
+      .eq('id', student.id); // ✅ make sure you're using correct id
 
-    alert("✅ Student approved and moved to Eligible successfully!");
+    if (updateError) {
+      console.error("Update error:", updateError);
+      alert("❌ Failed to approve student: " + updateError.message);
+      return;
+    }
+
+    // 🟢 2. Send email ONLY if email exists
+    if (!student.email) {
+      console.warn("⚠️ No email found for student");
+    } else {
+      try {
+        const response = await fetch(
+          "https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session.access_token}`, // 🔥 FIXED 401
+            },
+            body: JSON.stringify({
+              email: student.email,
+              name: student.full_name || student.name || "Student",
+            }),
+          }
+        );
+
+        const result = await response.json();
+        console.log("📧 Email response:", result);
+      } catch (emailError) {
+        console.error("❌ Email sending failed:", emailError);
+      }
+    }
+
+    // 🟢 3. Refresh UI
+    await fetchEligibleStudents();
+    await fetchEligibleCount();
+
+    alert("✅ Student approved and email sent!");
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Unexpected error:", err);
     alert("❌ Error: " + err.message);
-    // Revert UI change if error occurred
-    await fetchStudents();
   }
 };
-
 const handleMoveToEligible = async (student) => {
   try {
     const { error } = await supabase.rpc(
