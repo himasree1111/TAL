@@ -2839,59 +2839,7 @@ const handleEditDonor = (donor) => {
 {/* Manage Beneficiaries */}
           {activeSection === "manage" && (
             <section className="manage-section">
-              <div className="manage-controls">
-{/* Prominent Search Bar - Out of the box */}
-                <div className="prominent-search-bar" style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1rem 1.5rem',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  borderRadius: '12px',
-                  marginBottom: '1.5rem',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
-                }}>
-                  <span style={{ fontSize: '1.5rem' }}>🔍</span>
-                  <input
-                    type="text"
-                    placeholder="Search by name or email... (instant filter)"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="search-input"
-                    autoFocus
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: '2px solid transparent',
-                      fontSize: '1rem',
-                      outline: 'none',
-                      background: 'white',
-                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      style={{
-                        padding: '10px 20px',
-                        background: 'rgba(255,255,255,0.2)',
-                        border: '2px solid white',
-                        borderRadius: '8px',
-                        color: 'white',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem'
-                      }}
-                    >
-                      ✕ Clear
-                    </button>
-                  )}
-                  <span style={{ color: 'white', fontWeight: 500, fontSize: '0.9rem' }}>
-                    {filteredStudents.length} result{filteredStudents.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
+<div className="manage-controls">
 
 <div className="new-filters-grid">
                   <FilterCard 
@@ -2938,6 +2886,56 @@ const handleEditDonor = (donor) => {
                 <div className="manage-actions">
                   <button className="btn primary" onClick={exportCSV}>Export CSV</button>
                 </div>
+              </div>
+
+{/* Search Bar - Above the table, plain colors */}
+              <div className="search-bar-top" style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '1rem',
+                background: '#f5f5f5',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                border: '1px solid #ddd'
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #ccc',
+                    fontSize: '0.95rem',
+                    outline: 'none'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#666',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+                <span style={{ color: '#333', fontWeight: 500, fontSize: '0.9rem' }}>
+                  {filteredStudents.length} result{filteredStudents.length !== 1 ? 's' : ''}
+                </span>
               </div>
 
               <div className="table-wrap">
@@ -2989,7 +2987,7 @@ const handleEditDonor = (donor) => {
                   </tbody>
                 </table>
               </div>
-              {/* Debug panel: show raw fetch when no students present to help diagnose Supabase issues */}
+{/* Debug panel: show raw fetch when no students present to help diagnose Supabase issues */}
               {students.length === 0 && lastFetch && (
                 <div className="debug-panel">
                   <h4>No more forms to Review</h4>
