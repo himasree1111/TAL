@@ -6,7 +6,6 @@ import EducationDropdown from "./EducationDropdown";
 import {
   getStudentNotifications,
   subscribeToNotifications,
-  filterNotification,
 } from "./notificationService";
 import { useStudent } from "./StudentContext";
 

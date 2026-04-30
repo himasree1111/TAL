@@ -1,8 +1,24 @@
-# ESLint Fixes Progress
+# ESLint Fixes TODO
 
-## SetPassword.js unused variable fix
-- [x] Step 1: Create this TODO file
-- [x] Step 2: Edit src/SetPassword.js to remove unused passwordErrors state and related setPasswordErrors call
-- [x] Step 3: Verify with npm run build (should show 0 warnings)
-- [x] Step 4: Test password validation UI/Submit
-- [x] Step 5: Mark complete and attempt_completion
+## Task: Fix unused variables/imports warnings
+
+### Files to fix:
+
+1. **src/VolunteerDashboard.js**
+   - [x] Remove unused `useCallback` import (Line 1)
+   - [x] Remove unused `filterNotification` import (Line 9)
+   - [x] Fix unused `totalNotifications` variable (Line 64)
+
+2. **src/studentdashboard.js**
+   - [x] Remove unused `filterNotification` import (Line 9)
+
+3. **src/studentlogin.js**
+   - [x] Remove unused `handleSignup` import (Line 5)
+
+## Progress:
+- [x] Apply fixes to VolunteerDashboard.js
+- [x] Apply fixes to studentdashboard.js  
+- [x] Apply fixes to studentlogin.js
+- [x] Verify with ESLint
+
+## COMPLETED ✅

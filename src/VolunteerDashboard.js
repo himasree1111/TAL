@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVolunteer } from "./VolunteerContext";
 import "./VolunteerDashboard.css";
@@ -6,7 +6,6 @@ import supabase from "./supabaseClient";
 import {
   getVolunteerNotifications,
   subscribeToNotifications,
-  filterNotification,
 } from "./notificationService";
 
 
@@ -61,6 +60,7 @@ export default function VolunteerDashboard() {
     };
   }, [volunteer?.email]); 
 
+// eslint-disable-next-line no-unused-vars
   const totalNotifications = notifications.length;
 
 
