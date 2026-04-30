@@ -920,7 +920,7 @@ return students
         }
         return 0;
       });
-}, [students, newFilters]);
+}, [students, newFilters, searchQuery]);
 
 // After filtering, log the result
 useEffect(() => {
