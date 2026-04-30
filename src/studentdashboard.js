@@ -31,10 +31,18 @@ const initialDocumentState = DOCUMENT_CATEGORIES.reduce((acc, curr) => {
   return acc;
 }, {});
 
+
+const formatToIST = (dateString) => {
+  if (!dateString) return new Date();
+  const utcDate = new Date(dateString);
+  const istOffsetMs = 5.5 * 60 * 60 * 1000; // IST UTC+5:30
+  return new Date(utcDate.getTime() + istOffsetMs);
+};
+
 const formatRelative = (dateStr) => {
   if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const diffMs = Date.now() - date.getTime();
+  const istDate = formatToIST(dateStr);
+  const diffMs = Date.now() - istDate.getTime();
   const minutes = Math.floor(diffMs / 60000);
   if (minutes < 5) return "Just now";
   if (minutes < 60) return `${minutes}m ago`;
@@ -43,6 +51,7 @@ const formatRelative = (dateStr) => {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 };
+
 
 const isImportantNotification = (item) => {
   const title = item.title?.toLowerCase() || "";
@@ -542,7 +551,8 @@ const type = await getStudentType(idToUse);      setStudentType(type);
       
       subscription = subscribeToNotifications((newData) => {
         // if (!studentType) return;
-if (filterNotification(newData, type)) {          setNotifications(prev => {
+        if (!newData.expires_at || new Date(newData.expires_at) > new Date()) {
+          setNotifications(prev => {
             const exists = prev.some(n => n.id === newData.id);
             if (exists) return prev;
             return [newData, ...prev];

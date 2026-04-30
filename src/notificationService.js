@@ -1,6 +1,6 @@
 import supabase from './supabaseClient';
 
-// ✅ CREATE NOTIFICATION (unchanged)
+// ✅ CREATE NOTIFICATION
 export const createNotification = async (
   title,
   message,
@@ -30,7 +30,7 @@ export const createNotification = async (
         {
           title,
           message,
-          audience: targetAudience.toLowerCase().trim(), // ✅ normalize
+          audience: targetAudience.toLowerCase().trim(),
           expires_at: expiresAt || null
         }
       ])
@@ -47,12 +47,14 @@ export const createNotification = async (
   }
 };
 
-// ✅ NEW: GET ALL ADMIN NOTIFICATIONS
+// ✅ GET ALL ADMIN NOTIFICATIONS
+
 export const getAdminNotifications = async () => {
   try {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
+      .or('expires_at.is.null,expires_at.gt.now()')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -66,7 +68,17 @@ export const getAdminNotifications = async () => {
   }
 };
 
-// ✅ NEW: DELETE NOTIFICATION
+
+// ✅ SHARED FILTER UTIL
+export const filterNotification = (notification, studentType) => {
+  const audience = (notification.audience || "").toLowerCase().trim();
+  const type = (studentType || "all").toLowerCase().trim();
+  const notExpired = !notification.expires_at || new Date(notification.expires_at) > new Date();
+  const audienceMatch = audience === "all" || audience === type;
+  return notExpired && audienceMatch;
+};
+
+// ✅ DELETE NOTIFICATION
 export const deleteNotification = async (id) => {
   try {
     const { error } = await supabase
@@ -77,38 +89,62 @@ export const deleteNotification = async (id) => {
     if (error) throw error;
 
     return { success: true };
+
   } catch (error) {
     console.error('Error deleting notification:', error);
     return { success: false, error: error.message };
   }
 };
 
-// ✅ SHARED FILTER UTIL (unchanged)
-export const filterNotification = (notification, studentType) => {
-  const audience = (notification.audience || "").toLowerCase().trim();
-  const type = (studentType || "all").toLowerCase().trim();
-  const notExpired = !notification.expires_at || new Date(notification.expires_at) > new Date();
-  const audienceMatch = audience === "all" || audience === type;
-  console.log(`[FILTER] ${notification.title || 'ID:'+notification.id}: audience="${audience}" vs type="${type}", expired=${!notExpired}`);
-  return notExpired && audienceMatch;
-};
 
-// ✅ GET STUDENT NOTIFICATIONS (unchanged)
-export const getStudentNotifications = async (studentType) => {
+
+
+
+export const getVolunteerNotifications = async (volunteerEmail) => {
   try {
+    console.log('[VOLUNTEER] Email:', volunteerEmail);
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
+      .or('audience.eq.volunteers,audience.eq.all')
+      .or('expires_at.is.null,expires_at.gt.now()')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    console.log('[VOLUNTEER] Fetched', data?.length || 0, 'notifications');
+    return { success: true, notifications: data || [] };
+    
+  } catch (error) {
+    console.error(error);
+    return { success: false, error: error.message };
+  }
+};
+
+
+  // ✅ GET STUDENT NOTIFICATIONS
+
+
+
+
+// ✅ GET STUDENT NOTIFICATIONS
+
+export const getStudentNotifications = async (studentType) => {
+  try {
+    const type = (studentType || "all").toLowerCase().trim();
+    const audienceFilter = type === 'all' ? '' : `audience.eq.${type}`;
+    
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .or(audienceFilter ? [`audience.eq.${type},audience.eq.all`] : ['audience.eq.all'])
+      .or('expires_at.is.null,expires_at.gt.now()')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    const type = (studentType || "all").toLowerCase().trim();
-
-    const filtered = data.filter((notification) => filterNotification(notification, type));
-
-    console.log(`[FETCH] Fetched ${data.length} total, filtered to ${filtered.length} for type "${studentType}"`);
-    return { success: true, notifications: filtered };
+    console.log(`[STUDENT ${type}] Fetched ${data?.length || 0} notifications`);
+    return { success: true, notifications: data || [] };
 
   } catch (error) {
     console.error(error);
@@ -116,7 +152,8 @@ export const getStudentNotifications = async (studentType) => {
   }
 };
 
-// ✅ REAL-TIME SUBSCRIPTION (unchanged)
+
+// ✅ REAL-TIME SUBSCRIPTION
 export const subscribeToNotifications = (callback) => {
   return supabase
     .channel('notifications')
@@ -128,10 +165,11 @@ export const subscribeToNotifications = (callback) => {
         table: 'notifications'
       },
       (payload) => {
-      console.log("[REALTIME] New payload received:", payload.new);
-      callback(payload.new);
+        console.log("[REALTIME] New payload received:", payload.new);
+        callback(payload.new);
       }
     )
     .subscribe();
 };
+
 
