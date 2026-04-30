@@ -39,7 +39,21 @@ const toISODateString = (value) => {
   return date.toISOString().split('T')[0];
 };
 
+const normalizeCampName = (value) => (value || '').trim();
+
 const buildCampScopeKey = (campName, campDate) => `${campName}__${campDate}`;
+
+const parseCampScopeKey = (scopeKey = '') => {
+  const separatorIndex = scopeKey.lastIndexOf('__');
+  if (separatorIndex < 0) {
+    return { campName: scopeKey, campDate: '' };
+  }
+
+  return {
+    campName: scopeKey.slice(0, separatorIndex),
+    campDate: scopeKey.slice(separatorIndex + 2),
+  };
+};
 
 const asComparableId = (value) => (value === null || value === undefined ? '' : String(value));
 
@@ -439,10 +453,8 @@ export default function AdminDashboard() {
               year: student.class || student.year,
               fee_status: student.fee || "Not Provided",
               course: student.educationcategory || student.class || student.year || student.course || "—",
-              campName: student.camp_name,
-              campDate: student.camp_date
-                ? new Date(student.camp_date).toISOString().split("T")[0]
-                : "",
+              campName: normalizeCampName(student.camp_name),
+              campDate: toISODateString(student.camp_date),
               age: student.age,
               class: student.class,
               prev_percent: student.prev_percent,
@@ -503,43 +515,37 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
   // Search functionality for Manage Beneficiaries
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Unique values for dropdowns - now with camp_master data showing dates
+  // Manage Beneficiaries camp options should come from loaded admin_student_info records.
   const uniqueCamps = useMemo(() => {
-    // Format camps from camp_master with dates - showing ALL camp+date combinations
-    const campsWithDates = campOptions
-      .map((camp) => {
-        const campName = camp.camp_name?.trim();
-        const campDate = camp.camp_date;
+    const campsWithDates = students
+      .map((student) => {
+        const campName = normalizeCampName(student.campName || student.camp_name);
+        const campDate = toISODateString(student.campDate || student.camp_date);
         if (!campName || !campDate) {
           return null;
         }
-        // Use both camp_name and camp_date as unique key
-        const uniqueKey = `${campName}__${campDate}`;
+
+        const uniqueKey = buildCampScopeKey(campName, campDate);
         return {
           value: uniqueKey,
           label: `${campName} - ${new Date(campDate).toLocaleDateString('en-IN')}`,
-          campName: campName,
-          campDate: campDate
+          campName,
+          campDate,
         };
       })
       .filter(Boolean);
 
-    // Get unique camps by name+date combination (remove exact duplicates)
     const uniqueByNameAndDate = [...new Map(campsWithDates.map(camp => [camp.value, camp])).values()];
-    
-    // Sort by date (newest first)
+
     uniqueByNameAndDate.sort((a, b) => new Date(b.campDate) - new Date(a.campDate));
-    
+
     const result = [
       { value: 'all', label: 'All' },
       ...uniqueByNameAndDate
     ];
-    
-    console.log('[UNIQUE_CAMPS_DEBUG] Generated camps:', result.map(c => ({value: c.value, label: c.label})));
-    
-    // Add 'all' option first
+
     return result;
-  }, [campOptions]);
+  }, [students]);
 
   const uniqueEducations = useMemo(() => {
     const educations = [...students.map(s => s.course).filter(Boolean), ...students.map(s => s.year).filter(Boolean)];
@@ -564,10 +570,15 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
       })
       .filter(Boolean);
 
-    return [...new Map(options.map((option) => [option.key, option])).values()].sort((a, b) => {
+    const uniqueOptions = [...new Map(options.map((option) => [option.key, option])).values()].sort((a, b) => {
       const dateDiff = b.campDate.localeCompare(a.campDate);
       return dateDiff !== 0 ? dateDiff : a.campName.localeCompare(b.campName);
     });
+
+    return [
+      { key: 'all', campName: 'ALL', campDate: '', label: 'ALL - Entire Reports' },
+      ...uniqueOptions,
+    ];
   }, [campOptions]);
 
   useEffect(() => {
@@ -741,7 +752,7 @@ const paidFeeRecords = useMemo(() => {
   }, [feeTrackingRecords]);
 
   const matchesSelectedReportScope = useCallback((campName, campDate) => {
-    if (!selectedReportCampScope) {
+    if (!selectedReportCampScope || selectedReportCampScope.key === 'all') {
       return true;
     }
 
@@ -882,20 +893,20 @@ return students
 
         // New filters
         if (newFilters.camp !== 'all') {
-          // Parse the camp filter value (format: "campName__campDate")
-          const [filterCampName, filterCampDate] = newFilters.camp.split('__');
-          // Student has campName and campDate (already formatted as YYYY-MM-DD)
-          
-          const nameMatches = s.campName === filterCampName;
-          const dateMatches = s.campDate === filterCampDate;
+          const { campName: filterCampName, campDate: filterCampDate } = parseCampScopeKey(newFilters.camp);
+          const studentCampName = normalizeCampName(s.campName || s.camp_name);
+          const studentCampDate = toISODateString(s.campDate || s.camp_date);
+
+          const nameMatches = studentCampName === filterCampName;
+          const dateMatches = studentCampDate === filterCampDate;
           
           if (idx < 3 || (!nameMatches || !dateMatches)) {
             console.log(`[CAMP_FILTER_DEBUG] Student #${idx} - ${s.name || 'Unknown'}:`, {
               filter: newFilters.camp,
               filterCampName,
               filterCampDate,
-              studentCampName: s.campName || 'EMPTY',
-              studentCampDate: s.campDate || 'EMPTY',
+              studentCampName: studentCampName || 'EMPTY',
+              studentCampDate: studentCampDate || 'EMPTY',
               nameMatch: nameMatches,
               dateMatch: dateMatches,
               willShow: nameMatches && dateMatches
@@ -978,10 +989,10 @@ const filteredNonEligibleStudents = useMemo(() => {
       const campName = s.camp_name || s.campName;
       const education = s.education || s.course || s.class || s.year;
       if (newFilters.camp !== 'all') {
-        // Parse the camp filter value (format: "campName__campDate")
-        const [filterCampName, filterCampDate] = newFilters.camp.split('__');
-        const studentCampDate = s.camp_date ? new Date(s.camp_date).toISOString().split('T')[0] : s.campDate;
-        if (campName !== filterCampName || studentCampDate !== filterCampDate) {
+        const { campName: filterCampName, campDate: filterCampDate } = parseCampScopeKey(newFilters.camp);
+        const normalizedCampName = normalizeCampName(campName);
+        const studentCampDate = toISODateString(s.camp_date || s.campDate);
+        if (normalizedCampName !== filterCampName || studentCampDate !== filterCampDate) {
           return false;
         }
       }
@@ -1718,7 +1729,9 @@ await fetchFeeTrackingRecords();
     }
 
     if (scopedEligibleStudents.length === 0) {
-      alert(`No eligible students found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
+      alert(selectedReportCampScope.key === 'all'
+        ? 'No eligible students found for the full report.'
+        : `No eligible students found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
       return;
     }
 
@@ -1735,7 +1748,9 @@ await fetchFeeTrackingRecords();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `eligible-students-${selectedReportCampScope.campName}-${selectedReportCampScope.campDate}.csv`;
+    a.download = selectedReportCampScope.key === 'all'
+      ? 'eligible-students-all.csv'
+      : `eligible-students-${selectedReportCampScope.campName}-${selectedReportCampScope.campDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     alert('Report downloaded successfully!');
@@ -1748,7 +1763,9 @@ await fetchFeeTrackingRecords();
     }
 
     if (scopedNonEligibleStudents.length === 0) {
-      alert(`No non-eligible students found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
+      alert(selectedReportCampScope.key === 'all'
+        ? 'No non-eligible students found for the full report.'
+        : `No non-eligible students found for ${selectedReportCampScope.campName} on ${selectedReportCampScope.campDate}`);
       return;
     }
 
@@ -1765,7 +1782,9 @@ await fetchFeeTrackingRecords();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `non-eligible-students-${selectedReportCampScope.campName}-${selectedReportCampScope.campDate}.csv`;
+    a.download = selectedReportCampScope.key === 'all'
+      ? 'non-eligible-students-all.csv'
+      : `non-eligible-students-${selectedReportCampScope.campName}-${selectedReportCampScope.campDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     alert('Report downloaded successfully!');
@@ -2381,7 +2400,9 @@ const handleEditDonor = (donor) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'fee-receipts-report.csv';
+    a.download = selectedReportCampScope.key === 'all'
+      ? 'fee-receipts-report-all.csv'
+      : 'fee-receipts-report.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -2403,7 +2424,9 @@ const handleEditDonor = (donor) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'donor-contributions-report.csv';
+    a.download = selectedReportCampScope?.key === 'all'
+      ? 'donor-contributions-report-all.csv'
+      : 'donor-contributions-report.csv';
     a.click();
     URL.revokeObjectURL(url);
     alert('Donor contributions report downloaded successfully!');
@@ -4377,7 +4400,15 @@ const handleEditDonor = (donor) => {
                   <div className="report-scope-summary">
                     {selectedReportCampScope ? (
                       <>
-                        <strong>Active scope:</strong> {selectedReportCampScope.campName} on {new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}
+                        {selectedReportCampScope.key === 'all' ? (
+                          <>
+                            <strong>Active scope:</strong> ALL - Entire Reports
+                          </>
+                        ) : (
+                          <>
+                            <strong>Active scope:</strong> {selectedReportCampScope.campName} on {new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')}
+                          </>
+                        )}
                       </>
                     ) : (
                       'No camp date pair selected yet.'

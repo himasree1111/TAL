@@ -1442,7 +1442,7 @@ const RELATION_OPTIONS = [
               {errors.first_name && <p className="error-text">{errors.first_name}</p>}
             </label>
             <label>
-              <span className="field-label">Middle Name</span>
+              <span className="field-label">Middle Name (Not Mandatory)</span>
               <input
                 type="text"
                 name="middle_name"
