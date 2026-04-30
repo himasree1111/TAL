@@ -1,8 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVolunteer } from "./VolunteerContext";
 import "./VolunteerDashboard.css";
 import supabase from "./supabaseClient";
+import {
+  getVolunteerNotifications,
+  subscribeToNotifications,
+  filterNotification,
+} from "./notificationService";
+
 
 export default function VolunteerDashboard() {
   const navigate = useNavigate();
@@ -19,6 +25,109 @@ export default function VolunteerDashboard() {
   const [settingsMessage, setSettingsMessage] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  // Fetch volunteer notifications on mount 
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoadingNotifications(true);
+      const result = await getVolunteerNotifications(volunteer?.email);
+      if (result.success) {
+        setNotifications(result.notifications);
+      }
+      setLoadingNotifications(false);
+    };
+
+    fetchNotifications();
+
+    // Real-time subscription — volunteer or all audience
+    const subscription = subscribeToNotifications((newData) => {
+      if (!newData.expires_at || new Date(newData.expires_at) > new Date()) {
+        setNotifications((prev) => {
+          const exists = prev.some((n) => n.id === newData.id);
+          if (exists) return prev;
+          return [newData, ...prev];
+        });
+      }
+    });
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
+  }, [volunteer?.email]); 
+
+  const totalNotifications = notifications.length;
+
+
+const formatToIST = (dateString) => {
+  if (!dateString) return new Date();
+  const utcDate = new Date(dateString);
+  const istOffsetMs = 5.5 * 60 * 60 * 1000; // IST UTC+5:30
+  return new Date(utcDate.getTime() + istOffsetMs);
+};
+
+const formatRelative = (dateStr) => {
+  if (!dateStr) return "";
+  const istDate = formatToIST(dateStr);
+  const diffMs = Date.now() - istDate.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 5) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
+
+  const isImportantNotification = (item) => {
+    const title = item.title?.toLowerCase() || "";
+    const message = item.message?.toLowerCase() || "";
+    return title.includes("urgent") || title.includes("important") || message.includes("urgent") || message.includes("important");
+  };
+
+
+
+  const renderNotifications = () => {
+    if (loadingNotifications) {
+      return <div className="empty-state">Loading notifications...</div>;
+    }
+    if (!notifications.length) {
+      return <div className="empty-state">No notifications available.</div>;
+    }
+
+    const sortedNotifications = [...notifications].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    return (
+      <div className="notification-grid">
+        {sortedNotifications.map((item) => {
+          const isImportant = isImportantNotification(item);
+          return (
+            <article
+              key={item.id}
+              className={`notification-card ${isImportant ? "important" : ""}`}
+            >
+              <div className="notification-title">
+                <strong>{item.title || "Untitled"}</strong>
+                <div className="notification-tags">
+                  {isImportant && <span className="badge important">Important</span>}
+                </div>
+              </div>
+              <p className="notification-message">{item.message}</p>
+              <div className="notification-meta">
+                <span className="timestamp">{formatRelative(item.created_at)}</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    );
+  };
 
   // Fetch stats directly from Supabase counts for accuracy
   useEffect(() => {
@@ -299,6 +408,17 @@ export default function VolunteerDashboard() {
             >
               Forms
             </button>
+            <button 
+              className={`nav-btn ${activeSection === "notifications" ? "active" : ""}`} 
+              onClick={() => {
+                setActiveSection("notifications");
+                setSidebarOpen(false);
+              }}
+              style={{ position: 'relative' }}
+            >
+              Notifications 🔔
+            </button>
+
 {/* 
               <button 
               className={`nav-btn ${activeSection === "settings" ? "active" : ""}`} 
@@ -321,7 +441,7 @@ export default function VolunteerDashboard() {
 
       {/* Main Content */}
       <main className="main-content">
-{activeSection === "forms" ? (
+        {activeSection === "forms" ? (
           <>
             <div className="main-header">
               <button
@@ -407,9 +527,27 @@ export default function VolunteerDashboard() {
               </div>
             )}
           </>
+        ) : activeSection === "notifications" ? (
+          <>
+            <div className="main-header">
+              <button
+                className="volunteer-menu-toggle"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Toggle sidebar menu"
+              >
+                ☰
+              </button>
+              <div className="tab-buttons">
+                <h1>Notifications</h1>
+              </div>
+            </div>
+            <div className="section-header">
+              <p className="section-note">Stay updated with announcements from the admin.</p>
+            </div>
+            {renderNotifications()}
+          </>
         ) : renderSettings()}
       </main>
     </div>
   );
 }
-

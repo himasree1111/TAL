@@ -23,6 +23,23 @@ const formatToIST = (dateString) => {
   return new Intl.DateTimeFormat('en-IN', istOptions).format(utcDate);
 };
 
+// For notifications - timestamps already stored in IST (no UTC conversion needed)
+/*const formatNotificationTime = (dateString) => {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "—";
+  const istOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  };
+  return new Intl.DateTimeFormat('en-IN', istOptions).format(date);
+};*/
+
 const parseMoney = (value) => {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -132,7 +149,7 @@ export default function AdminDashboard() {
   // Notification state
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationAudience, setNotificationAudience] = useState("all");
+  const [notificationAudience, setNotificationAudience] = useState("eligible");
   const [notificationExpiresAt, setNotificationExpiresAt] = useState("");
   const [isAllTimeNotification, setIsAllTimeNotification] = useState(false);
   const [creatingNotification, setCreatingNotification] = useState(false);
@@ -2455,7 +2472,7 @@ const handleEditDonor = (donor) => {
               sms_alerts: smsAlerts,
               system_notifications: systemNotifications,
               default_language: "English",
-              time_zone: "IST (UTC+5:30)",
+              time_zone: "IST",
             }
           }
         });
@@ -2501,31 +2518,44 @@ const handleEditDonor = (donor) => {
   // Handle creating notifications
   const handleCreateNotification = async (e) => {
     e.preventDefault();
-    setCreatingNotification(true);
 
-  const formattedDate = notificationExpiresAt
-  ? new Date(notificationExpiresAt).toISOString()
-  : null;
-
-    const result = await createNotification(
-  notificationTitle,
-  notificationMessage,
-  notificationAudience,
-  formattedDate
-);
-
-    if (!isAllTimeNotification && !notificationExpiresAt) {
-      alert("Please select an expiry time or check 'All time notification'.");
-      setCreatingNotification(false);
+    // Validation: require title
+    if (!notificationTitle.trim()) {
+      alert("Please enter a notification title.");
       return;
     }
+
+    // Validation: require message
+    if (!notificationMessage.trim()) {
+      alert("Please enter a notification message.");
+      return;
+    }
+
+    // Validation: require expiry unless it's an all-time notification
+    if (!isAllTimeNotification && !notificationExpiresAt) {
+      alert("Please select an expiry time or check 'All time notification'.");
+      return;
+    }
+
+    setCreatingNotification(true);
+
+    // Send IST string directly - Supabase will interpret as local time and store as timestamptz
+    const expiresAtIST = isAllTimeNotification ? null : notificationExpiresAt + ':00';
+
+
+    const result = await createNotification(
+      notificationTitle,
+      notificationMessage,
+      notificationAudience,
+      expiresAtIST
+    );
 
     if (result.success) {
       alert("Notification created successfully!");
       // Reset form including new state
       setNotificationTitle("");
       setNotificationMessage("");
-      setNotificationAudience("all");
+      setNotificationAudience("eligible");
       setNotificationExpiresAt("");
       setIsAllTimeNotification(false);
     } else {
@@ -2534,6 +2564,7 @@ const handleEditDonor = (donor) => {
 
     setCreatingNotification(false);
   };
+
 
   // Filter Components
   const FilterCard = ({ title, icon, options, value, onChange }) => (
@@ -4251,18 +4282,34 @@ const handleEditDonor = (donor) => {
                         <thead>
                           <tr>
                             <th>Title</th>
+                            <th>Message</th>
                             <th>Audience</th>
                             <th>Expires</th>
                             <th>Created</th>
-                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {adminNotifications.map((notif) => (
+                          {adminNotifications
+                              .filter((notif) => {
+                                const expires = notif.expires_at ? new Date(notif.expires_at ) : null;
+                                const now = new Date();
+                                const isActive = !expires || expires > now;
+                                console.groupCollapsed(`[NOTIF FILTER ${notif.id}] Active: ${isActive}`);
+                                console.log('expires_at raw:', notif.expires_at);
+                                console.log('parsed expires:', expires?.toISOString());
+                                console.log('current time:', now.toISOString());
+                                console.groupEnd();
+                                return isActive;
+                              })
+                              .map((notif) => 
                             <tr key={notif.id}>
                               <td style={{fontWeight: 500}}>{notif.title}</td>
+                              <td style={{fontWeight: 500}}>{notif.message}</td>
                               <td>{notif.audience}</td>
                               <td>{notif.expires_at ? formatToIST(notif.expires_at) : 'Never'}</td>
+
+          
+                              
                               <td>{formatToIST(notif.created_at)}</td>
                               <td>
                                 <button 
@@ -4274,7 +4321,7 @@ const handleEditDonor = (donor) => {
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -4301,6 +4348,7 @@ const handleEditDonor = (donor) => {
                       value={notificationAudience}
                       onChange={(e) => setNotificationAudience(e.target.value)}
                     >
+                      <option value="all">All Students & Volunteers</option>
                       <option value="eligible">Eligible Students Only</option>
                       <option value="volunteers">Volunteers Only</option>
                     </select>
@@ -4867,7 +4915,7 @@ const handleEditDonor = (donor) => {
 {viewStudent && (
   <div className="modal-overlay">
     <div className="modal">
-      <h3>Student Details (from admin_student_info)</h3>
+      <h3>Student Details</h3>
 
       <div className="view-grid">
         {/* Basic Info */}
