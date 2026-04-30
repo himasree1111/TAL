@@ -43,6 +43,24 @@ const buildCampScopeKey = (campName, campDate) => `${campName}__${campDate}`;
 
 const asComparableId = (value) => (value === null || value === undefined ? '' : String(value));
 
+// Highlight matching search text
+const highlightMatch = (text, query) => {
+  if (!text || !query) return text || '';
+  const queryLower = query.toLowerCase().trim();
+  if (!queryLower) return text;
+  
+  const textLower = text.toLowerCase();
+  const index = textLower.indexOf(queryLower);
+  
+  if (index === -1) return text;
+  
+  const before = text.slice(0, index);
+  const match = text.slice(index, index + queryLower.length);
+  const after = text.slice(index + queryLower.length);
+  
+  return `${before}<mark style="background-color: #ffeb3b; padding: 0 2px; border-radius: 2px;">${match}</mark>${after}`;
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
@@ -479,8 +497,11 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
-  // New filters for replacement
+// New filters for replacement
 const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', toppers: false, achievements: 'all', singleParent: false, specialRemarks: false });
+
+  // Search functionality for Manage Beneficiaries
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Unique values for dropdowns - now with camp_master data showing dates
   const uniqueCamps = useMemo(() => {
@@ -847,8 +868,18 @@ const calculatePriority = useCallback((s) => {
       return typeof value === 'string' && value.trim().length > 0;
     };
 
-    return students
+return students
       .filter((s, idx) => {
+        // Search filter - real-time search by name
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase().trim();
+          const nameMatches = (s.name || s.full_name || '').toLowerCase().includes(query);
+          const emailMatches = (s.email || '').toLowerCase().includes(query);
+          if (!nameMatches && !emailMatches) {
+            return false;
+          }
+        }
+
         // New filters
         if (newFilters.camp !== 'all') {
           // Parse the camp filter value (format: "campName__campDate")
@@ -2782,10 +2813,63 @@ const handleEditDonor = (donor) => {
             </>
           )} 
 
-          {/* Manage Beneficiaries */}
+{/* Manage Beneficiaries */}
           {activeSection === "manage" && (
             <section className="manage-section">
               <div className="manage-controls">
+{/* Prominent Search Bar - Out of the box */}
+                <div className="prominent-search-bar" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '1rem 1.5rem',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '12px',
+                  marginBottom: '1.5rem',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                }}>
+                  <span style={{ fontSize: '1.5rem' }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search by name or email... (instant filter)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="search-input"
+                    autoFocus
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: '2px solid transparent',
+                      fontSize: '1rem',
+                      outline: 'none',
+                      background: 'white',
+                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        padding: '10px 20px',
+                        background: 'rgba(255,255,255,0.2)',
+                        border: '2px solid white',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      ✕ Clear
+                    </button>
+                  )}
+                  <span style={{ color: 'white', fontWeight: 500, fontSize: '0.9rem' }}>
+                    {filteredStudents.length} result{filteredStudents.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
 <div className="new-filters-grid">
                   <FilterCard 
                     title="Camp" 
@@ -2849,8 +2933,8 @@ const handleEditDonor = (donor) => {
                   <tbody>
 {filteredStudents.map(s => (
                       <tr key={s.id}>
-                        <td>{s.name}</td>
-                        <td>{s.email}</td>
+                        <td dangerouslySetInnerHTML={{__html: highlightMatch(s.name || s.full_name || '', searchQuery)}}></td>
+                        <td dangerouslySetInnerHTML={{__html: highlightMatch(s.email || '', searchQuery)}}></td>
                         <td>{s.course || '—'}</td>
                         <td className="nowrap-cell">{s.contact || '—'}</td>
                             <td>{s.campName || '—'}</td>
@@ -2937,7 +3021,7 @@ const handleEditDonor = (donor) => {
                 </div>
 
                 <div className="manage-actions">
-                  <button className="btn primary" onClick={fetchNonEligibleStudents}>Refresh</button>
+<button className="btn primary" onClick={() => fetchNonEligibleStudents()}>Refresh</button>
                   <button className="btn primary" onClick={handleDownloadNonEligibleReport}>Export CSV</button>
                 </div>
               </div>
