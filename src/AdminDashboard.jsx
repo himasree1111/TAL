@@ -1836,13 +1836,8 @@ await fetchFeeTrackingRecords();
 
 const handleApprove = async (student) => {
   try {
-    // 🔐 Get current session (for auth token)
+    // Get Supabase session if present (used for email function auth)
     const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      alert("❌ You are not logged in");
-      return;
-    }
 
     // 🟢 1. Update student status to Eligible
     const { error: updateError } = await supabase
@@ -1856,6 +1851,11 @@ const handleApprove = async (student) => {
       return;
     }
 
+    // Remove from pending list immediately so UI updates without refresh
+    setStudents((prev) =>
+      prev.filter((s) => asComparableId(s.id) !== asComparableId(student.id))
+    );
+
     // 🟢 2. Send email ONLY if email exists
     if (!student.email) {
       console.warn("⚠️ No email found for student");
@@ -1867,7 +1867,9 @@ const handleApprove = async (student) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${session.access_token}`, // 🔥 FIXED 401
+              ...(session?.access_token
+                ? { "Authorization": `Bearer ${session.access_token}` }
+                : {}),
             },
             body: JSON.stringify({
               email: student.email,
