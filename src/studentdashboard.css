@@ -1,12 +1,13 @@
 .student-root {
   display: grid;
   grid-template-columns: clamp(240px, min(25vw, 80vw), 280px) 1fr;
+  height: 100vh;
   min-height: 100vh;
   font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
   background: #f6f7f6;
   color: #2e2e2e;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 /* Sidebar */
@@ -132,12 +133,14 @@
 /* Main Area */
 .student-main {
   padding: clamp(1rem, 4vw, 1.75rem) clamp(1.25rem, 5vw, 2.125rem);
-  min-height: 100vh;
+  min-height: 0;
+  height: 100vh;
   display: block !important;
   width: 100%;
   gap: clamp(1.5rem, 3vw, 1.5rem);
   overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .student-main-header {
@@ -168,14 +171,11 @@
 
 @media (max-width: 768px) {
   .student-main-header::before {
-    display: flex;
-    content: '←';
-    font-weight: bold;
-    color: #1d2b4a;
+    display: none;
   }
 
   .student-main-header {
-    padding-left: 40px;
+    padding-left: 0;
   }
 }
 
@@ -351,10 +351,11 @@
 
 /* Documents */
 .documents-grid { 
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 1.5rem !important;
-  align-items: stretch !important;}
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
 
 .doc-card { 
   background: #ffffff; 
@@ -712,14 +713,36 @@ width: 100%;
 @media (max-width: 600px) {
   .student-root {
     grid-template-columns: 1fr;
+    height: 100vh;
     min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .student-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .student-sidebar.open {
+    left: 0;
   }
 
   .student-main {
     padding: 12px 12px;
     gap: 12px;
     width: 100%;
+    height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .student-main-header {
@@ -806,12 +829,15 @@ width: 100%;
   }
 
   .documents-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    width: 100%;
     gap: 14px;
   }
 
   .doc-card {
     padding: 16px;
+    width: 100%;
+    min-width: 0;
   }
 
   .doc-card-header {
@@ -821,9 +847,14 @@ width: 100%;
     gap: 12px;
   }
 
+  .doc-card-header > div {
+    width: 100%;
+  }
+
   .upload-section {
     max-width: 100%;
     width: 100%;
+    align-items: stretch;
   }
 
   .doc-input {
@@ -833,6 +864,29 @@ width: 100%;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
     margin-bottom: 12px;
+  }
+
+  .upload-section input[type="file"] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 48px;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px dashed #d1d5db;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+
+  .upload-progress .upload-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .doc-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .profile-form {
@@ -1149,6 +1203,9 @@ width: 100%;
 @media (max-width: 768px) and (min-width: 601px) {
   .student-root {
     grid-template-columns: 1fr;
+    height: 100vh;
+    min-height: 100vh;
+    overflow: hidden;
   }
 
   .student-sidebar {
@@ -1174,7 +1231,10 @@ width: 100%;
 
   .student-main {
     width: 100%;
+    height: 100vh;
     padding: 16px 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .stats-bar {
@@ -1182,7 +1242,8 @@ width: 100%;
   }
 
   .documents-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 1fr !important;
+    width: 100%;
   }
 
   /* Tablet-specific improvements */
@@ -1195,12 +1256,13 @@ width: 100%;
   }
 
   .doc-card-header {
-    flex-direction: row;
+    flex-direction: column;
     align-items: flex-start;
   }
 
   .upload-section {
-    min-width: 200px;
+    min-width: 0;
+    width: 100%;
   }
 
   .form-actions {
