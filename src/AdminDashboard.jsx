@@ -188,7 +188,7 @@ export default function AdminDashboard() {
   // Notification state
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationAudience, setNotificationAudience] = useState("eligible");
+  const [notificationAudience, setNotificationAudience] = useState("all");
   const [notificationExpiresAt, setNotificationExpiresAt] = useState("");
   const [isAllTimeNotification, setIsAllTimeNotification] = useState(false);
   const [creatingNotification, setCreatingNotification] = useState(false);
@@ -752,6 +752,11 @@ const paidFeeRecords = useMemo(() => {
     return paidFeeRecords.filter((record) => !record.voucher_url);
   }, [paidFeeRecords]);
 
+  // Students with voucher uploaded but fee receipt NOT uploaded
+  const voucherUploadedNoReceiptRecords = useMemo(() => {
+    return paidFeeRecords.filter((record) => record.voucher_url && !record.fee_receipt_url);
+  }, [paidFeeRecords]);
+
   // Students with student-uploaded fee receipts (from fee_tracking where fee_receipt_url IS NOT NULL and fee_receipt_checked = 'false')
   const [studentFeeReceipts, setStudentFeeReceipts] = useState([]);
   const [loadingStudentReceipts, setLoadingStudentReceipts] = useState(false);
@@ -855,6 +860,21 @@ const totalFeeDue = useMemo(() => {
       return sum + Math.max(requiredFee - paidAmount, 0);
     }, 0);
   }, [feeTrackingRecords]);
+
+  // Calculate total funds available (donor amount - amount used for fee payments)
+  const totalFundsAvailable = useMemo(() => {
+    const totalDonated = donors.reduce((s, d) => s + parseMoney(d.amount), 0);
+    const totalPaid = feeTrackingRecords.reduce((s, r) => s + parseMoney(r.fee_paid_by_tal), 0);
+    return Math.max(totalDonated - totalPaid, 0);
+  }, [donors, feeTrackingRecords]);
+
+  // Calculate fund utilization percentage
+  const fundUtilizationPercent = useMemo(() => {
+    const totalDonated = donors.reduce((s, d) => s + parseMoney(d.amount), 0);
+    const totalPaid = feeTrackingRecords.reduce((s, r) => s + parseMoney(r.fee_paid_by_tal), 0);
+    if (totalDonated <= 0) return 0;
+    return Math.round((totalPaid / totalDonated) * 100);
+  }, [donors, feeTrackingRecords]);
 
 const getMaxPercent = useCallback((s) => {
   return Math.max(
@@ -1855,13 +1875,8 @@ await fetchFeeTrackingRecords();
 
 const handleApprove = async (student) => {
   try {
-    // 🔐 Get current session (for auth token)
+    // Get Supabase session if present (used for email function auth)
     const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      alert("❌ You are not logged in");
-      return;
-    }
 
     // 🟢 1. Update student status to Eligible
     const { error: updateError } = await supabase
@@ -1875,6 +1890,11 @@ const handleApprove = async (student) => {
       return;
     }
 
+    // Remove from pending list immediately so UI updates without refresh
+    setStudents((prev) =>
+      prev.filter((s) => asComparableId(s.id) !== asComparableId(student.id))
+    );
+
     // 🟢 2. Send email ONLY if email exists
     if (!student.email) {
       console.warn("⚠️ No email found for student");
@@ -1886,7 +1906,9 @@ const handleApprove = async (student) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${session.access_token}`, // 🔥 FIXED 401
+              ...(session?.access_token
+                ? { "Authorization": `Bearer ${session.access_token}` }
+                : {}),
             },
             body: JSON.stringify({
               email: student.email,
@@ -2241,7 +2263,7 @@ const handleEditDonor = (donor) => {
         donation_type: editDonorForm.donation_type,
         donation_date: editDonorForm.donation_date ? new Date(editDonorForm.donation_date).toISOString() : new Date().toISOString()
       };
-      const {  error } = await supabase
+      const { data, error } = await supabase
         .from('donor_details')
         .update(formData)
         .eq('id', editingDonor.id)
@@ -2489,13 +2511,35 @@ const handleEditDonor = (donor) => {
   };
 
   const handleDownloadSpecificReport = (key) => {
-    const blob = new Blob([key + ' report (demo)'], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${key}-report.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (key === 'financial') {
+      const totalFunds = donors.reduce((s, d) => s + parseMoney(d.amount), 0);
+      const totalUsed = feeTrackingRecords.reduce((s, r) => s + parseMoney(r.fee_paid_by_tal), 0);
+      const available = Math.max(totalFunds - totalUsed, 0);
+      
+      const rows = [
+        'Financial Overview Report',
+        `Generated on: ${new Date().toLocaleString('en-IN')}`,
+        '',
+        'Summary',
+        `Total Funds Raised,\u20b9${totalFunds.toLocaleString()}`,
+        `Total Used,\u20b9${totalUsed.toLocaleString()}`,
+        `Total Available,\u20b9${available.toLocaleString()}`,
+        `Utilization Rate,${totalFunds > 0 ? Math.round((totalUsed / totalFunds) * 100) : 0}%`,
+        '',
+        'Donors Count,' + donors.length,
+        'Students Paid,' + feeTrackingRecords.filter(r => parseMoney(r.fee_paid_by_tal) > 0).length
+      ];
+      
+      const csvContent = rows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `financial-overview-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('✅ Financial report downloaded!');
+    }
   };
 
   const handleSaveSettings = async () => {
@@ -2594,7 +2638,7 @@ const handleEditDonor = (donor) => {
       // Reset form including new state
       setNotificationTitle("");
       setNotificationMessage("");
-      setNotificationAudience("eligible");
+      setNotificationAudience("all");
       setNotificationExpiresAt("");
       setIsAllTimeNotification(false);
     } else {
@@ -3274,7 +3318,7 @@ const handleEditDonor = (donor) => {
 
               <div className="mapping-stats">
                 <div className="stat-box">
-                  <div className="value">₹{donors.reduce((s,d) => s + (d.amount || 0), 0)}</div>
+                  <div className="value">₹{totalFundsAvailable.toLocaleString()}</div>
                   <div className="label">Total Funds Available</div>
                 </div>
                 <div className="stat-box">
@@ -3282,7 +3326,7 @@ const handleEditDonor = (donor) => {
                   <div className="label">Active Donors</div>
                 </div>
                 <div className="stat-box">
-                  <div className="value">85%</div>
+                  <div className="value">{fundUtilizationPercent}%</div>
                   <div className="label">Fund Utilization</div>
                 </div>
               </div>
@@ -3748,7 +3792,6 @@ const handleEditDonor = (donor) => {
               <div className="section-header">
                 <h3>Fee Tracking</h3>
                 <div className="section-actions">
-                  <button className="btn primary" onClick={handleSendReminders}>Send Reminders</button>
                   <button className="btn" onClick={handleDownloadFeeReport}>Download Report</button>
                 </div>
               </div>
@@ -3931,7 +3974,14 @@ const handleEditDonor = (donor) => {
               ) : feeSectionTab === 'receipts' ? (
                 <div className="table-wrap">
                   {/* Fee Receipt Sub-Tabs */}
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      className={`btn ${feeReceiptSubTab === 'pending_receipts' ? 'primary' : ''}`}
+                      onClick={() => setFeeReceiptSubTab('pending_receipts')}
+                      style={{ fontWeight: feeReceiptSubTab === 'pending_receipts' ? 'bold' : 'normal' }}
+                    >
+                      📤 Pending Fee Receipts ({voucherUploadedNoReceiptRecords.length})
+                    </button>
                     <button
                       className={`btn ${feeReceiptSubTab === 'pending' ? 'primary' : ''}`}
                       onClick={() => setFeeReceiptSubTab('pending')}
@@ -3948,7 +3998,63 @@ const handleEditDonor = (donor) => {
                     </button>
                   </div>
 
-                  {/* Pending Fee Receipts Tab */}
+                  {/* Pending Fee Receipts (Voucher Uploaded, No Receipt) Tab */}
+                  {feeReceiptSubTab === 'pending_receipts' && (
+                    <div>
+                      <h4>Students with Voucher Uploaded - Awaiting Fee Receipt Upload</h4>
+                      {voucherUploadedNoReceiptRecords.length === 0 ? (
+                        <p style={{ textAlign: 'center', color: '#666', padding: '2rem' }}>No students with pending fee receipts. All vouchers have receipts or none are uploaded.</p>
+                      ) : (
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              
+                              <th>Student Name</th>
+                              <th>Email</th>
+                              <th>Required Fee</th>
+                              <th>Paid by TAL</th>
+                              <th>Voucher</th>
+                              <th>Voucher Uploaded At</th>
+                              <th>Details</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {voucherUploadedNoReceiptRecords.map((record) => {
+                              const requiredFee = parseMoney(record.total_educational_expenses || 0);
+                              const paidAmount = parseMoney(record.fee_paid_by_tal || 0);
+                              return (
+                                <tr key={record.id}>
+                                  
+                                  <td>{record.student_name || '—'}</td>
+                                  <td>{record.email || '—'}</td>
+                                  <td>₹{requiredFee.toLocaleString()}</td>
+                                  <td>₹{paidAmount.toLocaleString()}</td>
+                                  <td>
+                                    {record.voucher_url ? (
+                                      <a href={record.voucher_url} target="_blank" rel="noreferrer" className="btn small">View Voucher</a>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </td>
+                                  <td>{formatToIST(record.voucher_uploaded_at)}</td>
+                                  <td>
+                                    <button
+                                      className="btn small"
+                                      onClick={() => setViewingReceiptRecord(record)}
+                                    >
+                                    Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Pending Fee Receipts Tab (For Verification) */}
                   {feeReceiptSubTab === 'pending' && (
                     <div>
                       <h4>Student Fee Receipts for Admin Verification</h4>
@@ -3960,7 +4066,7 @@ const handleEditDonor = (donor) => {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>ID</th>
+                              
                               <th>Student Name</th>
                               <th>Email</th>
                               <th>Required Fee</th>
@@ -3976,7 +4082,7 @@ const handleEditDonor = (donor) => {
                               const paidAmount = parseMoney(receipt.fee_paid_by_tal || 0);
                               return (
                                 <tr key={receipt.id}>
-                                  <td><strong>#{receipt.id}</strong></td>
+                                  
                                   <td>{receipt.student_name || '—'}</td>
                                   <td>{receipt.email || '—'}</td>
                                   <td>₹{requiredFee.toLocaleString()}</td>
@@ -4027,7 +4133,7 @@ const handleEditDonor = (donor) => {
                         <table className="data-table">
                           <thead>
                             <tr>
-                              <th>ID</th>
+                          
                               <th>Student Name</th>
                               <th>Email</th>
                               <th>Required Fee</th>
@@ -4044,7 +4150,7 @@ const handleEditDonor = (donor) => {
                               const paidAmount = parseMoney(record.fee_paid_by_tal || 0);
                               return (
                                 <tr key={record.id}>
-                                  <td><strong>#{record.id}</strong></td>
+                          
                                   <td>{record.student_name || '—'}</td>
                                   <td>{record.email || '—'}</td>
                                   <td>₹{requiredFee.toLocaleString()}</td>
@@ -4540,7 +4646,9 @@ const handleEditDonor = (donor) => {
                 <div className="report-card">
                   <h4>Financial Overview</h4>
                   <div className="report-meta">
-                    <p>Total Funds: <strong>₹{donors.reduce((s,d) => s + (d.amount || 0), 0)}</strong></p>
+                    <p>Total Funds Available: <strong>₹{totalFundsAvailable.toLocaleString()}</strong></p>
+                    <p>Total Funds Raised: <strong>₹{donors.reduce((s,d) => s + (d.amount || 0), 0).toLocaleString()}</strong></p>
+                    <p>Total Used: <strong>₹{feeTrackingRecords.reduce((s,r) => s + parseMoney(r.fee_paid_by_tal), 0).toLocaleString()}</strong></p>
                   </div>
                   <div className="chart-container">
                     <div className="chart-placeholder">Chart Coming Soon</div>
@@ -4558,12 +4666,22 @@ const handleEditDonor = (donor) => {
                   <div className="chart-container">
                     <div className="chart-placeholder">
                       {selectedReportCampScope
-                        ? `Fee receipts for ${selectedReportCampScope.campName} on ${new Date(selectedReportCampScope.campDate).toLocaleDateString('en-IN')} are ready for export.`
+                        ? `${scopedFeeReceiptRecords.length} fee receipts available`
                         : 'Select a camp/date pair to scope this report.'}
                     </div>
                   </div>
                   <div className="report-actions">
-                    <button className="btn small view-btn" onClick={() => setActiveSection('fees')}>View Page</button>
+                    <button 
+                      className="btn small view-btn" 
+                      onClick={() => {
+                        setShowNonEligibleTable(false);
+                        setShowFeeReceiptsReportTable(true);
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+                      }}
+                      disabled={!selectedReportCampScope}
+                    >
+                      View Data
+                    </button>
                     <button className="btn small" onClick={handleDownloadFeeReceiptsReport} disabled={!selectedReportCampScope || scopedFeeReceiptRecords.length === 0}>
                       Download Report
                     </button>
@@ -4856,11 +4974,11 @@ const handleEditDonor = (donor) => {
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th>Donor ID</th>
                             <th>Donor Name</th>
                             <th>Amount</th>
                             <th>Donation Date</th>
-                            <th>Camp Name</th>
+                            <th>Payment Method</th>
+                            <th>Transaction ID</th>
                             <th>Email</th>
                             <th>Contact</th>
                           </tr>
@@ -4868,8 +4986,7 @@ const handleEditDonor = (donor) => {
                         <tbody>
                           {donors.map((donor) => (
                             <tr key={donor.id}>
-                              <td>#{donor.id}</td>
-                              <td>{donor.name || '—'}</td>
+                              <td>{donor.full_name || donor.name || '—'}</td>
                               <td>₹{(donor.amount || 0).toLocaleString()}</td>
                               <td>
                                 {donor.donation_date 
@@ -4878,12 +4995,13 @@ const handleEditDonor = (donor) => {
                                       month: 'short',
                                       year: 'numeric'
                                     })
-                                  : '—'
+                                : '—'
                                 }
                               </td>
-                              <td>{donor.camp_name || '—'}</td>
+                              <td>{donor.payment_method || '—'}</td>
+                              <td>{donor.transaction_id || '—'}</td>
                               <td>{donor.email || '—'}</td>
-                              <td>{donor.contact || '—'}</td>
+                              <td>{donor.phone || '—'}</td>
                             </tr>
                           ))}
                         </tbody>
