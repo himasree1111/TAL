@@ -109,6 +109,8 @@ export default function AdminDashboard() {
   const [eligibleStudents, setEligibleStudents] = useState([]);
   const [_eligibleStudentsRaw, setEligibleStudentsRaw] = useState([]);
   const [loadingEligible, setLoadingEligible] = useState(false);
+  const [documentVerificationCampFilter, setDocumentVerificationCampFilter] = useState('all');
+  const [documentVerificationSearchQuery, setDocumentVerificationSearchQuery] = useState('');
   const [_eligibleCount, setEligibleCount] = useState(0);
   const [nonEligibleStudents, setNonEligibleStudents] = useState([]);
   const [loadingNonEligible, setLoadingNonEligible] = useState(false);
@@ -126,6 +128,43 @@ export default function AdminDashboard() {
   const [newCampExtraDates, setNewCampExtraDates] = useState("");
   const [addingCamp, setAddingCamp] = useState(false);
   const [reportCampScopeKey, setReportCampScopeKey] = useState("");
+
+  const documentVerificationCampOptions = useMemo(() => {
+    const seen = new Set();
+    const options = [];
+
+    (eligibleStudents || []).forEach((student) => {
+      const campName = normalizeCampName(student.camp_name || student.campName);
+      if (!campName) return;
+      if (seen.has(campName)) return;
+      seen.add(campName);
+      options.push({ value: campName, label: campName });
+    });
+
+    return [
+      { value: 'all', label: 'All Camps' },
+      ...options.sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+  }, [eligibleStudents]);
+
+  const filteredEligibleStudentsForVerification = useMemo(() => {
+    const searchQuery = (documentVerificationSearchQuery || '').toLowerCase().trim();
+
+    return (eligibleStudents || []).filter((student) => {
+      const campName = normalizeCampName(student.camp_name || student.campName);
+      if (documentVerificationCampFilter !== 'all' && campName.toLowerCase() !== documentVerificationCampFilter.toLowerCase()) {
+        return false;
+      }
+
+      if (!searchQuery) {
+        return true;
+      }
+
+      const name = (student.student_name || student.full_name || student.name || '').toLowerCase();
+      const email = (student.email || '').toLowerCase();
+      return name.includes(searchQuery) || email.includes(searchQuery);
+    });
+  }, [eligibleStudents, documentVerificationCampFilter, documentVerificationSearchQuery]);
   const [newDonorForm, setNewDonorForm] = useState({
     full_name: '',
     gender: '',
@@ -3550,7 +3589,36 @@ const handleEditDonor = (donor) => {
             <section className="verification-section">
               <div className="section-header">
                 <h3>Document Verification</h3>
-                <div className="section-actions">
+                <div className="section-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select
+                    className="filter-select"
+                    value={documentVerificationCampFilter}
+                    onChange={(e) => setDocumentVerificationCampFilter(e.target.value)}
+                    style={{ minWidth: '200px' }}
+                  >
+                    {documentVerificationCampOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={documentVerificationSearchQuery}
+                    onChange={(e) => setDocumentVerificationSearchQuery(e.target.value)}
+                    className="search-input"
+                    style={{ flex: 1, minWidth: '220px', padding: '10px 14px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem' }}
+                  />
+                  {documentVerificationSearchQuery && (
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => setDocumentVerificationSearchQuery('')}
+                    >
+                      Clear
+                    </button>
+                  )}
                   <button className="btn primary" onClick={() => {
                     setLoadingEligible(true);
                     fetchEligibleStudents().then(() => setLoadingEligible(false));
@@ -3562,10 +3630,16 @@ const handleEditDonor = (donor) => {
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
                   Loading documents...
                 </div>
-              ) : eligibleStudents.length === 0 ? (
+              ) : filteredEligibleStudentsForVerification.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '4rem', color: '#666' }}>
-                  <h4>No Eligible Students</h4>
-                  <p>Documents will appear here once students are marked as eligible.</p>
+                  <h4>No Documents Found</h4>
+                  <p>
+                    {documentVerificationSearchQuery
+                      ? `No eligible students found matching "${documentVerificationSearchQuery}".`
+                      : documentVerificationCampFilter === 'all'
+                        ? 'No eligible students found.'
+                        : 'No eligible students found for the selected camp.'}
+                  </p>
                 </div>
               ) : (
                 <div className="table-wrap">
@@ -3583,85 +3657,84 @@ const handleEditDonor = (donor) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {eligibleStudents.map((student) => {
-                        // Find the latest fee tracking record for this student
+                      {filteredEligibleStudentsForVerification.map((student) => {
                         const feeRecord = getFeeTrackingRecord(student);
-                        const lastFeePaidDate = feeRecord?.fee_paid_by_tal > 0 
-                          ? feeRecord?.updated_at || feeRecord?.created_at 
+                        const lastFeePaidDate = feeRecord?.fee_paid_by_tal > 0
+                          ? feeRecord?.updated_at || feeRecord?.created_at
                           : null;
-                        
+
                         return (
-                        <tr key={student.id}>
-                          <td>{student.student_name || student.full_name || '—'}</td>
-                          <td>{student.email || '—'}</td>
-                          <td>{student.class || student.year || student.course || '—'}</td>
-                          <td>
-                            <span 
-                              className="doc-badge" 
-                              style={{backgroundColor: '#e3f2fd', color: '#1976d2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.academic_count > 0 ? 'pointer' : 'default', opacity: student.academic_count > 0 ? 1 : 0.6}}
-                              onClick={() => student.academic_count > 0 && handleViewDocuments(student, 'academic')}
-                            >
-                              {student.academic_count || 0} files
-                            </span>
-                          </td>
-                          <td>
-                            <span 
-                              className="doc-badge" 
-                              style={{backgroundColor: '#f3e5f5', color: '#7b1fa2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.personal_count > 0 ? 'pointer' : 'default', opacity: student.personal_count > 0 ? 1 : 0.6}}
-                              onClick={() => student.personal_count > 0 && handleViewDocuments(student, 'personal')}
-                            >
-                              {student.personal_count || 0} files
-                            </span>
-                          </td>
-                          <td>
-                            <span 
-                              className="doc-badge" 
-                              style={{backgroundColor: '#fff3e0', color: '#e65100', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.extracurricular_count > 0 ? 'pointer' : 'default', opacity: student.extracurricular_count > 0 ? 1 : 0.6}}
-                              onClick={() => student.extracurricular_count > 0 && handleViewDocuments(student, 'extracurricular')}
-                            >
-                              {student.extracurricular_count || 0} files
-                            </span>
-                          </td>
-                          <td>
-                            {lastFeePaidDate ? (
-                              <div style={{ fontSize: '12px' }}>
-                                <div style={{ fontWeight: '600', color: '#16a34a' }}>
-                                  {new Date(lastFeePaidDate).toLocaleDateString('en-IN', { 
-                                    day: '2-digit', 
-                                    month: 'short', 
-                                    year: 'numeric' 
-                                  })}
+                          <tr key={student.id}>
+                            <td dangerouslySetInnerHTML={{ __html: highlightMatch(student.student_name || student.full_name || '—', documentVerificationSearchQuery) }}></td>
+                            <td dangerouslySetInnerHTML={{ __html: highlightMatch(student.email || '—', documentVerificationSearchQuery) }}></td>
+                            <td>{student.class || student.year || student.course || '—'}</td>
+                            <td>
+                              <span
+                                className="doc-badge"
+                                style={{ backgroundColor: '#e3f2fd', color: '#1976d2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.academic_count > 0 ? 'pointer' : 'default', opacity: student.academic_count > 0 ? 1 : 0.6 }}
+                                onClick={() => student.academic_count > 0 && handleViewDocuments(student, 'academic')}
+                              >
+                                {student.academic_count || 0} files
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className="doc-badge"
+                                style={{ backgroundColor: '#f3e5f5', color: '#7b1fa2', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.personal_count > 0 ? 'pointer' : 'default', opacity: student.personal_count > 0 ? 1 : 0.6 }}
+                                onClick={() => student.personal_count > 0 && handleViewDocuments(student, 'personal')}
+                              >
+                                {student.personal_count || 0} files
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className="doc-badge"
+                                style={{ backgroundColor: '#fff3e0', color: '#e65100', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: student.extracurricular_count > 0 ? 'pointer' : 'default', opacity: student.extracurricular_count > 0 ? 1 : 0.6 }}
+                                onClick={() => student.extracurricular_count > 0 && handleViewDocuments(student, 'extracurricular')}
+                              >
+                                {student.extracurricular_count || 0} files
+                              </span>
+                            </td>
+                            <td>
+                              {lastFeePaidDate ? (
+                                <div style={{ fontSize: '12px' }}>
+                                  <div style={{ fontWeight: '600', color: '#16a34a' }}>
+                                    {new Date(lastFeePaidDate).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })}
+                                  </div>
+                                  <div style={{ color: '#6b7280', fontSize: '11px' }}>
+                                    {new Date(lastFeePaidDate).toLocaleTimeString('en-IN', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
                                 </div>
-                                <div style={{ color: '#6b7280', fontSize: '11px' }}>
-                                  {new Date(lastFeePaidDate).toLocaleTimeString('en-IN', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })}
-                                </div>
-                              </div>
-                            ) : (
-                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>No fee paid</span>
-                            )}
-                          </td>
-                          <td className="actions-flex">
-                            <button
-                              className="btn small icon-only view-btn"
-                              aria-label="View documents"
-                              onClick={() => setViewEligibleStudent(student)}
-                            >
-                              👁
-                            </button>
-                            <button
-                              className={`btn small icon-only verify-btn ${student.document_count > 0 && student.verified_count === student.document_count ? 'verified' : ''}`}
-                              aria-label={student.document_count > 0 && student.verified_count === student.document_count ? 'Verified' : 'Mark Verified'}
-                              disabled={student.document_count === 0 || student.verified_count === student.document_count}
-                              onClick={() => handleVerifyStudentDocuments(student)}
-                            >
-                              ✅
-                            </button>
-                          </td>
-                        </tr>
-                      );
+                              ) : (
+                                <span style={{ color: '#9ca3af', fontSize: '12px' }}>No fee paid</span>
+                              )}
+                            </td>
+                            <td className="actions-flex">
+                              <button
+                                className="btn small icon-only view-btn"
+                                aria-label="View documents"
+                                onClick={() => setViewEligibleStudent(student)}
+                              >
+                                👁
+                              </button>
+                              <button
+                                className={`btn small icon-only verify-btn ${student.document_count > 0 && student.verified_count === student.document_count ? 'verified' : ''}`}
+                                aria-label={student.document_count > 0 && student.verified_count === student.document_count ? 'Verified' : 'Mark Verified'}
+                                disabled={student.document_count === 0 || student.verified_count === student.document_count}
+                                onClick={() => handleVerifyStudentDocuments(student)}
+                              >
+                                ✅
+                              </button>
+                            </td>
+                          </tr>
+                        );
                       })}
                     </tbody>
                   </table>
