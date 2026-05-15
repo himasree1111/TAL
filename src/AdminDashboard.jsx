@@ -2176,8 +2176,18 @@ const fetchStudents = async () => {
   // Edit donor state
   const [editingDonor, setEditingDonor] = useState(null);
   
-const handleEditDonor = (donor) => {
-    const editData = {...donor, donation_date: donor.donation_date ? donor.donation_date.slice(0,16) : ''};
+  const formatDonationDateForInput = (donationDate) => {
+    if (!donationDate) return '';
+    if (typeof donationDate === 'string') return donationDate.slice(0, 16);
+    if (donationDate instanceof Date) return donationDate.toISOString().slice(0, 16);
+    return new Date(donationDate).toISOString().slice(0, 16);
+  };
+
+  const handleEditDonor = (donor) => {
+    const editData = {
+      ...donor,
+      donation_date: formatDonationDateForInput(donor.donation_date),
+    };
     setEditingDonor(editData);
     setEditDonorForm(editData);
     setShowEditDonorModal(true);
@@ -2262,15 +2272,15 @@ const handleEditDonor = (donor) => {
     setSubmittingDonor(true);
     try {
       const formData = {
-        full_name: newDonorForm.full_name.trim(),
-        gender: newDonorForm.gender.trim() || null,
-        phone: newDonorForm.phone.trim() || null,
-        email: newDonorForm.email.trim().toLowerCase(),  // normalize email
+        full_name: (newDonorForm.full_name || '').trim(),
+        gender: (newDonorForm.gender || '').trim() || null,
+        phone: (newDonorForm.phone || '').trim() || null,
+        email: (newDonorForm.email || '').trim().toLowerCase(),
         donor_type: newDonorForm.donor_type,
-        organization_name: newDonorForm.organization_name.trim() || null,
+        organization_name: (newDonorForm.organization_name || '').trim() || null,
         amount: parseFloat(newDonorForm.amount),
         payment_method: newDonorForm.payment_method,
-        transaction_id: newDonorForm.transaction_id.trim() || `TXN_${Date.now()}`,
+        transaction_id: (newDonorForm.transaction_id || '').trim() || `TXN_${Date.now()}`,
         donation_type: newDonorForm.donation_type,
         donation_date: newDonorForm.donation_date ? new Date(newDonorForm.donation_date).toISOString() : new Date().toISOString(),
         created_at: new Date().toISOString()
@@ -2284,7 +2294,10 @@ const handleEditDonor = (donor) => {
         .single();
 
       if (error) {
-        console.error('Error adding donor:', error);
+        console.error('[ADD DONOR] Supabase error:', error);
+        console.error('[ADD DONOR] Error message:', error.message);
+        console.error('[ADD DONOR] Error code:', error.code);
+        console.error('[ADD DONOR] Error details:', error.details);
         alert('❌ Failed to add donor: ' + (error.message || error));
         return;
       }
@@ -2348,16 +2361,20 @@ const handleEditDonor = (donor) => {
     }
     setSubmittingDonor(true);
     try {
+      if (!editingDonor?.id) {
+        alert('❌ Unable to update donor: missing donor identifier.');
+        return;
+      }
       const formData = {
-        full_name: editDonorForm.full_name.trim(),
-        gender: editDonorForm.gender.trim() || null,
-        phone: editDonorForm.phone.trim() || null,
-        email: editDonorForm.email.trim().toLowerCase(),
+        full_name: (editDonorForm.full_name || '').trim(),
+        gender: (editDonorForm.gender || '').trim() || null,
+        phone: (editDonorForm.phone || '').trim() || null,
+        email: (editDonorForm.email || '').trim().toLowerCase(),
         donor_type: editDonorForm.donor_type,
-        organization_name: editDonorForm.organization_name.trim() || null,
+        organization_name: (editDonorForm.organization_name || '').trim() || null,
         amount: parseFloat(editDonorForm.amount),
         payment_method: editDonorForm.payment_method,
-        transaction_id: editDonorForm.transaction_id.trim(),
+        transaction_id: (editDonorForm.transaction_id || '').trim(),
         donation_type: editDonorForm.donation_type,
         donation_date: editDonorForm.donation_date ? new Date(editDonorForm.donation_date).toISOString() : new Date().toISOString()
       };
@@ -2368,7 +2385,10 @@ const handleEditDonor = (donor) => {
         .select()
         .single();
       if (error) {
-        console.error('Update error:', error);
+        console.error('[EDIT DONOR] Supabase update error:', error);
+        console.error('[EDIT DONOR] Error message:', error.message);
+        console.error('[EDIT DONOR] Error code:', error.code);
+        console.error('[EDIT DONOR] Error details:', error.details);
         alert('❌ Update failed: ' + error.message);
         return;
       }
@@ -2378,8 +2398,10 @@ const handleEditDonor = (donor) => {
       setEditingDonor(null);
       setEditDonorForm({});
     } catch (err) {
-      console.error(err);
-      alert('❌ Unexpected error');
+      console.error('[EDIT DONOR] Unexpected error:', err);
+      console.error('[EDIT DONOR] Error message:', err.message);
+      console.error('[EDIT DONOR] Error stack:', err.stack);
+      alert('❌ Unexpected error: ' + (err.message || err));
     } finally {
       setSubmittingDonor(false);
     }
@@ -5356,6 +5378,15 @@ const handleEditDonor = (donor) => {
               <p><strong>Updated At:</strong> {viewDonor.updated_at ? formatToIST(viewDonor.updated_at) : '—'}</p>
             </div>
             <div style={{display:'flex',gap:8,marginTop:12}}>
+              <button
+                className="btn secondary"
+                onClick={() => {
+                  handleEditDonor(viewDonor);
+                  setViewDonor(null);
+                }}
+              >
+                Edit
+              </button>
               <button className="btn primary" onClick={() => setViewDonor(null)}>Close</button>
             </div>
           </div>
