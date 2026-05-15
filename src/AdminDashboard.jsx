@@ -74,6 +74,28 @@ const parseCampScopeKey = (scopeKey = '') => {
 
 const asComparableId = (value) => (value === null || value === undefined ? '' : String(value));
 
+const getStoragePathFromUrl = (fileUrl) => {
+  if (!fileUrl) return '';
+
+  const marker = '/student_documents/';
+
+  try {
+    const url = new URL(fileUrl);
+    const markerIndex = url.pathname.indexOf(marker);
+    if (markerIndex >= 0) {
+      return url.pathname.slice(markerIndex + marker.length);
+    }
+    return '';
+  } catch {
+    const fileUrlString = String(fileUrl);
+    const markerIndex = fileUrlString.indexOf(marker);
+    if (markerIndex >= 0) {
+      return fileUrlString.slice(markerIndex + marker.length);
+    }
+    return '';
+  }
+};
+
 // Highlight matching search text
 const highlightMatch = (text, query) => {
   if (!text || !query) return text || '';
@@ -663,10 +685,12 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
   const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [viewNonEligibleStudent, setViewNonEligibleStudent] = useState(null);
   const [viewDocumentsStudent, setViewDocumentsStudent] = useState(null);
+  const [viewDocumentsCategory, setViewDocumentsCategory] = useState(null);
   const [studentDocuments, setStudentDocuments] = useState([]);
   const [groupedDocuments, setGroupedDocuments] = useState({});
   const [sortedYears, setSortedYears] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState(null);
 
   const [feeSectionTab, setFeeSectionTab] = useState('tracking');
   const [feeReceiptSubTab, setFeeReceiptSubTab] = useState('pending'); // 'pending' or 'verified'
@@ -1283,61 +1307,61 @@ const fetchStudentMonthlyStats = async () => {
 
   const handleViewDocuments = async (student, category) => {
     setViewDocumentsStudent(student);
+    setViewDocumentsCategory(category);
     setLoadingDocs(true);
 
     try {
-      // Get student_form_submissions ID using email
-      const { data: formData } = await supabase
-        .from('student_form_submissions')
-        .select('id')
-        .eq('email', student.email)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const studentFormId = formData?.id;
-      if (!studentFormId) {
-        alert('Student form not found');
-        setLoadingDocs(false);
-        return;
-      }
-
-      // Fetch ALL documents for this category (not filtered by year)
-      const { data: docs, error } = await supabase
-        .from('student_documents')
-        .select('*')
-        .eq('student_id', studentFormId)
-        .eq('category', category)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Group documents by education_year
-      const groupedDocs = {};
-      (docs || []).forEach(doc => {
-        const year = doc.education_year || 'Unknown';
-        if (!groupedDocs[year]) {
-          groupedDocs[year] = [];
-        }
-        groupedDocs[year].push(doc);
-      });
-      
-      // Sort years: most recent first
-      const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
-        if (a === 'Unknown') return 1;
-        if (b === 'Unknown') return -1;
-        return b.localeCompare(a);
-      });
-      
-      setStudentDocuments(docs || []);
-      setGroupedDocuments(groupedDocs);
-      setSortedYears(sortedYears);
+      await refreshDocumentPanel(student, category);
     } catch (err) {
       console.error('Error fetching documents:', err);
       alert('Error fetching documents: ' + err.message);
     } finally {
       setLoadingDocs(false);
     }
+  };
+
+  const refreshDocumentPanel = async (student, category) => {
+    const { data: formData } = await supabase
+      .from('student_form_submissions')
+      .select('id')
+      .eq('email', student.email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const studentFormId = formData?.id;
+    if (!studentFormId) {
+      alert('Student form not found');
+      return;
+    }
+
+    const { data: docs, error } = await supabase
+      .from('student_documents')
+      .select('*')
+      .eq('student_id', studentFormId)
+      .eq('category', category)
+      .order('uploaded_at', { ascending: false });
+
+    if (error) throw error;
+
+    const groupedDocs = {};
+    (docs || []).forEach(doc => {
+      const year = doc.education_year || 'Unknown';
+      if (!groupedDocs[year]) {
+        groupedDocs[year] = [];
+      }
+      groupedDocs[year].push(doc);
+    });
+
+    const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
+      if (a === 'Unknown') return 1;
+      if (b === 'Unknown') return -1;
+      return b.localeCompare(a);
+    });
+
+    setStudentDocuments(docs || []);
+    setGroupedDocuments(groupedDocs);
+    setSortedYears(sortedYears);
   };
 
   const handleVerifyStudentDocuments = async (student) => {
@@ -1518,6 +1542,16 @@ await fetchFeeTrackingRecords();
   // Verify individual document
   const handleVerifySingleDocument = async (docId) => {
     try {
+      const { data: currentDoc, error: currentDocError } = await supabase
+        .from('student_documents')
+        .select('category')
+        .eq('id', docId)
+        .maybeSingle();
+
+      if (currentDocError) {
+        throw currentDocError;
+      }
+
       const { error: updateError } = await supabase
         .from('student_documents')
         .update({ is_checked: true })
@@ -1528,42 +1562,8 @@ await fetchFeeTrackingRecords();
       }
 
       // Refresh the document list
-      if (viewDocumentsStudent) {
-        const { data: formData } = await supabase
-          .from('student_form_submissions')
-          .select('id')
-          .eq('email', viewDocumentsStudent.email)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (formData?.id) {
-          const { data: docs } = await supabase
-            .from('student_documents')
-            .select('*')
-            .eq('student_id', formData.id)
-            .order('uploaded_at', { ascending: false });
-
-          // Re-group documents
-          const groupedDocs = {};
-          (docs || []).forEach(doc => {
-            const year = doc.education_year || 'Unknown';
-            if (!groupedDocs[year]) {
-              groupedDocs[year] = [];
-            }
-            groupedDocs[year].push(doc);
-          });
-
-          const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
-            if (a === 'Unknown') return 1;
-            if (b === 'Unknown') return -1;
-            return b.localeCompare(a);
-          });
-
-          setStudentDocuments(docs || []);
-          setGroupedDocuments(groupedDocs);
-          setSortedYears(sortedYears);
-        }
+      if (viewDocumentsStudent && currentDoc?.category) {
+        await refreshDocumentPanel(viewDocumentsStudent, currentDoc.category);
       }
       
       // Refresh the eligible students list to remove fully verified students
@@ -1575,6 +1575,50 @@ await fetchFeeTrackingRecords();
     } catch (err) {
       console.error('Error verifying document:', err);
       alert('Error verifying document: ' + err.message);
+    }
+  };
+
+  const handleDeleteSingleDocument = async (doc) => {
+    const confirmDelete = window.confirm(
+      `Delete ${doc.document_name || doc.file_name || 'this document'}? This will remove it permanently.`,
+    );
+
+    if (!confirmDelete) return;
+
+    setDeletingDocumentId(doc.id);
+
+    try {
+      const storagePath = getStoragePathFromUrl(doc.file_url);
+
+      if (storagePath) {
+        const { error: storageError } = await supabase.storage
+          .from('student_documents')
+          .remove([storagePath]);
+
+        if (storageError) {
+          console.error('Error deleting storage file:', storageError);
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from('student_documents')
+        .delete()
+        .eq('id', doc.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      if (viewDocumentsStudent) {
+        await refreshDocumentPanel(viewDocumentsStudent, viewDocumentsCategory || doc.category);
+      }
+
+      alert('✅ Document deleted successfully!');
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      alert('Error deleting document: ' + err.message);
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -3942,9 +3986,9 @@ const fetchStudents = async () => {
                                 👁
                               </button>
                               <button
-                                className={`btn small icon-only verify-btn ${student.document_count > 0 && student.verified_count === student.document_count ? 'verified' : ''}`}
-                                aria-label={student.document_count > 0 && student.verified_count === student.document_count ? 'Verified' : 'Mark Verified'}
-                                disabled={student.document_count === 0 || student.verified_count === student.document_count}
+                                className={`btn small icon-only verify-btn ${student.doc_verification_count > 0 ? 'verified' : ''}`}
+                                aria-label={student.doc_verification_count > 0 ? 'Approved' : 'Mark Approved'}
+                                disabled={student.document_count === 0 || student.doc_verification_count > 0}
                                 onClick={() => handleVerifyStudentDocuments(student)}
                               >
                                 ✅
@@ -5619,6 +5663,23 @@ const fetchStudents = async () => {
                                 ✅ Mark as Verified
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDeleteSingleDocument(doc)}
+                              disabled={deletingDocumentId === doc.id}
+                              style={{
+                                backgroundColor: deletingDocumentId === doc.id ? '#ef9a9a' : '#d32f2f',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                cursor: deletingDocumentId === doc.id ? 'not-allowed' : 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                opacity: deletingDocumentId === doc.id ? 0.8 : 1
+                              }}
+                            >
+                              {deletingDocumentId === doc.id ? 'Deleting...' : '🗑 Delete'}
+                            </button>
                             <span style={{
                               fontSize: '12px', 
                               color: doc.is_checked ? '#2e7d32' : '#e65100', 
