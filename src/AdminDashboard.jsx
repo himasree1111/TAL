@@ -570,6 +570,7 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
 
   // Search functionality for Manage Beneficiaries
   const [searchQuery, setSearchQuery] = useState("");
+  const [nonEligibleSearchQuery, setNonEligibleSearchQuery] = useState("");
 
   // Manage Beneficiaries camp options should come from loaded admin_student_info records.
   const uniqueCamps = useMemo(() => {
@@ -1061,6 +1062,16 @@ const filteredNonEligibleStudents = useMemo(() => {
 
   return nonEligibleStudents
     .filter((s) => {
+      // Search filter for non-eligible students
+      if (nonEligibleSearchQuery.trim()) {
+        const query = nonEligibleSearchQuery.toLowerCase().trim();
+        const name = (s.student_name || s.full_name || s.name || '').toLowerCase();
+        const email = (s.email || '').toLowerCase();
+        if (!name.includes(query) && !email.includes(query)) {
+          return false;
+        }
+      }
+
       // New filters
       const campName = s.camp_name || s.campName;
       const education = s.education || s.course || s.class || s.year;
@@ -1081,7 +1092,7 @@ const filteredNonEligibleStudents = useMemo(() => {
     })
     .map(s => ({...s, priority: calculatePriority(s)}))
     .sort((a, b) => b.priority - a.priority);
-}, [nonEligibleStudents, newFilters, calculatePriority, getMaxPercent]);
+}, [nonEligibleStudents, newFilters, nonEligibleSearchQuery, calculatePriority, getMaxPercent]);
 
 const fetchEligibleCount = async () => {
   const { count, error } = await supabase
@@ -3161,6 +3172,55 @@ const handleEditDonor = (donor) => {
                 </div>
               </div>
 
+              <div className="search-bar-top" style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '1rem',
+                background: '#f5f5f5',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                border: '1px solid #ddd'
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search non-eligible students by name or email..."
+                  value={nonEligibleSearchQuery}
+                  onChange={(e) => setNonEligibleSearchQuery(e.target.value)}
+                  className="search-input"
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #ccc',
+                    fontSize: '0.95rem',
+                    outline: 'none'
+                  }}
+                />
+                {nonEligibleSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setNonEligibleSearchQuery('')}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#666',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: 'white',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+                <span style={{ color: '#333', fontWeight: 500, fontSize: '0.9rem' }}>
+                  {filteredNonEligibleStudents.length} result{filteredNonEligibleStudents.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
               {loadingNonEligible ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
                   Loading non-eligible students...
@@ -3185,8 +3245,8 @@ const handleEditDonor = (donor) => {
                     <tbody>
                       {filteredNonEligibleStudents.map((student) => (
                         <tr key={student.student_id || student.id || student.email || Math.random()}>
-                          <td>{student.student_name || student.full_name || student.name || '—'}</td>
-                          <td>{student.email || '—'}</td>
+                          <td dangerouslySetInnerHTML={{ __html: highlightMatch(student.student_name || student.full_name || student.name || '—', nonEligibleSearchQuery) }}></td>
+                          <td dangerouslySetInnerHTML={{ __html: highlightMatch(student.email || '—', nonEligibleSearchQuery) }}></td>
                           <td>{student.school || '—'}</td>
                           <td>{student.special_remarks || '—'}</td>
                           <td>
