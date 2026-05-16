@@ -74,6 +74,28 @@ const parseCampScopeKey = (scopeKey = '') => {
 
 const asComparableId = (value) => (value === null || value === undefined ? '' : String(value));
 
+const getStoragePathFromUrl = (fileUrl) => {
+  if (!fileUrl) return '';
+
+  const marker = '/student_documents/';
+
+  try {
+    const url = new URL(fileUrl);
+    const markerIndex = url.pathname.indexOf(marker);
+    if (markerIndex >= 0) {
+      return url.pathname.slice(markerIndex + marker.length);
+    }
+    return '';
+  } catch {
+    const fileUrlString = String(fileUrl);
+    const markerIndex = fileUrlString.indexOf(marker);
+    if (markerIndex >= 0) {
+      return fileUrlString.slice(markerIndex + marker.length);
+    }
+    return '';
+  }
+};
+
 // Highlight matching search text
 const highlightMatch = (text, query) => {
   if (!text || !query) return text || '';
@@ -663,10 +685,12 @@ const [newFilters, setNewFilters] = useState({ camp: 'all', education: 'all', to
   const [viewEligibleStudent, setViewEligibleStudent] = useState(null);
   const [viewNonEligibleStudent, setViewNonEligibleStudent] = useState(null);
   const [viewDocumentsStudent, setViewDocumentsStudent] = useState(null);
+  const [viewDocumentsCategory, setViewDocumentsCategory] = useState(null);
   const [studentDocuments, setStudentDocuments] = useState([]);
   const [groupedDocuments, setGroupedDocuments] = useState({});
   const [sortedYears, setSortedYears] = useState([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState(null);
 
   const [feeSectionTab, setFeeSectionTab] = useState('tracking');
   const [feeReceiptSubTab, setFeeReceiptSubTab] = useState('pending'); // 'pending' or 'verified'
@@ -1283,61 +1307,61 @@ const fetchStudentMonthlyStats = async () => {
 
   const handleViewDocuments = async (student, category) => {
     setViewDocumentsStudent(student);
+    setViewDocumentsCategory(category);
     setLoadingDocs(true);
 
     try {
-      // Get student_form_submissions ID using email
-      const { data: formData } = await supabase
-        .from('student_form_submissions')
-        .select('id')
-        .eq('email', student.email)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const studentFormId = formData?.id;
-      if (!studentFormId) {
-        alert('Student form not found');
-        setLoadingDocs(false);
-        return;
-      }
-
-      // Fetch ALL documents for this category (not filtered by year)
-      const { data: docs, error } = await supabase
-        .from('student_documents')
-        .select('*')
-        .eq('student_id', studentFormId)
-        .eq('category', category)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Group documents by education_year
-      const groupedDocs = {};
-      (docs || []).forEach(doc => {
-        const year = doc.education_year || 'Unknown';
-        if (!groupedDocs[year]) {
-          groupedDocs[year] = [];
-        }
-        groupedDocs[year].push(doc);
-      });
-      
-      // Sort years: most recent first
-      const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
-        if (a === 'Unknown') return 1;
-        if (b === 'Unknown') return -1;
-        return b.localeCompare(a);
-      });
-      
-      setStudentDocuments(docs || []);
-      setGroupedDocuments(groupedDocs);
-      setSortedYears(sortedYears);
+      await refreshDocumentPanel(student, category);
     } catch (err) {
       console.error('Error fetching documents:', err);
       alert('Error fetching documents: ' + err.message);
     } finally {
       setLoadingDocs(false);
     }
+  };
+
+  const refreshDocumentPanel = async (student, category) => {
+    const { data: formData } = await supabase
+      .from('student_form_submissions')
+      .select('id')
+      .eq('email', student.email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const studentFormId = formData?.id;
+    if (!studentFormId) {
+      alert('Student form not found');
+      return;
+    }
+
+    const { data: docs, error } = await supabase
+      .from('student_documents')
+      .select('*')
+      .eq('student_id', studentFormId)
+      .eq('category', category)
+      .order('uploaded_at', { ascending: false });
+
+    if (error) throw error;
+
+    const groupedDocs = {};
+    (docs || []).forEach(doc => {
+      const year = doc.education_year || 'Unknown';
+      if (!groupedDocs[year]) {
+        groupedDocs[year] = [];
+      }
+      groupedDocs[year].push(doc);
+    });
+
+    const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
+      if (a === 'Unknown') return 1;
+      if (b === 'Unknown') return -1;
+      return b.localeCompare(a);
+    });
+
+    setStudentDocuments(docs || []);
+    setGroupedDocuments(groupedDocs);
+    setSortedYears(sortedYears);
   };
 
   const handleVerifyStudentDocuments = async (student) => {
@@ -1518,6 +1542,16 @@ await fetchFeeTrackingRecords();
   // Verify individual document
   const handleVerifySingleDocument = async (docId) => {
     try {
+      const { data: currentDoc, error: currentDocError } = await supabase
+        .from('student_documents')
+        .select('category')
+        .eq('id', docId)
+        .maybeSingle();
+
+      if (currentDocError) {
+        throw currentDocError;
+      }
+
       const { error: updateError } = await supabase
         .from('student_documents')
         .update({ is_checked: true })
@@ -1528,42 +1562,8 @@ await fetchFeeTrackingRecords();
       }
 
       // Refresh the document list
-      if (viewDocumentsStudent) {
-        const { data: formData } = await supabase
-          .from('student_form_submissions')
-          .select('id')
-          .eq('email', viewDocumentsStudent.email)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (formData?.id) {
-          const { data: docs } = await supabase
-            .from('student_documents')
-            .select('*')
-            .eq('student_id', formData.id)
-            .order('uploaded_at', { ascending: false });
-
-          // Re-group documents
-          const groupedDocs = {};
-          (docs || []).forEach(doc => {
-            const year = doc.education_year || 'Unknown';
-            if (!groupedDocs[year]) {
-              groupedDocs[year] = [];
-            }
-            groupedDocs[year].push(doc);
-          });
-
-          const sortedYears = Object.keys(groupedDocs).sort((a, b) => {
-            if (a === 'Unknown') return 1;
-            if (b === 'Unknown') return -1;
-            return b.localeCompare(a);
-          });
-
-          setStudentDocuments(docs || []);
-          setGroupedDocuments(groupedDocs);
-          setSortedYears(sortedYears);
-        }
+      if (viewDocumentsStudent && currentDoc?.category) {
+        await refreshDocumentPanel(viewDocumentsStudent, currentDoc.category);
       }
       
       // Refresh the eligible students list to remove fully verified students
@@ -1575,6 +1575,50 @@ await fetchFeeTrackingRecords();
     } catch (err) {
       console.error('Error verifying document:', err);
       alert('Error verifying document: ' + err.message);
+    }
+  };
+
+  const handleDeleteSingleDocument = async (doc) => {
+    const confirmDelete = window.confirm(
+      `Delete ${doc.document_name || doc.file_name || 'this document'}? This will remove it permanently.`,
+    );
+
+    if (!confirmDelete) return;
+
+    setDeletingDocumentId(doc.id);
+
+    try {
+      const storagePath = getStoragePathFromUrl(doc.file_url);
+
+      if (storagePath) {
+        const { error: storageError } = await supabase.storage
+          .from('student_documents')
+          .remove([storagePath]);
+
+        if (storageError) {
+          console.error('Error deleting storage file:', storageError);
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from('student_documents')
+        .delete()
+        .eq('id', doc.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      if (viewDocumentsStudent) {
+        await refreshDocumentPanel(viewDocumentsStudent, viewDocumentsCategory || doc.category);
+      }
+
+      alert('✅ Document deleted successfully!');
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      alert('Error deleting document: ' + err.message);
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -2226,10 +2270,97 @@ const fetchStudents = async () => {
 
 
 
-  const handleEditSave = (data) => {
-    // Data contains id + updated fields
-    setStudents((prev) => prev.map((p) => (p.id === data.id ? { ...p, ...data } : p)));
-    setEditStudent(null);
+  const handleEditSave = async (data) => {
+    const patchData = {
+      full_name: data.name,
+      email: data.email,
+      contact: data.contact,
+      parent_contact_2: data.parent_contact_2,
+      whatsapp: data.whatsapp,
+      student_contact: data.student_contact,
+      address: data.address,
+      school: data.school,
+      class: data.year,
+      camp_name: data.campName,
+      camp_date: data.campDate,
+      prev_percent: data.prev_percent,
+      present_percent: data.present_percent,
+      has_scholarship: data.has_scholarship === 'Yes' || data.has_scholarship === 'YES' || data.has_scholarship === true,
+      scholarship: data.scholarship,
+      does_work: data.does_work === 'Yes' || data.does_work === 'YES' || data.does_work === true,
+      earning_members: data.earning_members,
+      academic_achievements: data.academic_achievements,
+      non_academic_achievements: data.non_academic_achievements,
+      is_single_parent: data.is_single_parent === 'Yes' || data.is_single_parent === 'YES' || data.is_single_parent === true,
+      special_remarks: data.special_remarks,
+      volunteer_name: data.volunteer_name,
+      volunteer_contact: data.volunteer_contact,
+    };
+
+    try {
+      const { error } = await supabase
+        .from('admin_student_info')
+        .update(patchData)
+        .eq('id', data.id);
+
+      if (error) {
+        console.error('Error saving student edit:', error);
+        alert('❌ Failed to save student edits: ' + error.message);
+        return;
+      }
+
+      const studentFormId = editStudent?.student_form_id || data.student_form_id;
+      if (studentFormId) {
+        const studentPatch = {
+          full_name: data.name,
+          first_name: data.name,
+          email: data.email,
+          contact: data.contact,
+          parent_contact_2: data.parent_contact_2,
+          whatsapp: data.whatsapp,
+          student_contact: data.student_contact,
+          address: data.address,
+          school: data.school,
+          branch: data.college,
+          class: data.year,
+          educationcategory: data.course,
+          camp_name: data.campName,
+          camp_date: data.campDate,
+          prev_percent: data.prev_percent,
+          present_percent: data.present_percent,
+          has_scholarship: patchData.has_scholarship,
+          scholarship: data.scholarship,
+          does_work: patchData.does_work,
+          earning_members: data.earning_members,
+          academic_achievements: data.academic_achievements,
+          non_academic_achievements: data.non_academic_achievements,
+          is_single_parent: patchData.is_single_parent,
+          special_remarks: data.special_remarks,
+          volunteer_name: data.volunteer_name,
+          volunteer_contact: data.volunteer_contact,
+        };
+
+        const { error: studentError } = await supabase
+          .from('student_form_submissions')
+          .update(studentPatch)
+          .eq('id', studentFormId);
+
+        if (studentError) {
+          console.error('Error saving student_form_submissions edit:', studentError);
+          alert('⚠️ Saved admin record, but failed to update student_form_submissions: ' + studentError.message);
+        }
+      }
+
+      setStudents((prev) => prev.map((p) => (p.id === data.id ? { ...p, ...patchData, ...data } : p)));
+      if (viewStudent?.id === data.id) {
+        setViewStudent((prev) => ({ ...prev, ...patchData, ...data }));
+      }
+      setEditStudent(null);
+      alert('✅ Student details updated successfully.');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Error saving student edits: ' + (err.message || err));
+    }
   };
 
   const exportCSV = () => {
@@ -2278,8 +2409,18 @@ const fetchStudents = async () => {
   // Edit donor state
   const [editingDonor, setEditingDonor] = useState(null);
   
-const handleEditDonor = (donor) => {
-    const editData = {...donor, donation_date: donor.donation_date ? donor.donation_date.slice(0,16) : ''};
+  const formatDonationDateForInput = (donationDate) => {
+    if (!donationDate) return '';
+    if (typeof donationDate === 'string') return donationDate.slice(0, 16);
+    if (donationDate instanceof Date) return donationDate.toISOString().slice(0, 16);
+    return new Date(donationDate).toISOString().slice(0, 16);
+  };
+
+  const handleEditDonor = (donor) => {
+    const editData = {
+      ...donor,
+      donation_date: formatDonationDateForInput(donor.donation_date),
+    };
     setEditingDonor(editData);
     setEditDonorForm(editData);
     setShowEditDonorModal(true);
@@ -2364,15 +2505,15 @@ const handleEditDonor = (donor) => {
     setSubmittingDonor(true);
     try {
       const formData = {
-        full_name: newDonorForm.full_name.trim(),
-        gender: newDonorForm.gender.trim() || null,
-        phone: newDonorForm.phone.trim() || null,
-        email: newDonorForm.email.trim().toLowerCase(),  // normalize email
+        full_name: (newDonorForm.full_name || '').trim(),
+        gender: (newDonorForm.gender || '').trim() || null,
+        phone: (newDonorForm.phone || '').trim() || null,
+        email: (newDonorForm.email || '').trim().toLowerCase(),
         donor_type: newDonorForm.donor_type,
-        organization_name: newDonorForm.organization_name.trim() || null,
+        organization_name: (newDonorForm.organization_name || '').trim() || null,
         amount: parseFloat(newDonorForm.amount),
         payment_method: newDonorForm.payment_method,
-        transaction_id: newDonorForm.transaction_id.trim() || `TXN_${Date.now()}`,
+        transaction_id: (newDonorForm.transaction_id || '').trim() || `TXN_${Date.now()}`,
         donation_type: newDonorForm.donation_type,
         donation_date: newDonorForm.donation_date ? new Date(newDonorForm.donation_date).toISOString() : new Date().toISOString(),
         created_at: new Date().toISOString()
@@ -2386,7 +2527,10 @@ const handleEditDonor = (donor) => {
         .single();
 
       if (error) {
-        console.error('Error adding donor:', error);
+        console.error('[ADD DONOR] Supabase error:', error);
+        console.error('[ADD DONOR] Error message:', error.message);
+        console.error('[ADD DONOR] Error code:', error.code);
+        console.error('[ADD DONOR] Error details:', error.details);
         alert('❌ Failed to add donor: ' + (error.message || error));
         return;
       }
@@ -2450,16 +2594,20 @@ const handleEditDonor = (donor) => {
     }
     setSubmittingDonor(true);
     try {
+      if (!editingDonor?.id) {
+        alert('❌ Unable to update donor: missing donor identifier.');
+        return;
+      }
       const formData = {
-        full_name: editDonorForm.full_name.trim(),
-        gender: editDonorForm.gender.trim() || null,
-        phone: editDonorForm.phone.trim() || null,
-        email: editDonorForm.email.trim().toLowerCase(),
+        full_name: (editDonorForm.full_name || '').trim(),
+        gender: (editDonorForm.gender || '').trim() || null,
+        phone: (editDonorForm.phone || '').trim() || null,
+        email: (editDonorForm.email || '').trim().toLowerCase(),
         donor_type: editDonorForm.donor_type,
-        organization_name: editDonorForm.organization_name.trim() || null,
+        organization_name: (editDonorForm.organization_name || '').trim() || null,
         amount: parseFloat(editDonorForm.amount),
         payment_method: editDonorForm.payment_method,
-        transaction_id: editDonorForm.transaction_id.trim(),
+        transaction_id: (editDonorForm.transaction_id || '').trim(),
         donation_type: editDonorForm.donation_type,
         donation_date: editDonorForm.donation_date ? new Date(editDonorForm.donation_date).toISOString() : new Date().toISOString()
       };
@@ -2470,7 +2618,10 @@ const handleEditDonor = (donor) => {
         .select()
         .single();
       if (error) {
-        console.error('Update error:', error);
+        console.error('[EDIT DONOR] Supabase update error:', error);
+        console.error('[EDIT DONOR] Error message:', error.message);
+        console.error('[EDIT DONOR] Error code:', error.code);
+        console.error('[EDIT DONOR] Error details:', error.details);
         alert('❌ Update failed: ' + error.message);
         return;
       }
@@ -2480,8 +2631,10 @@ const handleEditDonor = (donor) => {
       setEditingDonor(null);
       setEditDonorForm({});
     } catch (err) {
-      console.error(err);
-      alert('❌ Unexpected error');
+      console.error('[EDIT DONOR] Unexpected error:', err);
+      console.error('[EDIT DONOR] Error message:', err.message);
+      console.error('[EDIT DONOR] Error stack:', err.stack);
+      alert('❌ Unexpected error: ' + (err.message || err));
     } finally {
       setSubmittingDonor(false);
     }
@@ -3281,6 +3434,10 @@ const handleEditDonor = (donor) => {
                               <span className="tooltiptext">View</span>
                             </div>
                             <div className="tooltip">
+                              <button className="btn small icon-btn" onClick={() => setEditStudent(s)} style={{backgroundColor: '#fff3e0', color: '#ef6c00', borderColor: '#ef6c00'}}>✏️</button>
+                              <span className="tooltiptext">Edit</span>
+                            </div>
+                            <div className="tooltip">
                               <button className="btn small icon-btn" onClick={() => {
                                 if (!window.confirm('Are you sure you want to approve this beneficiary?')) return;
                                 handleApprove(s);
@@ -4018,9 +4175,9 @@ const handleEditDonor = (donor) => {
                                 👁
                               </button>
                               <button
-                                className={`btn small icon-only verify-btn ${student.document_count > 0 && student.verified_count === student.document_count ? 'verified' : ''}`}
-                                aria-label={student.document_count > 0 && student.verified_count === student.document_count ? 'Verified' : 'Mark Verified'}
-                                disabled={student.document_count === 0 || student.verified_count === student.document_count}
+                                className={`btn small icon-only verify-btn ${student.doc_verification_count > 0 ? 'verified' : ''}`}
+                                aria-label={student.doc_verification_count > 0 ? 'Approved' : 'Mark Approved'}
+                                disabled={student.document_count === 0 || student.doc_verification_count > 0}
                                 onClick={() => handleVerifyStudentDocuments(student)}
                               >
                                 ✅
@@ -5408,13 +5565,23 @@ const handleEditDonor = (donor) => {
         <p><strong>Status:</strong> {viewStudent.status || '—'}</p>
       </div>
 
-      <button 
-        className="btn primary" 
-        style={{ marginTop: "20px" }} 
-        onClick={() => setViewStudent(null)}
-      >
-        Close
-      </button>
+      <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
+        <button 
+          className="btn secondary" 
+          onClick={() => {
+            setEditStudent(viewStudent);
+            setViewStudent(null);
+          }}
+        >
+          Edit
+        </button>
+        <button 
+          className="btn primary" 
+          onClick={() => setViewStudent(null)}
+        >
+          Close
+        </button>
+      </div>
     </div>
   </div>
 )}
@@ -5444,6 +5611,15 @@ const handleEditDonor = (donor) => {
               <p><strong>Updated At:</strong> {viewDonor.updated_at ? formatToIST(viewDonor.updated_at) : '—'}</p>
             </div>
             <div style={{display:'flex',gap:8,marginTop:12}}>
+              <button
+                className="btn secondary"
+                onClick={() => {
+                  handleEditDonor(viewDonor);
+                  setViewDonor(null);
+                }}
+              >
+                Edit
+              </button>
               <button className="btn primary" onClick={() => setViewDonor(null)}>Close</button>
             </div>
           </div>
@@ -5461,40 +5637,83 @@ const handleEditDonor = (donor) => {
               const updated = {
                 id: editStudent.id,
                 name: fd.get('name'),
+                email: fd.get('email'),
+                contact: fd.get('contact'),
+                parent_contact_2: fd.get('parent_contact_2'),
+                whatsapp: fd.get('whatsapp'),
+                student_contact: fd.get('student_contact'),
+                address: fd.get('address'),
+                school: fd.get('school'),
                 college: fd.get('college'),
                 year: fd.get('year'),
-                donor: fd.get('donor'),
-                feeStatus: fd.get('feeStatus'),
                 course: fd.get('course'),
+                feeStatus: fd.get('feeStatus'),
                 campName: fd.get('campName'),
                 campDate: fd.get('campDate'),
-                paidDate: fd.get('paidDate') || ""
+                prev_percent: fd.get('prev_percent'),
+                present_percent: fd.get('present_percent'),
+                has_scholarship: fd.get('has_scholarship'),
+                scholarship: fd.get('scholarship'),
+                does_work: fd.get('does_work'),
+                earning_members: fd.get('earning_members'),
+                academic_achievements: fd.get('academic_achievements'),
+                non_academic_achievements: fd.get('non_academic_achievements'),
+                is_single_parent: fd.get('is_single_parent'),
+                special_remarks: fd.get('special_remarks'),
+                volunteer_name: fd.get('volunteer_name'),
+                volunteer_contact: fd.get('volunteer_contact')
               };
               handleEditSave(updated);
             }}>
               <label>Name<input name="name" defaultValue={editStudent.name} /></label>
-              <label>College<input name="college" defaultValue={editStudent.college} /></label>
-              <label>Year<input name="year" defaultValue={editStudent.year} /></label>
-              <label>Donor<input name="donor" defaultValue={editStudent.donor} /></label>
-
-              <label>Course
-                <input name="course" defaultValue={editStudent.course || ""} placeholder="e.g. Science, Commerce" />
+              <label>Email<input name="email" defaultValue={editStudent.email || ''} /></label>
+              <label>Contact<input name="contact" defaultValue={editStudent.contact || ''} /></label>
+              <label>Parent Contact 2<input name="parent_contact_2" defaultValue={editStudent.parent_contact_2 || ''} /></label>
+              <label>WhatsApp<input name="whatsapp" defaultValue={editStudent.whatsapp || ''} /></label>
+              <label>Student Contact<input name="student_contact" defaultValue={editStudent.student_contact || ''} /></label>
+              <label>Address<input name="address" defaultValue={editStudent.address || ''} /></label>
+              <label>School<input name="school" defaultValue={editStudent.school || ''} /></label>
+              <label>College<input name="college" defaultValue={editStudent.college || ''} /></label>
+              <label>Class / Year<input name="year" defaultValue={editStudent.year || editStudent.class || ''} /></label>
+              <label>Course<input name="course" defaultValue={editStudent.course || ''} placeholder="e.g. Science, Commerce" /></label>
+              <label>Camp Name<input name="campName" defaultValue={editStudent.campName || editStudent.camp_name || ''} /></label>
+              <label>Camp Date<input name="campDate" defaultValue={editStudent.campDate || editStudent.camp_date || ''} placeholder="YYYY-MM-DD" /></label>
+              <label>Previous %<input name="prev_percent" defaultValue={editStudent.prev_percent || ''} /></label>
+              <label>Present %<input name="present_percent" defaultValue={editStudent.present_percent || ''} /></label>
+              <label>Has Scholarship
+                <select name="has_scholarship" defaultValue={editStudent.has_scholarship ? 'Yes' : 'No'}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
               </label>
-
-              <label>Camp Name<input name="campName" defaultValue={editStudent.campName || ""} /></label>
-              <label>Camp Date<input name="campDate" defaultValue={editStudent.campDate || ""} placeholder="YYYY-MM-DD" /></label>
-
-              <label>Paid Date<input name="paidDate" defaultValue={editStudent.paidDate || ""} placeholder="YYYY-MM-DD" /></label>
-
+              <label>Scholarship<input name="scholarship" defaultValue={editStudent.scholarship || ''} /></label>
+              <label>Does Work
+                <select name="does_work" defaultValue={editStudent.does_work ? 'Yes' : 'No'}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </label>
+              <label>Earning Members<input name="earning_members" defaultValue={editStudent.earning_members || ''} /></label>
+              <label>Academic Achievements<input name="academic_achievements" defaultValue={editStudent.academic_achievements || ''} /></label>
+              <label>Non-Academic Achievements<input name="non_academic_achievements" defaultValue={editStudent.non_academic_achievements || ''} /></label>
+              <label>Single Parent
+                <select name="is_single_parent" defaultValue={editStudent.is_single_parent ? 'Yes' : 'No'}>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </label>
+              <label>Special Remarks<textarea name="special_remarks" defaultValue={editStudent.special_remarks || ''} rows={3} /></label>
+              <label>Volunteer Name<input name="volunteer_name" defaultValue={editStudent.volunteer_name || ''} /></label>
+              <label>Volunteer Contact<input name="volunteer_contact" defaultValue={editStudent.volunteer_contact || ''} /></label>
               <label>Fee Status
-                <select name="feeStatus" defaultValue={editStudent.feeStatus}>
+                <select name="feeStatus" defaultValue={editStudent.feeStatus || editStudent.fee || ''}>
                   <option>Paid</option>
                   <option>Partial</option>
                   <option>Pending</option>
                 </select>
               </label>
 
-              <div style={{display:'flex',gap:8,marginTop:12}}>
+              <div style={{display:'flex',gap:8,marginTop:12, flexWrap: 'wrap'}}>
                 <button className="btn" type="submit">Save</button>
                 <button className="btn" type="button" onClick={() => setEditStudent(null)}>Cancel</button>
               </div>
@@ -5633,6 +5852,23 @@ const handleEditDonor = (donor) => {
                                 ✅ Mark as Verified
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDeleteSingleDocument(doc)}
+                              disabled={deletingDocumentId === doc.id}
+                              style={{
+                                backgroundColor: deletingDocumentId === doc.id ? '#ef9a9a' : '#d32f2f',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                cursor: deletingDocumentId === doc.id ? 'not-allowed' : 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                opacity: deletingDocumentId === doc.id ? 0.8 : 1
+                              }}
+                            >
+                              {deletingDocumentId === doc.id ? 'Deleting...' : '🗑 Delete'}
+                            </button>
                             <span style={{
                               fontSize: '12px', 
                               color: doc.is_checked ? '#2e7d32' : '#e65100', 
