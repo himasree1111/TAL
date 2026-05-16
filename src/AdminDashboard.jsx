@@ -1581,22 +1581,109 @@ await fetchFeeTrackingRecords();
   const fetchNonEligibleStudents = useCallback(async () => {
     setLoadingNonEligible(true);
     try {
+      console.log('[FETCH_NON_ELIGIBLE] Starting fetch...');
       const { data, error } = await supabase
         .from('non_eligible_students')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching non-eligible students:', error);
-        alert('Error fetching non-eligible students: ' + error.message);
-      } else {
-        const studentsWithPublicIds = await attachStudentPublicIds(data || []);
-        setNonEligibleStudents(studentsWithPublicIds);
-        setNonEligibleCount(studentsWithPublicIds?.length || 0);
+        console.error('[FETCH_NON_ELIGIBLE] ❌ Supabase error:', error);
+        alert('⚠️ Error fetching non-eligible students: ' + error.message);
+        setNonEligibleStudents([]);
+        setNonEligibleCount(0);
+        return;
       }
+
+      if (!data || data.length === 0) {
+        console.log('[FETCH_NON_ELIGIBLE] ✓ No non-eligible students found in table');
+        setNonEligibleStudents([]);
+        setNonEligibleCount(0);
+        return;
+      }
+
+      // Transform data to match table format with robust field handling
+      const transformedStudents = (data || []).map((student, index) => {
+        // Handle various possible field names from database
+        const dbId = student.id || index + 1;
+        const dbName = student.full_name || student.student_name || student.name || 'Student';
+        const dbEmail = student.email || student.student_email || 'no-email@example.com';
+        const dbContact = student.contact || student.student_contact || student.phone || student.whatsapp || 'N/A';
+        const dbClass = student.class || student.year || 'N/A';
+        const dbSchool = student.school || 'N/A';
+        const dbAddress = student.address || 'N/A';
+        const dbAge = student.age || null;
+        const dbPublicId = student.student_public_id || `STU-${dbId}`;
+        const dbCreatedAt = student.created_at || new Date().toISOString();
+        const dbCampName = student.camp_name || student.campName || null;
+        const dbCampDate = student.camp_date || student.campDate || null;
+        const dbStatus = student.status || 'Not Eligible';
+        
+        // Academic fields
+        const dbPrevPercent = student.prev_percent || null;
+        const dbPresentPercent = student.present_percent || null;
+        const dbAcademicAchievements = student.academic_achievements || null;
+        const dbNonAcademicAchievements = student.non_academic_achievements || null;
+        
+        // Family information
+        const dbHasScholarship = student.has_scholarship || student.scholarship === 'Yes' || false;
+        const dbDoesWork = student.does_work || false;
+        const dbEarningMembers = student.earning_members || 0;
+        const dbIsSingleParent = student.is_single_parent || false;
+        const dbSpecialRemarks = student.special_remarks || '';
+        
+        // Volunteer/Contact info
+        const dbVolunteerName = student.volunteer_name || 'N/A';
+        const dbVolunteerContact = student.volunteer_contact || 'N/A';
+        const dbParentContact2 = student.parent_contact_2 || 'N/A';
+
+        return {
+          id: dbId,
+          student_id: student.student_id || dbId,
+          student_public_id: dbPublicId,
+          full_name: dbName,
+          name: dbName,
+          email: dbEmail,
+          contact: dbContact,
+          contact_number: dbContact,
+          phone: dbContact,
+          whatsapp: student.whatsapp || dbContact,
+          student_contact: student.student_contact || dbContact,
+          parent_contact_2: dbParentContact2,
+          address: dbAddress,
+          age: dbAge,
+          class: dbClass,
+          year: dbClass,
+          school: dbSchool,
+          prev_percent: dbPrevPercent,
+          present_percent: dbPresentPercent,
+          academic_achievements: dbAcademicAchievements,
+          non_academic_achievements: dbNonAcademicAchievements,
+          has_scholarship: dbHasScholarship,
+          scholarship: dbHasScholarship ? 'Yes' : 'No',
+          does_work: dbDoesWork,
+          earning_members: dbEarningMembers,
+          is_single_parent: dbIsSingleParent,
+          special_remarks: dbSpecialRemarks,
+          volunteer_name: dbVolunteerName,
+          volunteer_contact: dbVolunteerContact,
+          // CamelCase versions (for UI table rendering)
+          campName: dbCampName,
+          campDate: dbCampDate,
+          camp_name: dbCampName,
+          camp_date: dbCampDate,
+          status: dbStatus,
+          created_at: dbCreatedAt,
+          updated_at: student.updated_at || dbCreatedAt
+        };
+      });
+
+      console.log('[FETCH_NON_ELIGIBLE] Transformed', transformedStudents.length, 'non-eligible students');
+      const studentsWithPublicIds = await attachStudentPublicIds(transformedStudents);
+      setNonEligibleStudents(studentsWithPublicIds);
+      setNonEligibleCount(studentsWithPublicIds?.length || 0);
     } catch (err) {
-      console.error('Error:', err);
-      alert('Error fetching data');
+      console.error('[FETCH_NON_ELIGIBLE] Unexpected error:', err);
     } finally {
       setLoadingNonEligible(false);
     }
@@ -1604,9 +1691,26 @@ await fetchFeeTrackingRecords();
 
   useEffect(() => {
     if (activeSection === 'noneligible') {
+      console.log('[SECTION_CHANGE] Non-eligible section activated, fetching data...');
       fetchNonEligibleStudents();
     }
   }, [activeSection, fetchNonEligibleStudents]);
+
+  // Auto-load non-eligible students on component mount and refresh periodically
+  useEffect(() => {
+    console.log('[MOUNT] Component mounted, loading non-eligible students...');
+    fetchNonEligibleStudents();
+    
+    // Refresh every 30 seconds if on non-eligible section
+    const interval = setInterval(() => {
+      if (activeSection === 'noneligible') {
+        console.log('[AUTO_REFRESH] Refreshing non-eligible students...');
+        fetchNonEligibleStudents();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchNonEligibleStudents, activeSection]);
 
   const fetchFeeTrackingRecords = async () => {
     setLoadingFeeTracking(true);
@@ -1886,30 +1990,58 @@ await fetchFeeTrackingRecords();
 
 const handleApprove = async (student) => {
   try {
-    // Get Supabase session if present (used for email function auth)
-    const { data: { session } } = await supabase.auth.getSession();
+    const { error } = await supabase.rpc('approve_student', {
+      p_id: student.student_id || student.id,
+    });
 
-    // 🟢 1. Update student status to Eligible
-    const { error: updateError } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Eligible' })
-      .eq('id', student.id); // ✅ make sure you're using correct id
-
-    if (updateError) {
-      console.error("Update error:", updateError);
-      alert("❌ Failed to approve student: " + updateError.message);
+    if (error) {
+      console.error('[APPROVE_STUDENT] RPC error:', error);
+      alert("❌ " + error.message);
       return;
     }
 
-    // Remove from pending list immediately so UI updates without refresh
-    setStudents((prev) =>
-      prev.filter((s) => asComparableId(s.id) !== asComparableId(student.id))
-    );
+    console.log('[APPROVE_STUDENT] Successfully approved student:', student.email);
 
-    // 🟢 2. Send email ONLY if email exists
-    if (!student.email) {
-      console.warn("⚠️ No email found for student");
-    } else {
+    // send email
+    await fetch("https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtc21vcWtmdW5ydW1lYmZqemFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2NjMzNTksImV4cCI6MjA3NzIzOTM1OX0.VxTjXGWfojQxE_f7SVyXIsBTFKHrEzwJ9dkCmQZeX8U
+`,
+      },
+      body: JSON.stringify({
+        email: student.email,
+        name: student.full_name || "Student",
+      }),
+    });
+
+    alert("✅ Student approved");
+
+    // Refresh all tables and counts
+    await fetchStudents();
+    await fetchEligibleStudents();
+    await fetchNonEligibleStudents();
+    await fetchEligibleCount();
+    await fetchNonEligibleCount();
+  } catch (err) {
+    console.error('[APPROVE_STUDENT] Catch error:', err);
+    alert("❌ " + err.message);
+  }
+};
+
+const handleMoveToEligible = async (student) => {
+  try {
+    // ✅ Get current session for Supabase Edge Function auth
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    // =====================================================
+    // 1️⃣ SEND ELIGIBILITY EMAIL
+    // =====================================================
+
+    if (student.email) {
       try {
         const response = await fetch(
           "https://rmsmoqkfunrumebfjzah.supabase.co/functions/v1/send-eligibility-email",
@@ -1917,40 +2049,41 @@ const handleApprove = async (student) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              ...(session?.access_token
-                ? { "Authorization": `Bearer ${session.access_token}` }
-                : {}),
+              Authorization: `Bearer ${session?.access_token}`,
             },
             body: JSON.stringify({
               email: student.email,
-              name: student.full_name || student.name || "Student",
+              name:
+                student.student_name ||
+                student.full_name ||
+                student.name ||
+                "Student",
             }),
           }
         );
 
         const result = await response.json();
-        console.log("📧 Email response:", result);
-      } catch (emailError) {
-        console.error("❌ Email sending failed:", emailError);
+
+        if (!response.ok) {
+          console.error("❌ Email error:", result);
+          alert("⚠️ Student moved but email failed to send");
+        } else {
+          console.log("✅ Email sent successfully");
+        }
+      } catch (mailErr) {
+        console.error("❌ Mail send failed:", mailErr);
       }
     }
 
-    // 🟢 3. Refresh UI
-    await fetchEligibleStudents();
-    await fetchEligibleCount();
+    // =====================================================
+    // 2️⃣ MOVE TO ELIGIBLE TABLE
+    // =====================================================
 
-    alert("✅ Student approved and email sent!");
-
-  } catch (err) {
-    console.error("❌ Unexpected error:", err);
-    alert("❌ Error: " + err.message);
-  }
-};
-const handleMoveToEligible = async (student) => {
-  try {
     const { error } = await supabase.rpc(
-      'move_to_eligible_from_non_eligible',
-      { p_id: student.id }
+      "move_to_eligible_from_non_eligible",
+      {
+        p_id: student.id,
+      }
     );
 
     if (error) {
@@ -1959,13 +2092,21 @@ const handleMoveToEligible = async (student) => {
       return;
     }
 
-    // ✅ remove from UI instantly
-    setNonEligibleStudents(prev =>
-      prev.filter(s => s.student_id !== student.student_id)
-    );
-    setNonEligibleCount(prev => prev - 1);
+    // =====================================================
+    // 3️⃣ UPDATE UI INSTANTLY
+    // =====================================================
 
-    alert("✅ Student moved to Eligible");
+    setNonEligibleStudents((prev) =>
+      prev.filter((s) => s.id !== student.id)
+    );
+
+    setNonEligibleCount((prev) => prev - 1);
+
+    // Refresh eligible students
+    await fetchEligibleStudents();
+    await fetchEligibleCount();
+
+    alert("✅ Student moved to Eligible and email sent!");
 
   } catch (err) {
     console.error(err);
@@ -1973,64 +2114,112 @@ const handleMoveToEligible = async (student) => {
   }
 };
 
-
 const handleNotApprove = async (student) => {
-  // Remove from UI instantly for better UX
-  setStudents(prev => prev.filter(s => s.student_id !== student.student_id));
-  
-  try {
-    // Update status to 'Not Eligible' - trigger will handle moving to non_eligible_students table
-    const { error: updateError } = await supabase
-      .from('admin_student_info')
-      .update({ status: 'Not Eligible' })
-      .eq('id', student.student_id);
+  // Remove from UI instantly
+  setStudents((prev) =>
+    prev.filter((s) => s.student_id !== student.student_id)
+  );
 
-    if (updateError) {
-      console.error(updateError);
-      alert("❌ Failed to reject student: " + updateError.message);
-      // Revert UI change if database operation failed
+  try {
+    // Use RPC to reject student (handles RLS properly)
+    const { error } = await supabase.rpc('reject_student', {
+      p_id: student.student_id || student.id,
+    });
+
+    if (error) {
+      console.error('[REJECT_STUDENT] RPC error:', error);
+      alert('❌ Failed to reject student: ' + error.message);
+      // restore UI if failed
       await fetchStudents();
       return;
     }
 
-    alert("✅ Student moved to Non-Eligible successfully!");
+    console.log('[REJECT_STUDENT] Successfully rejected student:', student.email);
 
+    // Refresh all tables after rejection
+    await fetchStudents();
+    await fetchEligibleStudents();
+    await fetchNonEligibleStudents();
+    await fetchNonEligibleCount();
+
+    alert('✅ Student moved to Non-Eligible successfully!');
   } catch (err) {
-    console.error(err);
-    alert("Error: " + err.message);
-    // Revert UI change if error occurred
+    console.error('[REJECT_STUDENT] Catch error:', err);
+    alert('❌ Error: ' + err.message);
+
+    // restore UI if error
     await fetchStudents();
   }
 };
 
 const fetchStudents = async () => {
-  const { data, error } = await supabase
-    .from('admin_student_info')
-    .select('*')
-    .eq('status', 'Pending');
+  try {
+    const { data, error } = await supabase
+      .from('admin_student_info')
+      .select('*')
+      .eq('status', 'Pending');
 
-  if (error) {
-    console.error(error);
-    return;
+    if (error) {
+      console.error('[FETCH_STUDENTS] Supabase error:', error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('[FETCH_STUDENTS] No pending students found');
+      setStudents([]);
+      return;
+    }
+
+    // Transform data to match table format with robust field handling
+    const transformedStudents = (data || []).map((student, index) => {
+      // Handle various possible field names from database
+      const dbId = student.id || student.student_id || index + 1;
+      const dbFormId = student.student_id || student.form_id || null;
+      const dbName = student.student_name || student.full_name || student.name || 'Student';
+      const dbEmail = student.email || student.student_email || 'no-email@example.com';
+      const dbContact = student.contact || student.phone || student.whatsapp || student.contact_number || 'N/A';
+      const dbEducation = student.education || student.course || student.class || student.educationcategory || student.year || 'N/A';
+      const dbClass = student.class || student.year || student.education || 'N/A';
+      const dbPublicId = student.student_public_id || student.public_id || `STU-${dbId}`;
+      const dbCreatedAt = student.created_at || new Date().toISOString();
+      const dbCampName = student.camp_name || student.campName || null;
+      const dbCampDate = student.camp_date || student.campDate || null;
+      const dbPercentage = student.percentage || student.prev_percent || student.present_percent || null;
+
+      return {
+        id: dbId,
+        student_id: dbId,
+        student_form_id: dbFormId,
+        student_public_id: dbPublicId,
+        name: dbName,
+        full_name: dbName,
+        email: dbEmail,
+        contact: dbContact,
+        contact_number: dbContact,
+        phone: dbContact,
+        education: dbEducation,
+        course: dbEducation,
+        class: dbClass,
+        year: dbClass,
+        school: student.school || 'N/A',
+        // Snake case versions
+        camp_name: dbCampName,
+        camp_date: dbCampDate,
+        // CamelCase versions (for UI table rendering)
+        campName: dbCampName,
+        campDate: dbCampDate,
+        percentage: dbPercentage,
+        created_at: dbCreatedAt,
+        status: student.status || 'Pending'
+      };
+    });
+
+    console.log('[FETCH_STUDENTS] Transformed', transformedStudents.length, 'students');
+    const studentsWithPublicIds = await attachStudentPublicIds(transformedStudents);
+    setStudents(studentsWithPublicIds);
+  } catch (err) {
+    console.error('[FETCH_STUDENTS] Unexpected error:', err);
   }
-
-  // Transform data to match table format
-  const transformedStudents = (data || []).map((student, index) => ({
-    id: student.id || index + 1,
-    student_id: student.id,
-    student_form_id: student.student_id || null,
-    student_public_id: student.student_public_id || null,
-    name: student.student_name || student.full_name || '',
-    year: student.year || student.class || '',
-    email: student.email,
-    contact: student.contact,
-    class: student.class || student.year || '',
-    full_name: student.student_name || student.full_name || '',
-    created_at: student.created_at
-  }));
-
-  const studentsWithPublicIds = await attachStudentPublicIds(transformedStudents);
-  setStudents(studentsWithPublicIds);
 };
 
 

@@ -175,6 +175,28 @@ CREATE POLICY "Enable all for service_role" ON public.admin_student_info
     FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- ============================================================
+-- STEP 4.1: Ensure target derived tables allow insert/update
+-- ============================================================
+
+ALTER TABLE public.eligible_students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.non_eligible_students ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read for authenticated" ON public.eligible_students;
+DROP POLICY IF EXISTS "Enable all for service_role" ON public.eligible_students;
+DROP POLICY IF EXISTS "Enable read for authenticated" ON public.non_eligible_students;
+DROP POLICY IF EXISTS "Enable all for service_role" ON public.non_eligible_students;
+
+CREATE POLICY "Enable read for authenticated" ON public.eligible_students
+    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable all for service_role" ON public.eligible_students
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Enable read for authenticated" ON public.non_eligible_students
+    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable all for service_role" ON public.non_eligible_students
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ============================================================
 -- STEP 5: Verify functions exist
 -- ============================================================
 
