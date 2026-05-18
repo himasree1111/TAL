@@ -1225,11 +1225,29 @@ const fetchStudentMonthlyStats = async () => {
             .maybeSingle();
 
           const studentFormId = formData?.id;
-          const { data: docs } = studentFormId ? await supabase
-            .from('student_documents')
-            .select('id, student_id, category, is_checked')
-            .eq('student_id', studentFormId)
-            : { data: [] };
+          let docs = [];
+
+          // Try to fetch documents using student_form_submissions ID
+          if (studentFormId) {
+            const { data: formDocs } = await supabase
+              .from('student_documents')
+              .select('id, student_id, category, is_checked')
+              .eq('student_id', studentFormId);
+            docs = formDocs || [];
+          }
+
+          // If no documents found with form ID, try the eligible_students.id as fallback
+          if (docs.length === 0 && student.id) {
+            console.log(`[FETCH_ELIGIBLE] No docs found with formId ${studentFormId}, trying eligible_students.id ${student.id}`);
+            const { data: eligibleDocs } = await supabase
+              .from('student_documents')
+              .select('id, student_id, category, is_checked')
+              .eq('student_id', student.id);
+            docs = eligibleDocs || [];
+            if (docs.length > 0) {
+              console.log(`[FETCH_ELIGIBLE] Found ${docs.length} documents using eligible_students.id for ${student.email}`);
+            }
+          }
 
           const academics = docs?.filter(d => d.category === 'academic')?.length || 0;
           const personal = docs?.filter(d => d.category === 'personal')?.length || 0;
@@ -1321,38 +1339,28 @@ const fetchStudentMonthlyStats = async () => {
   };
 
   const refreshDocumentPanel = async (student, category) => {
-    console.log("OPENING STUDENT:", student);
+    const realStudentId = Number(
+      student.student_id ||
+      student.student_form_id ||
+      student.id
+    );
+
+    console.log("Fetching docs for:", realStudentId);
+
     const { data: fetchedDocs, error: docsError } = await supabase
-  .from('student_documents')
-  .select('*')
-  .eq('student_id', student.id)
-  .eq('category', category)
-  .order('uploaded_at', { ascending: false });
-
-if (docsError) {
-  console.error('Error fetching documents:', docsError);
-  return;
-}
-
-setStudentDocuments(fetchedDocs || []);
-
-    const studentFormId = student?.id;
-    if (!studentFormId) {
-      alert('Student form not found');
-      return;
-    }
-
-    const { data: docs, error } = await supabase
       .from('student_documents')
       .select('*')
-      .eq('student_id', studentFormId)
+      .eq('student_id', realStudentId)
       .eq('category', category)
       .order('uploaded_at', { ascending: false });
 
-    if (error) throw error;
+    if (docsError) {
+      console.error('Error fetching documents:', docsError);
+      return;
+    }
 
     const groupedDocs = {};
-    (docs || []).forEach(doc => {
+    (fetchedDocs || []).forEach(doc => {
       const year = doc.education_year || 'Unknown';
       if (!groupedDocs[year]) {
         groupedDocs[year] = [];
@@ -1366,7 +1374,7 @@ setStudentDocuments(fetchedDocs || []);
       return b.localeCompare(a);
     });
 
-    setStudentDocuments(docs || []);
+    setStudentDocuments(fetchedDocs || []);
     setGroupedDocuments(groupedDocs);
     setSortedYears(sortedYears);
   };
@@ -1391,18 +1399,40 @@ setStudentDocuments(fetchedDocs || []);
       console.log('[DOC_VERIFY] Student form ID:', studentFormId);
 
       // Fetch ALL documents for this student BEFORE update to see current state
-      const { data: docsBefore } = await supabase
+      let docsBefore = [];
+      let documentStudentId = studentFormId;
+
+      // Try to fetch documents using student_form_submissions ID
+      const { data: formDocs } = await supabase
         .from('student_documents')
         .select('id, student_id, category, is_checked')
         .eq('student_id', studentFormId);
       
+      docsBefore = formDocs || [];
+
+      // If no documents found with form ID, try the eligible_students.id as fallback
+      if (docsBefore.length === 0 && student.id) {
+        console.log(`[DOC_VERIFY] No docs found with formId ${studentFormId}, trying eligible_students.id ${student.id}`);
+        const { data: eligibleDocs } = await supabase
+          .from('student_documents')
+          .select('id, student_id, category, is_checked')
+          .eq('student_id', student.id);
+        
+        if (eligibleDocs && eligibleDocs.length > 0) {
+          docsBefore = eligibleDocs;
+          documentStudentId = student.id;
+          console.log(`[DOC_VERIFY] Found ${eligibleDocs.length} documents using eligible_students.id`);
+        }
+      }
+      
       console.log('[DOC_VERIFY] Documents BEFORE update:', docsBefore?.length, 'total');
       console.log('[DOC_VERIFY] Documents BEFORE update - is_checked values:', docsBefore?.map(d => ({ category: d.category, is_checked: d.is_checked })));
 
+      // Update documents using the determined student_id
       const { error: updateError } = await supabase
         .from('student_documents')
         .update({ is_checked: true })
-        .eq('student_id', studentFormId)
+        .eq('student_id', documentStudentId)
         .in('category', ['academic', 'personal', 'extracurricular']);
 
       if (updateError) {
@@ -1417,7 +1447,7 @@ setStudentDocuments(fetchedDocs || []);
       const { data: docsAfter } = await supabase
         .from('student_documents')
         .select('id, student_id, category, is_checked')
-        .eq('student_id', studentFormId);
+        .eq('student_id', documentStudentId);
       
       console.log('[DOC_VERIFY] Documents AFTER update:', docsAfter?.length, 'total');
       console.log('[DOC_VERIFY] Documents AFTER update - is_checked values:', docsAfter?.map(d => ({ category: d.category, is_checked: d.is_checked })));
