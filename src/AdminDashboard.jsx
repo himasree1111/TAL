@@ -1321,15 +1321,22 @@ const fetchStudentMonthlyStats = async () => {
   };
 
   const refreshDocumentPanel = async (student, category) => {
-    const { data: formData } = await supabase
-      .from('student_form_submissions')
-      .select('id')
-      .eq('email', student.email)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    console.log("OPENING STUDENT:", student);
+    const { data: fetchedDocs, error: docsError } = await supabase
+  .from('student_documents')
+  .select('*')
+  .eq('student_id', student.id)
+  .eq('category', category)
+  .order('uploaded_at', { ascending: false });
 
-    const studentFormId = formData?.id;
+if (docsError) {
+  console.error('Error fetching documents:', docsError);
+  return;
+}
+
+setStudentDocuments(fetchedDocs || []);
+
+    const studentFormId = student?.id;
     if (!studentFormId) {
       alert('Student form not found');
       return;
