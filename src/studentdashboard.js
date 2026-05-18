@@ -357,24 +357,60 @@ console.log(studentId, studentType);
     setLoadingDocuments(true);
     setError('');
     try {
-      const { data, error } = await supabase
+      const studentPublicId = profileForm?.student_public_id || null;
+
+      console.log('[DOCS] fetchDocuments called with:', {
+        studentFormId,
+        studentPublicId,
+      });
+
+      // Fetch by BOTH identifiers to avoid mismatches between student_id and student_public_id.
+      const { data: byStudentId, error: byStudentIdError } = await supabase
         .from('student_documents')
         .select('*')
         .eq('student_id', studentFormId)
         .order('uploaded_at', { ascending: false });
-      if (error) throw error;
+
+      if (byStudentIdError) throw byStudentIdError;
+
+      console.log('[DOCS] by student_id result count:', (byStudentId || []).length);
+
+      let byPublicId = [];
+      if (studentPublicId) {
+        const { data, error } = await supabase
+          .from('student_documents')
+          .select('*')
+          .eq('student_public_id', studentPublicId)
+          .order('uploaded_at', { ascending: false });
+
+        if (error) throw error;
+        byPublicId = data || [];
+      }
+
+      console.log('[DOCS] by student_public_id result count:', byPublicId.length);
+
+      const merged = Array.from(
+        new Map([...(byStudentId || []), ...(byPublicId || [])].map((d) => [d.id, d])).values()
+      );
+
+      console.log('[DOCS] merged total unique docs:', merged.length);
+      console.log('[DOCS] merged categories:', merged.map(d => ({ id: d.id, category: d.category })));
 
       const grouped = DOCUMENT_CATEGORIES.reduce((acc, cat) => {
-        acc[cat.key] = data.filter(doc => doc.category === cat.key);
+        acc[cat.key] = merged.filter(doc => doc.category === cat.key);
         return acc;
       }, {});
+
+      console.log('[DOCS] grouped counts:', DOCUMENT_CATEGORIES.map(cat => ({ cat: cat.key, count: grouped[cat.key]?.length || 0 })));
+
       setDocuments(grouped);
     } catch (err) {
+      console.error('[DOCS] fetchDocuments error:', err);
       setError('Failed to fetch documents: ' + err.message);
     } finally {
       setLoadingDocuments(false);
     }
-  }, [studentFormId]);
+  }, [studentFormId, profileForm?.student_public_id]);
 
   useEffect(() => {
     fetchDocuments();

@@ -20,8 +20,24 @@ export async function fetchDocumentsByBothIds(studentId, studentPublicId, catego
   const results = { byStudentId: [], byPublicId: [], merged: [] };
 
   try {
+    console.log('[DOC_SERVICE] fetchDocumentsByBothIds START - inputs:', {
+      studentId: Array.isArray(studentId) ? `[array: ${studentId.join(',')}]` : studentId,
+      studentPublicId,
+      category,
+    });
+
+    // Check if student 229 is in the request
+    const hasStudent229 = Array.isArray(studentId) ? studentId.includes(229) : studentId === 229;
+    if (hasStudent229) {
+      console.log('[DOC_SERVICE] ⭐ STUDENT 229 DETECTED - Full array:', studentId);
+    }
+
     // Query by student_id
-    if (studentId) {
+    const studentIds = Array.isArray(studentId)
+    ? studentId.filter((id) => id !== null && id !== undefined && id !== '')
+    : [studentId].filter((id) => id !== null && id !== undefined && id !== '');
+
+  if (studentIds.length > 0) {
       let query = supabase
         .from('student_documents')
         .select('*');
@@ -30,9 +46,23 @@ export async function fetchDocumentsByBothIds(studentId, studentPublicId, catego
         query = query.eq('category', category);
       }
 
-      const { data, error } = await query
-        .eq('student_id', studentId)
-        .order('uploaded_at', { ascending: false });
+      if (studentIds.length === 1) {
+        query = query.eq('student_id', studentIds[0]);
+        console.log('[DOC_SERVICE] Querying by student_id =', studentIds[0]);
+      } else {
+        query = query.in('student_id', studentIds);
+        console.log('[DOC_SERVICE] Querying by student_id IN (', studentIds.join(','), ')');
+        if (hasStudent229) {
+          console.log('[DOC_SERVICE] ⭐ STUDENT 229 IS IN THE QUERY');
+        }
+      }
+
+      const { data, error } = await query.order('uploaded_at', { ascending: false });
+
+      console.log('[DOC_SERVICE] Query by student_id result:', data?.length || 0, 'docs', error ? `ERROR: ${error.message}` : 'OK');
+      if (hasStudent229 && data) {
+        console.log('[DOC_SERVICE] ⭐ STUDENT 229 DOCS RETURNED:', data.map(d => ({ id: d.id, category: d.category, student_id: d.student_id })));
+      }
 
       if (error) {
         console.error('[DOC_SERVICE] Error fetching by student_id:', error);
@@ -51,9 +81,13 @@ export async function fetchDocumentsByBothIds(studentId, studentPublicId, catego
         query = query.eq('category', category);
       }
 
+      console.log('[DOC_SERVICE] Querying by student_public_id =', studentPublicId);
+
       const { data, error } = await query
         .eq('student_public_id', studentPublicId)
         .order('uploaded_at', { ascending: false });
+
+      console.log('[DOC_SERVICE] Query by student_public_id result:', data?.length || 0, 'docs', error ? `ERROR: ${error.message}` : 'OK');
 
       if (error) {
         console.error('[DOC_SERVICE] Error fetching by student_public_id:', error);
@@ -66,14 +100,15 @@ export async function fetchDocumentsByBothIds(studentId, studentPublicId, catego
     const merged = [...results.byStudentId, ...results.byPublicId];
     results.merged = Array.from(new Map(merged.map((d) => [d.id, d])).values());
 
-    console.log('[DOC_SERVICE] Document fetch summary:', {
-      studentId,
-      studentPublicId,
-      category: category || 'all',
+    console.log('[DOC_SERVICE] Merge results:', {
       byStudentId: results.byStudentId.length,
       byPublicId: results.byPublicId.length,
-      merged: results.merged.length,
+      merged_total: results.merged.length,
     });
+
+    if (hasStudent229) {
+      console.log('[DOC_SERVICE] ⭐ STUDENT 229 FINAL MERGED COUNT:', results.merged.length);
+    }
 
     return results.merged;
   } catch (err) {
@@ -101,7 +136,14 @@ export async function getDocumentCounts(studentId, studentPublicId) {
   };
 
   try {
+    console.log('[DOC_SERVICE] getDocumentCounts called with:', {
+      studentId: Array.isArray(studentId) ? `[array of ${studentId.length}]` : studentId,
+      studentPublicId,
+    });
+
     const docs = await fetchDocumentsByBothIds(studentId, studentPublicId);
+
+    console.log('[DOC_SERVICE] fetchDocumentsByBothIds returned:', docs.length, 'documents');
 
     counts.academic = docs.filter((d) => d.category === 'academic').length;
     counts.personal = docs.filter((d) => d.category === 'personal').length;
@@ -110,7 +152,7 @@ export async function getDocumentCounts(studentId, studentPublicId) {
     counts.total = docs.length;
     counts.verified = docs.filter((d) => d.is_checked === true).length;
 
-    console.log('[DOC_SERVICE] Document counts:', { studentId, studentPublicId, counts });
+    console.log('[DOC_SERVICE] Document counts computed:', counts);
 
     return counts;
   } catch (err) {

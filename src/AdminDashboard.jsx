@@ -961,11 +961,14 @@ const calculatePriority = useCallback((s) => {
       const hasAcademic = normalizeAchievementFlag(student.academic_achievements_choice) || normalizeAchievementFlag(student.academic_achievements);
       const hasNonAcademic = normalizeAchievementFlag(student.non_academic_achievements_choice) || normalizeAchievementFlag(student.non_academic_achievements);
 
-      // 'all' means show ALL students (no filter)
-      if (newFilters.achievements === 'all') return true;
+      // When 'all' is selected, do NOT filter out students.
+      // IMPORTANT: do not return `true` for the entire function by accident when
+      // `newFilters.achievements` is undefined or empty.
+      if (!newFilters.achievements || newFilters.achievements === 'all') return true;
       if (newFilters.achievements === 'both') return hasAcademic && hasNonAcademic;
       if (newFilters.achievements === 'academic_only') return hasAcademic && !hasNonAcademic;
       if (newFilters.achievements === 'non_academic_only') return !hasAcademic && hasNonAcademic;
+
       return true;
     };
 
@@ -1227,27 +1230,58 @@ const fetchStudentMonthlyStats = async () => {
           const studentFormId = formData?.id;
           let docs = [];
 
-          // Try to fetch documents using student_form_submissions ID
-          if (studentFormId) {
-            const { data: formDocs } = await supabase
-              .from('student_documents')
-              .select('id, student_id, category, is_checked')
-              .eq('student_id', studentFormId);
-            docs = formDocs || [];
+          // DEBUG: trace linking for known issue student
+          if (student?.email && student.email.toLowerCase().includes('navyaelkapelli53@gmail.com'.toLowerCase())) {
+            console.log('[ELIGIBLE_DEBUG TARGET] student row:', {
+              eligible_student_id: student.id,
+              student_id_field: student.student_id,
+              student_form_id_field: student.student_form_id,
+              email: student.email,
+            });
+            console.log('[ELIGIBLE_DEBUG TARGET] resolved student_form_submissions.id:', studentFormId);
           }
 
-          // If no documents found with form ID, try the eligible_students.id as fallback
-          if (docs.length === 0 && student.id) {
-            console.log(`[FETCH_ELIGIBLE] No docs found with formId ${studentFormId}, trying eligible_students.id ${student.id}`);
-            const { data: eligibleDocs } = await supabase
+
+          // Try to fetch documents using multiple possible linkage fields.
+          // Historical data may link student_documents.student_id to:
+          // 1) student_form_submissions.id (studentFormId)
+          // 2) eligible_students.id (student.id)
+          // 3) student_documents.student_id stored as the numeric student_id (e.g. 229)
+          const candidateStudentIds = new Set();
+          if (studentFormId !== null && studentFormId !== undefined && studentFormId !== '') {
+            candidateStudentIds.add(Number(studentFormId));
+          }
+          if (student.id !== null && student.id !== undefined && student.id !== '') {
+            candidateStudentIds.add(Number(student.id));
+          }
+          // If admin dashboard row already includes a numeric student_id, use it too.
+          if (student.student_id !== null && student.student_id !== undefined && student.student_id !== '') {
+            candidateStudentIds.add(Number(student.student_id));
+          }
+
+          const candidateIds = Array.from(candidateStudentIds).filter((x) => Number.isFinite(x));
+
+          if (candidateIds.length > 0) {
+            const { data: candidateDocs } = await supabase
               .from('student_documents')
               .select('id, student_id, category, is_checked')
-              .eq('student_id', student.id);
-            docs = eligibleDocs || [];
+              .in('student_id', candidateIds);
+
+            docs = candidateDocs || [];
+
             if (docs.length > 0) {
-              console.log(`[FETCH_ELIGIBLE] Found ${docs.length} documents using eligible_students.id for ${student.email}`);
+              console.log(`[FETCH_ELIGIBLE] Found ${docs.length} documents for ${student.email} using candidate student_ids:`, candidateIds);
+            } else {
+              console.log(`[FETCH_ELIGIBLE] No documents found for ${student.email} using candidate student_ids:`, candidateIds);
             }
+          } else {
+            console.log(`[FETCH_ELIGIBLE] Skipping doc fetch for ${student.email} - no valid candidate student_ids computed`, {
+              studentFormId,
+              eligible_id: student.id,
+              eligible_student_student_id: student.student_id,
+            });
           }
+
 
           const academics = docs?.filter(d => d.category === 'academic')?.length || 0;
           const personal = docs?.filter(d => d.category === 'personal')?.length || 0;
@@ -1289,18 +1323,19 @@ const fetchStudentMonthlyStats = async () => {
         
         studentsWithPublicIds?.forEach((student) => {
           const docCount = student.document_count || 0;
-          const verificationCount = student.doc_verification_count || 0;
-          
-          // Student is "verified" if they have documents AND doc_verification_count > 0
-          // This means admin has clicked the green tick button
-          const isVerified = docCount > 0 && verificationCount > 0;
+
+          // Document verification visibility is based on whether the underlying
+          // student_documents rows are marked as checked/verified.
+          const isCheckedVerified = (student.verified_count || 0) > 0;
+          const isVerified = docCount > 0 && isCheckedVerified;
+
           
           if (isVerified) {
             verifiedStudents.push({
               email: student.email,
               name: student.full_name || student.name,
               docs: docCount,
-              verification_count: verificationCount
+            verification_count: (student.doc_verification_count || student.verified_count || 0)
             });
           } else {
             pendingStudents.push(student);
